@@ -241,6 +241,25 @@
       <div class="field"><label>Corrosion allowance</label><input type="number" id="ca" value="1.5"><span class="unit">mm</span></div>
     </div>
   </div>
+
+  <!-- Minor losses -->
+  <div class="section">
+    <div class="stitle">Minor losses — fittings inventory (leave blank or 0 to omit)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px">
+      <div class="field"><label>Ball valves (K = 0.05)</label><input type="number" id="ml_ball" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>Gate valves (K = 0.10)</label><input type="number" id="ml_gate" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>Globe valves (K = 6.40)</label><input type="number" id="ml_globe" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>Check valves swing (K = 2.00)</label><input type="number" id="ml_check" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>90° elbow std (K = 0.75)</label><input type="number" id="ml_e90s" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>90° elbow LR (K = 0.45)</label><input type="number" id="ml_e90l" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>45° elbow (K = 0.35)</label><input type="number" id="ml_e45" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>Tee run (K = 0.40)</label><input type="number" id="ml_teer" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>Tee branch (K = 1.50)</label><input type="number" id="ml_teeb" value="0" min="0"><span class="unit">count</span></div>
+      <div class="field"><label>Additional K (user-defined)</label><input type="number" id="ml_extra" value="0" min="0"><span class="unit">K total</span></div>
+    </div>
+    <div id="minor-loss-summary" style="font-size:11px;color:var(--text3);font-family:var(--font-mono)"></div>
+  </div>
+
   <!-- Results placeholder -->
   <div id="results">
     <div class="alert in">Enter valid inputs above — results appear after you leave a field.</div>
@@ -306,7 +325,29 @@ function selectPipe(D_req_mm, MAOP_bar_abs, SMYS, F, CA) {
   const t_hoop=(Pdes_Pa*(od_c/1000))/(2*(SMYS*1e6*E_JT*F-Pdes_Pa*Y_COEF))*1000;
   return {nps:"Custom",od:od_c,s:"Custom",t:t_hoop+CA+2,id_mm:D_req_mm};
 }
-function calcDarcyWeisbach(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K) {
+// K values for standard fittings (Crane TP-410)
+const FITTING_K = {
+  ml_ball:  0.05,
+  ml_gate:  0.10,
+  ml_globe: 6.40,
+  ml_check: 2.00,
+  ml_e90s:  0.75,
+  ml_e90l:  0.45,
+  ml_e45:   0.35,
+  ml_teer:  0.40,
+  ml_teeb:  1.50,
+};
+function getMinorLossK() {
+  let K = 0;
+  for (const [id, k] of Object.entries(FITTING_K)) {
+    const n = parseFloat(document.getElementById(id).value) || 0;
+    K += n * k;
+  }
+  K += parseFloat(document.getElementById('ml_extra').value) || 0;
+  return K;
+}
+
+function calcDarcyWeisbach(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K, K_minor=0) {
   const Pavg=(Pin_abs+Pout_abs)/2;
   const Z=calcZ(Pavg,T_K);
   const rho=(Pavg*1e5*MH2)/(Z*Ru*T_K);
@@ -314,27 +355,34 @@ function calcDarcyWeisbach(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K) {
   const V=mdot/(rho*A);
   const Re=rho*V*D_m/MU;
   const f=colebrook(Re,D_m);
-  const dP=f*(L_m/D_m)*(rho*V*V/2)/1e5;
-  return {Z,rho,V,Re,f,dP,Pavg};
+  const dP_friction=f*(L_m/D_m)*(rho*V*V/2)/1e5;
+  const dP_minor=K_minor*(rho*V*V/2)/1e5;
+  const dP=dP_friction+dP_minor;
+  return {Z,rho,V,Re,f,dP,dP_friction,dP_minor,Pavg};
 }
-function calcWeymouth(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K, Z, Ef=0.77) {
+function calcWeymouth(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K, Z, f_DW, K_minor=0, Ef=0.77) {
+  // Convert minor losses to equivalent pipe length using D-W friction factor
+  const L_equiv = K_minor > 0 ? K_minor * D_m / f_DW : 0;
+  const L_eff_m = L_m + L_equiv;
   const D_in=D_m*39.3701;
-  const L_mi=L_m/1609.344;
+  const L_eff_mi=L_eff_m/1609.344;
   const P2_psia=Pout_abs*14.5038;
   const T_R=T_K*1.8;
   const Pb_Pa=101325, Tb_K=288.71;
+  // Fix: include Tb/Pb factor as required by the Weymouth equation (Menon / GPSA form)
+  const Tb_R=Tb_K*1.8, Pb_psia=Pb_Pa/6894.76;
   const Qb_std=mdot*Ru*Tb_K/(MH2*Pb_Pa);
   const Qb_mmscfd=Qb_std*86400/28316.85;
-  const coeff_sq=Math.pow(433.5*Ef*Math.pow(D_in,8/3),2);
-  const P1_sq=Math.pow(Qb_mmscfd*1e6,2)*G_H2*T_R*Z*L_mi/coeff_sq+P2_psia*P2_psia;
+  const coeff_sq=Math.pow(433.5*Ef*(Tb_R/Pb_psia)*Math.pow(D_in,8/3),2);
+  const P1_sq=Math.pow(Qb_mmscfd*1e6,2)*G_H2*T_R*Z*L_eff_mi/coeff_sq+P2_psia*P2_psia;
   const P1_bar=Math.sqrt(P1_sq)/14.5038;
   const dP=P1_bar-Pout_abs;
-  return {dP,P1_req_bar:P1_bar,Qb_mmscfd};
+  return {dP,P1_req_bar:P1_bar,Qb_mmscfd,L_equiv_m:L_equiv};
 }
-function derivePin(mdot, D_m, L_m, Pout_g, T_K) {
+function derivePin(mdot, D_m, L_m, Pout_g, T_K, K_minor=0) {
   let Pin_g=Pout_g+0.5;
   for(let i=0;i<40;i++){
-    const {dP}=calcDarcyWeisbach(mdot,D_m,L_m,Pin_g+PATM,Pout_g+PATM,T_K);
+    const {dP}=calcDarcyWeisbach(mdot,D_m,L_m,Pin_g+PATM,Pout_g+PATM,T_K,K_minor);
     const newPin=Pout_g+dP;
     if(Math.abs(newPin-Pin_g)<0.0005) break;
     Pin_g=newPin;
@@ -342,7 +390,7 @@ function derivePin(mdot, D_m, L_m, Pout_g, T_K) {
   return Pin_g;
 }
 
-function calculate({ktpa,Lkm,Pout_g,Pin_g_user,autoPin,T_C,Vt,Hyr,SMYS,F,CA}) {
+function calculate({ktpa,Lkm,Pout_g,Pin_g_user,autoPin,T_C,Vt,Hyr,SMYS,F,CA,K_minor=0}) {
   const T_K=T_C+273.15;
   const L_m=Lkm*1000;
   const mdot=(ktpa*1e6)/(Hyr*3600);
@@ -357,10 +405,10 @@ function calculate({ktpa,Lkm,Pout_g,Pin_g_user,autoPin,T_C,Vt,Hyr,SMYS,F,CA}) {
   const MAOP_bar=Math.max(Pin_abs_est,Pout_abs);
   const sel=selectPipe(D_req_mm,MAOP_bar,SMYS,F,CA);
   const D_sel=sel.id_mm/1000;
-  const Pin_g_final=autoPin?derivePin(mdot,D_sel,L_m,Pout_g,T_K):Pin_g_user;
+  const Pin_g_final=autoPin?derivePin(mdot,D_sel,L_m,Pout_g,T_K,K_minor):Pin_g_user;
   const Pin_abs_final=Pin_g_final+PATM;
-  const dw=calcDarcyWeisbach(mdot,D_sel,L_m,Pin_abs_final,Pout_abs,T_K);
-  const wy=calcWeymouth(mdot,D_sel,L_m,Pin_abs_final,Pout_abs,T_K,dw.Z,0.77);
+  const dw=calcDarcyWeisbach(mdot,D_sel,L_m,Pin_abs_final,Pout_abs,T_K,K_minor);
+  const wy=calcWeymouth(mdot,D_sel,L_m,Pin_abs_final,Pout_abs,T_K,dw.Z,dw.f,K_minor,0.77);
   const dP_avail=Pin_g_final-Pout_g;
   const dP_excess_dw=dP_avail-dw.dP;
   const dP_excess_wy=dP_avail-wy.dP;
@@ -383,7 +431,7 @@ function calculate({ktpa,Lkm,Pout_g,Pin_g_user,autoPin,T_C,Vt,Hyr,SMYS,F,CA}) {
     wy,dP_ratio_wy,
     t_hoop,t_total,MAOP_wt_bar:Pin_abs_final,
     sonic,mach,Ve,
-    Z_warn:dw.Pavg>50, smys_warn:SMYS>=415
+    Z_warn:dw.Pavg>50, smys_warn:SMYS>=415, K_minor, Lkm
   };
 }
 
@@ -544,7 +592,7 @@ function renderResults(r, baseline, Pout_g){
   const {sel,dw,wy,t_total,t_hoop,MAOP_wt_bar,sonic,mach,Ve,
          dP_avail,dP_excess_dw,dP_excess_wy,dP_ratio_dw,dP_ratio_wy,
          dw_valid,autoPin,Pin_g_final,D_req_mm,SMYS,F,CA,
-         Z_warn,smys_warn,T_C}=r;
+         Z_warn,smys_warn,T_C,Lkm}=r;
 
   const velClass=dw.V<5?"wn":dw.V<=20?"ok":dw.V<=30?"wn":"bd";
   const velMsg=dw.V<5?"Below 5 m/s — debris carry risk":dw.V<=20?"Within recommended range (5–20 m/s)":dw.V<=30?"Elevated — review noise and erosion (20–30 m/s)":"Exceeds 30 m/s — increase diameter";
@@ -595,13 +643,18 @@ function renderResults(r, baseline, Pout_g){
         <div class="card-h">${tag("in","Darcy–Weisbach")}</div>
         ${dataRow("Avg density",`${fd(dw.rho,4)} kg/m³`)}
         ${dataRow("Friction factor f",fd(dw.f,5))}
-        ${dataRow("ΔP",`${fd(dw.dP,4)} bar`)}
+        ${dataRow("ΔP friction",`${fd(dw.dP_friction,4)} bar`)}
+        ${r.K_minor>0?dataRow("ΔP minor losses",`${fd(dw.dP_minor,4)} bar  (K_total = ${fd(r.K_minor,2)})`):``}
+        ${dataRow("ΔP total",`${fd(dw.dP,4)} bar`)}
         ${dataRow("ΔP / P_avg",`${fd(dP_ratio_dw,2)}% ${tag(dw_valid?"ok":"wn",dw_valid?"Valid":"Use Weymouth")}`)}
       </div>
       <div class="card">
         <div class="card-h">${tag("gn","Weymouth")} (Ef = 77%)</div>
         ${dataRow("Z used",fd(dw.Z,5))}
-        ${dataRow("ΔP",`${fd(wy.dP,4)} bar`)}
+        ${dataRow("Pipe length",`${fd(Lkm,3)} km`)}
+        ${r.K_minor>0?dataRow("Equivalent length (minor losses)",`${fd(wy.L_equiv_m/1000,3)} km  (K=${fd(r.K_minor,2)}, f=${fd(dw.f,5)})`):``}
+        ${r.K_minor>0?dataRow("Effective length",`${fd((Lkm*1000+wy.L_equiv_m)/1000,3)} km`):`${dataRow("Minor losses","None")}`}
+        ${dataRow("ΔP total",`${fd(wy.dP,4)} bar`)}
         ${dataRow("ΔP / P_avg",`${fd(dP_ratio_wy,2)}% ${tag(dP_ratio_wy<10?"ok":"wn",dP_ratio_wy<10?"Valid":"High ratio")}`)}
         ${dataRow("P1 required",`${fd(wy.P1_req_bar-PATM,4)} barg`)}
       </div>
@@ -686,6 +739,7 @@ function runAndRender(){
   const CA     = parseFloat(inp.ca);
   const autoPin= inp.pin===""||isNaN(parseFloat(inp.pin));
   const Pin_g_user= autoPin?0:parseFloat(inp.pin);
+  const K_minor = getMinorLossK();
 
   const required=[ktpa,Lkm,Pout_g,T_C,Vt,Hyr,SMYS,F,CA];
   if(required.some(v=>!isFinite(v)||v<=0)){
@@ -693,9 +747,15 @@ function runAndRender(){
     return;
   }
 
+  // Update minor loss summary line
+  const mlSum = document.getElementById('minor-loss-summary');
+  if(mlSum) mlSum.textContent = K_minor > 0
+    ? `K_total = ${K_minor.toFixed(3)} — will be applied to both D–W and Weymouth (as equivalent length)`
+    : 'No minor losses entered — only pipe friction will be calculated.';
+
   try {
-    const r = calculate({ktpa,Lkm,Pout_g,Pin_g_user,autoPin,T_C,Vt,Hyr,SMYS,F,CA});
-    const b = calculate({ktpa,Lkm,Pout_g,Pin_g_user:0,autoPin:true,T_C,Vt,Hyr,SMYS,F,CA});
+    const r = calculate({ktpa,Lkm,Pout_g,Pin_g_user,autoPin,T_C,Vt,Hyr,SMYS,F,CA,K_minor});
+    const b = calculate({ktpa,Lkm,Pout_g,Pin_g_user:0,autoPin:true,T_C,Vt,Hyr,SMYS,F,CA,K_minor});
     document.getElementById('results').innerHTML = renderResults(r, b, Pout_g);
   } catch(e) {
     document.getElementById('results').innerHTML=`<div class="alert bd">Calculation error: ${e.message}</div>`;
@@ -703,7 +763,7 @@ function runAndRender(){
   }
 }
 
-// Bind events
+// Bind events — main inputs
 ['ktpa','Lkm','pout','pin','temp','vdes','hyr','ca'].forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('blur', runAndRender);
@@ -711,6 +771,12 @@ function runAndRender(){
 });
 ['smys','dfac'].forEach(id=>{
   document.getElementById(id).addEventListener('change', runAndRender);
+});
+// Minor loss inputs
+['ml_ball','ml_gate','ml_globe','ml_check','ml_e90s','ml_e90l','ml_e45','ml_teer','ml_teeb','ml_extra'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('blur', runAndRender);
+  el.addEventListener('keydown', e=>{ if(e.key==='Enter') el.blur(); });
 });
 
 // Initial render
