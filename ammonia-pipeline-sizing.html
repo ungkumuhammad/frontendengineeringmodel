@@ -590,13 +590,54 @@
           <div class="hint">Used for pressure-drop estimate only (Detailed Study). Does not affect diameter selection.</div>
         </div>
 
-        <div class="field detailed-only">
-          <label for="minor-loss-k">Total minor loss coefficient (ΣK)</label>
-          <div class="input-row">
-            <input type="number" id="minor-loss-k" value="5.0" min="0" step="0.1">
-            <span class="unit">—</span>
+        <div class="detailed-only">
+          <div class="field">
+            <label>Minor losses — fittings inventory</label>
+            <div class="hint" style="margin-bottom:10px;">Enter count of each fitting type; K-factors from Crane TP-410. Leave blank or 0 to omit.</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Ball valves <span style="font-family:var(--mono)">K=0.05</span></div>
+                <div class="input-row"><input type="number" id="ml_ball" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Gate valves <span style="font-family:var(--mono)">K=0.10</span></div>
+                <div class="input-row"><input type="number" id="ml_gate" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Globe valves <span style="font-family:var(--mono)">K=6.40</span></div>
+                <div class="input-row"><input type="number" id="ml_globe" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Check valves swing <span style="font-family:var(--mono)">K=2.00</span></div>
+                <div class="input-row"><input type="number" id="ml_check" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">90° elbow std <span style="font-family:var(--mono)">K=0.75</span></div>
+                <div class="input-row"><input type="number" id="ml_e90s" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">90° elbow LR <span style="font-family:var(--mono)">K=0.45</span></div>
+                <div class="input-row"><input type="number" id="ml_e90l" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">45° elbow <span style="font-family:var(--mono)">K=0.35</span></div>
+                <div class="input-row"><input type="number" id="ml_e45" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Tee — run <span style="font-family:var(--mono)">K=0.40</span></div>
+                <div class="input-row"><input type="number" id="ml_teer" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Tee — branch <span style="font-family:var(--mono)">K=1.50</span></div>
+                <div class="input-row"><input type="number" id="ml_teeb" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Additional K (user)</div>
+                <div class="input-row"><input type="number" id="ml_extra" value="0" min="0" step="0.1"><span class="unit">K</span></div>
+              </div>
+            </div>
+            <div id="minor-loss-summary" class="hint" style="margin-top:8px;"></div>
           </div>
-          <div class="hint">Sum of K-factors for all fittings and valves in the line (elbows, tees, gate valves, check valves, reducers, etc.). Typical values: 90° elbow ≈ 0.75–1.5, gate valve (open) ≈ 0.1–0.2, check valve ≈ 2.0–3.5. Default of 5.0 is a conservative allowance for a typical process spool.</div>
         </div>
 
         <div class="divider"></div>
@@ -668,6 +709,31 @@
 </div>
 
 <script>
+// ============================================================
+// FITTING K-FACTORS (Crane TP-410)
+// ============================================================
+const FITTING_K = {
+  ml_ball:  0.05,
+  ml_gate:  0.10,
+  ml_globe: 6.40,
+  ml_check: 2.00,
+  ml_e90s:  0.75,
+  ml_e90l:  0.45,
+  ml_e45:   0.35,
+  ml_teer:  0.40,
+  ml_teeb:  1.50,
+};
+function getMinorLossK() {
+  let K = 0;
+  for (const [id, k] of Object.entries(FITTING_K)) {
+    const el = document.getElementById(id);
+    if (el) K += (parseFloat(el.value) || 0) * k;
+  }
+  const extra = document.getElementById('ml_extra');
+  if (extra) K += parseFloat(extra.value) || 0;
+  return K;
+}
+
 // ============================================================
 // VERIFIED PHYSICAL CONSTANTS
 // ============================================================
@@ -741,9 +807,15 @@ function runModel() {
   const lengthM = currentMode === "detailed"
     ? (parseFloat(document.getElementById("pipe-length").value) || 1000)
     : 1000;
-  const minorK = currentMode === "detailed"
-    ? (parseFloat(document.getElementById("minor-loss-k").value) || 0)
-    : 0;
+  const minorK = currentMode === "detailed" ? getMinorLossK() : 0;
+
+  // Update minor-loss summary line
+  if (currentMode === "detailed") {
+    const el = document.getElementById("minor-loss-summary");
+    if (el) el.textContent = minorK > 0
+      ? `ΣK = ${minorK.toFixed(3)} — minor losses will be included in the pressure-drop estimate.`
+      : 'No fittings entered — only pipe friction will be calculated.';
+  }
   const schedulePref = currentMode === "detailed" ? document.getElementById("schedule-pref").value : "auto";
 
   const vMin = vrange === "conservative" ? 1.0 : 1.0;
@@ -1016,7 +1088,7 @@ function buildDetailBlock(r) {
           <tr><td>Reynolds number</td><td class="num">${fmt(pd.Re,0)} (${pd.regime})</td></tr>
           <tr><td>Darcy friction factor (f)</td><td class="num">${fmt(pd.f,5)}</td></tr>
           <tr><td>Friction pressure drop</td><td class="num">${fmt(pd.dP_friction_bar,3)} bar</td></tr>
-          <tr><td>Minor losses (ΣK = ${fmt(pd.minorK,1)})</td><td class="num">${fmt(pd.dP_minor_bar,3)} bar</td></tr>
+          <tr><td>Minor losses (ΣK = ${fmt(pd.minorK,3)})</td><td class="num">${fmt(pd.dP_minor_bar,3)} bar</td></tr>
           <tr class="highlight"><td>Total pressure drop</td><td class="num">${fmt(pd.dP_total_bar,3)} bar　(${fmt(pd.dP_total_kPa,1)} kPa)</td></tr>
         </tbody>
       </table>
@@ -1038,7 +1110,7 @@ function buildAssumptions(r) {
         <li><b>Pipe data:</b> ASME B36.10M standard OD/wall-thickness for NPS 2"–12", Schedules 40/80/160 as applicable.</li>
         <li><b>Velocity envelope:</b> ${r.vMin.toFixed(1)}–${r.vMax.toFixed(1)} m/s, a conservative subset of general liquid-line practice given ammonia's toxicity / Category E classification under ISO 13623.</li>
         <li><b>DREAL ceiling:</b> 650 t/hr is treated as a hard regulatory flow limit, checked independently of pipe velocity.</li>
-        <li><b>Minor losses:</b> ${currentMode === 'detailed' ? `ΣK = ${fmt(r.minorK,1)} (user input); applied as ΔP = ΣK · ρv²/2 in Detailed Study.` : 'Not applied in Feasibility Study; enable Detailed Study to include fitting K-factors.'}</li>
+        <li><b>Minor losses:</b> ${currentMode === 'detailed' ? `ΣK = ${fmt(r.minorK,3)} (from fitting inventory); applied as ΔP = ΣK · ρv²/2 in Detailed Study.` : 'Not applied in Feasibility Study; switch to Detailed Study and enter fitting counts to include.'}</li>
         <li><b>Design code context:</b> ASME B31.4 covers liquid anhydrous ammonia pipeline systems between facilities; this model supports sizing only, not full B31.4 wall-thickness/pressure-class design.</li>
         <li><b>Excluded from this model:</b> peak/batch jetty-unloading rates, pump NPSH/cavitation checks, thermal expansion/contraction, elevation profile, water-hammer/surge analysis, and first-fill/commissioning flow conditions.</li>
       </ul>

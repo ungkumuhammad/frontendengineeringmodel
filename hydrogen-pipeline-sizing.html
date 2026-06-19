@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hydrogen Pipeline Sizing Model</title>
+<style>
+  :root {
+    --ink: #1a2230;
+    --ink-soft: #4b5566;
+    --ink-faint: #8b94a3;
+    --paper: #fbfaf8;
+    --panel: #ffffff;
+    --line: #dfe2e8;
+    --line-soft: #ecedf0;
+    --accent: #0b5c4a;
+    --accent-soft: #e6f1ee;
+    --accent-line: #bcd9d1;
+    --warn: #8a5a00;
+    --warn-bg: #fdf3df;
+    --warn-line: #ecd9ab;
+    --danger: #8c2c2c;
+    --danger-bg: #fbeceb;
+    --danger-line: #e7c4c2;
+    --ok: #1f6e44;
+    --ok-bg: #eaf5ee;
+    --mono: "Courier New", Courier, monospace;
+    --sans: Calibri, Arial, sans-serif;
+    --serif: Cambria, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 36px 28px 64px; }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding-bottom: 22px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 28px;
+  }
+  .title-block .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .title-block h1 { font-family: var(--serif); font-size: 30px; font-weight: 700; margin: 0; color: var(--ink); }
+  .title-block p  { margin: 6px 0 0; color: var(--ink-soft); font-size: 13.5px; max-width: 560px; }
+  .meta-block { text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); line-height: 1.7; }
+  @media (max-width: 600px) {
+    .meta-block { text-align: left; font-size: 10.5px; }
+    header { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ---------- Mode toggle ---------- */
+  .mode-toggle {
+    display: inline-flex;
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 26px;
+  }
+  .mode-toggle button {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 11px 22px;
+    border: none;
+    background: var(--panel);
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mode-toggle button + button { border-left: 1.5px solid var(--ink); }
+  .mode-toggle button.active { background: var(--ink); color: #fff; }
+  .mode-toggle button:hover:not(.active) { background: var(--line-soft); }
+
+  .mode-caption { font-size: 12.5px; color: var(--ink-faint); margin: -16px 0 28px 2px; }
+
+  /* ---------- Layout ---------- */
+  .grid { display: grid; grid-template-columns: 360px 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ---------- Panels ---------- */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+  .panel-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .panel-head h2 { font-family: var(--serif); font-size: 16px; margin: 0; font-weight: 700; }
+  .panel-head .tag { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: 0.06em; }
+  .panel-body { padding: 18px; }
+
+  /* ---------- Form ---------- */
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+  .field .hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 4px; line-height: 1.45; }
+
+  .input-row {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .input-row input, .input-row select {
+    border: none;
+    padding: 9px 11px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink);
+    background: transparent;
+    width: 100%;
+    outline: none;
+  }
+  .input-row .unit {
+    background: var(--line-soft);
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    white-space: nowrap;
+    border-left: 1px solid var(--line);
+  }
+  .input-row:focus-within { border-color: var(--accent); }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0 L10 0 L5 6 Z' fill='%234b5566'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 28px !important;
+  }
+
+  fieldset { border: none; padding: 0; margin: 0 0 18px 0; }
+  fieldset legend { font-size: 12.5px; font-weight: 700; margin-bottom: 8px; padding: 0; }
+  .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .radio-card {
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 9px 10px;
+    cursor: pointer;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: border-color 0.12s, background 0.12s;
+    line-height: 1.4;
+  }
+  .radio-card:hover { border-color: var(--accent-line); }
+  .radio-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .radio-card input { margin: 0; accent-color: var(--accent); flex-shrink: 0; }
+
+  .detailed-only { display: none; }
+  body.mode-detailed .detailed-only { display: block; }
+
+  .divider { border-top: 1px dashed var(--line); margin: 18px 0; }
+
+  .run-btn {
+    width: 100%;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 13px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--accent); }
+
+  /* ---------- Results ---------- */
+  .results-empty { padding: 60px 30px; text-align: center; color: var(--ink-faint); font-size: 13.5px; }
+  .results-empty .icon { font-size: 28px; margin-bottom: 10px; opacity: 0.5; }
+
+  .verdict-banner {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .verdict-banner.ok     { background: var(--ok-bg);     color: var(--ok); }
+  .verdict-banner.warn   { background: var(--warn-bg);   color: var(--warn); }
+  .verdict-banner.danger { background: var(--danger-bg); color: var(--danger); }
+  .verdict-icon {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    flex: none;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid currentColor;
+  }
+  .verdict-text strong { display: block; font-size: 13.5px; margin-bottom: 2px; color: var(--ink); }
+  .verdict-text span   { font-size: 12.5px; color: var(--ink-soft); }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+  @media (max-width: 700px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+  .stat { padding: 16px; border-right: 1px solid var(--line-soft); }
+  .stat:last-child { border-right: none; }
+  .stat .label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
+  .stat .value { font-family: var(--serif); font-size: 23px; font-weight: 700; color: var(--ink); }
+  .stat .value small { font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+  .stat .sub { font-size: 11px; color: var(--ink-faint); margin-top: 3px; }
+
+  .section-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); padding: 18px 18px 8px; }
+
+  table.specs { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.specs th, table.specs td { padding: 9px 18px; text-align: left; border-bottom: 1px solid var(--line-soft); }
+  table.specs th { color: var(--ink-faint); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; font-family: var(--mono); }
+  table.specs td.num { font-family: var(--mono); }
+  table.specs tr.highlight td { background: var(--accent-soft); font-weight: 700; }
+  table.specs tr.highlight td:first-child { border-left: 3px solid var(--accent); }
+
+  .velocity-gauge { padding: 18px; }
+  .gauge-track { position: relative; height: 34px; background: #e7ebef; border-radius: 4px; border: 1px solid var(--line); overflow: hidden; }
+  .gauge-zone { position: absolute; top: 0; bottom: 0; }
+  .gauge-zone.low   { background: repeating-linear-gradient(45deg, #f0f1f3, #f0f1f3 4px, #e7e9ec 4px, #e7e9ec 8px); }
+  .gauge-zone.good  { background: var(--accent-soft); }
+  .gauge-zone.high  { background: repeating-linear-gradient(45deg, #fdf3df, #fdf3df 4px, #f5e8c4 4px, #f5e8c4 8px); }
+  .gauge-zone.alert { background: repeating-linear-gradient(45deg, #fbeceb, #fbeceb 4px, #f6dcda 4px, #f6dcda 8px); }
+  .gauge-marker { position: absolute; top: -6px; width: 2px; height: 46px; background: var(--ink); }
+  .gauge-marker .marker-label { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .gauge-marker.actual { background: var(--ink); z-index: 3; }
+  .gauge-marker.actual .marker-label { background: var(--ink); color: #fff; padding: 2px 6px; border-radius: 2px; top: -26px; }
+  .gauge-labels { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 6px; }
+  .gauge-legend { display: flex; gap: 16px; margin-top: 14px; font-size: 11.5px; color: var(--ink-soft); flex-wrap: wrap; }
+  .gauge-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid var(--line); }
+
+  .info-box { margin: 0 18px 18px; border: 1px solid var(--line); border-radius: 3px; padding: 14px 16px; background: #fcfcfb; }
+  .info-box h3 { font-size: 12.5px; margin: 0 0 8px; font-weight: 700; }
+  .info-box p { font-size: 12px; color: var(--ink-soft); margin: 0 0 6px; line-height: 1.55; }
+  .info-box p:last-child { margin-bottom: 0; }
+  .info-fact-row { display: flex; gap: 22px; margin-bottom: 10px; flex-wrap: wrap; }
+  .info-fact { font-family: var(--mono); font-size: 12px; }
+  .info-fact b { display: block; font-size: 16px; }
+
+  .advisory { margin: 0 18px 18px; border-radius: 3px; padding: 14px 16px; font-size: 12.5px; line-height: 1.55; }
+  .advisory.warn   { background: var(--warn-bg);   border: 1px solid var(--warn-line);   color: #5c3d00; }
+  .advisory.danger { background: var(--danger-bg); border: 1px solid var(--danger-line); color: #5c1f1f; }
+  .advisory.ok     { background: var(--ok-bg);     border: 1px solid #c7e3d2;            color: #154a2d; }
+  .advisory h3 { font-size: 12.5px; margin: 0 0 6px; font-weight: 700; }
+  .advisory ul { margin: 6px 0 0; padding-left: 18px; }
+  .advisory li { margin-bottom: 4px; }
+
+  .detail-block { padding: 0 18px 18px; }
+  .formula-strip { font-family: var(--mono); font-size: 12px; background: #f6f5f2; border: 1px solid var(--line); border-radius: 3px; padding: 10px 14px; color: var(--ink-soft); margin-bottom: 10px; overflow-x: auto; white-space: nowrap; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .sub-panel { border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px; background: #fcfcfb; }
+  .sub-panel h4 { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin: 0 0 10px; }
+
+  .finding { border-radius: 3px; padding: 12px 14px; margin-bottom: 10px; border-left: 3px solid; font-size: 12.5px; line-height: 1.55; }
+  .finding.ok   { background: var(--ok-bg);     border-color: var(--ok); }
+  .finding.warn { background: var(--warn-bg);   border-color: var(--warn); }
+  .finding.bad  { background: var(--danger-bg); border-color: var(--danger); }
+  .finding.info { background: #eff6ff;          border-color: #93c5fd; }
+  .finding-title { font-weight: 700; font-size: 12.5px; margin-bottom: 5px; }
+  .finding.ok   .finding-title { color: var(--ok); }
+  .finding.warn .finding-title { color: var(--warn); }
+  .finding.bad  .finding-title { color: var(--danger); }
+  .finding.info .finding-title { color: #1e40af; }
+  .finding-body { font-size: 12px; color: var(--ink-soft); }
+
+  .selected-row td { background: var(--accent-soft) !important; font-weight: 700; }
+  .selected-row td:first-child { border-left: 3px solid var(--accent); }
+
+  .assumptions { padding: 16px 18px; border-top: 1px solid var(--line); background: #fcfcfb; }
+  .assumptions h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--mono); color: var(--ink-faint); margin: 0 0 10px; }
+  .assumptions ul { margin: 0; padding-left: 18px; font-size: 12px; color: var(--ink-soft); columns: 2; column-gap: 28px; }
+  @media (max-width: 700px) { .assumptions ul { columns: 1; } }
+  .assumptions li { margin-bottom: 7px; line-height: 1.5; break-inside: avoid; }
+  .assumptions li b { color: var(--ink); }
+
+  footer.note { margin-top: 28px; font-size: 11.5px; color: var(--ink-faint); border-top: 1px solid var(--line); padding-top: 16px; line-height: 1.6; }
+</style>
+</head>
+<body class="mode-feasibility">
+
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Project Taurus — Le Havre</div>
+      <h1>Hydrogen Pipeline Sizing Model</h1>
+      <p>Sizes the gaseous H₂ transmission line from required throughput, checks velocity against design limits, estimates pressure drop via Darcy–Weisbach and Weymouth, and recommends nominal pipe size, schedule, and material grade.</p>
+    </div>
+    <div class="meta-block">
+      BASIS: ASME B31.12 / B31.8 · AIGA 033/15<br>
+      FLUID: GASEOUS H₂ · ISOTHERMAL<br>
+      REV: DRAFT FOR REVIEW
+    </div>
+  </header>
+
+  <div class="mode-toggle" role="tablist" aria-label="Study mode">
+    <button id="btn-feasibility" class="active" onclick="setMode('feasibility')">Feasibility Study</button>
+    <button id="btn-detailed" onclick="setMode('detailed')">Detailed Study</button>
+  </div>
+  <p class="mode-caption" id="mode-caption">Feasibility Study mode: quick sizing on fixed engineering assumptions — nominal diameter, schedule, velocity and pressure-drop check only.</p>
+
+  <div class="grid">
+
+    <!-- ============ INPUT PANEL ============ -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Inputs</h2>
+        <span class="tag">STEP 1 / 2</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="field">
+          <label for="h2-rate">Required hydrogen supply</label>
+          <div class="input-row">
+            <input type="number" id="h2-rate" value="14.4" min="0" step="0.1">
+            <span class="unit">ktpa H₂</span>
+          </div>
+          <div class="hint">Annual H₂ throughput, converted to steady-state mass flow at the specified operating hours.</div>
+        </div>
+
+        <div class="field">
+          <label for="pipe-length-h2">Pipeline length</label>
+          <div class="input-row">
+            <input type="number" id="pipe-length-h2" value="5" min="0.1" step="0.1">
+            <span class="unit">km</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="pout-h2">Outlet pressure</label>
+          <div class="input-row">
+            <input type="number" id="pout-h2" value="15" min="0" step="1">
+            <span class="unit">barg</span>
+          </div>
+          <div class="hint">Minimum delivery pressure at the offtake end. Inlet pressure is auto-derived unless overridden in Detailed Study.</div>
+        </div>
+
+        <div class="field">
+          <label for="vdes-h2">Design velocity target</label>
+          <div class="input-row">
+            <input type="number" id="vdes-h2" value="15" min="1" step="1">
+            <span class="unit">m/s</span>
+          </div>
+          <div class="hint">Pipe inner diameter sized to achieve this velocity at average line conditions. AIGA 033/15 guidance: 5–20 m/s.</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <fieldset>
+          <legend>Pipe material — SMYS</legend>
+          <div class="radio-grid">
+            <label class="radio-card" data-smys="290">
+              <input type="radio" name="smys" value="290" onchange="onRadioChange(this)">
+              X42<br><span style="font-size:11px;color:var(--ink-faint)">290 MPa</span>
+            </label>
+            <label class="radio-card selected" data-smys="360">
+              <input type="radio" name="smys" value="360" checked onchange="onRadioChange(this)">
+              X52<br><span style="font-size:11px;color:var(--ink-faint)">360 MPa</span>
+            </label>
+            <label class="radio-card" data-smys="415">
+              <input type="radio" name="smys" value="415" onchange="onRadioChange(this)">
+              X60 ⚠<br><span style="font-size:11px;color:var(--ink-faint)">415 MPa</span>
+            </label>
+            <label class="radio-card" data-smys="480">
+              <input type="radio" name="smys" value="480" onchange="onRadioChange(this)">
+              X70 ✕<br><span style="font-size:11px;color:var(--ink-faint)">480 MPa</span>
+            </label>
+          </div>
+          <div class="hint">X52 recommended baseline for H₂ service (ASME B31.12). X60/X70 require additional qualification — see material assessment in Detailed Study results.</div>
+        </fieldset>
+
+        <div class="divider"></div>
+
+        <!-- ——— Detailed Study only ——— -->
+        <div class="field detailed-only">
+          <label for="pin-h2">Inlet pressure</label>
+          <div class="input-row">
+            <input type="number" id="pin-h2" placeholder="Auto-derive">
+            <span class="unit">barg</span>
+          </div>
+          <div class="hint">Leave blank to auto-derive from Darcy–Weisbach ΔP. Enter a value to check the pressure balance against a known supply pressure.</div>
+        </div>
+
+        <div class="field detailed-only">
+          <label for="temp-h2">Operating temperature</label>
+          <div class="input-row">
+            <input type="number" id="temp-h2" value="20" step="1">
+            <span class="unit">°C</span>
+          </div>
+          <div class="hint">Isothermal assumption. Affects H₂ density and Z-factor. Default 20°C.</div>
+        </div>
+
+        <div class="field detailed-only">
+          <label for="hyr-h2">Operating hours / year</label>
+          <div class="input-row">
+            <input type="number" id="hyr-h2" value="8760" min="1" step="1">
+            <span class="unit">h/yr</span>
+          </div>
+          <div class="hint">8,760 = continuous. Reduces steady-state mass flow if less than full-year operation is assumed.</div>
+        </div>
+
+        <div class="field detailed-only">
+          <label for="dfac-h2">Design factor F</label>
+          <div class="input-row">
+            <select id="dfac-h2">
+              <option value="0.72" selected>0.72 — Location class 1</option>
+              <option value="0.60">0.60 — Location class 2</option>
+              <option value="0.50">0.50 — Location class 3</option>
+              <option value="0.40">0.40 — Location class 4</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field detailed-only">
+          <label for="ca-h2">Corrosion allowance</label>
+          <div class="input-row">
+            <input type="number" id="ca-h2" value="1.5" min="0" step="0.1">
+            <span class="unit">mm</span>
+          </div>
+        </div>
+
+        <div class="detailed-only">
+          <div class="field">
+            <label>Minor losses — fittings inventory</label>
+            <div class="hint" style="margin-bottom:10px;">Enter count of each fitting type; K-factors from Crane TP-410. Leave 0 to omit.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Ball valves <span style="font-family:var(--mono)">K=0.05</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_ball" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Gate valves <span style="font-family:var(--mono)">K=0.10</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_gate" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Globe valves <span style="font-family:var(--mono)">K=6.40</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_globe" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Check valves swing <span style="font-family:var(--mono)">K=2.00</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_check" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">90° elbow std <span style="font-family:var(--mono)">K=0.75</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_e90s" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">90° elbow LR <span style="font-family:var(--mono)">K=0.45</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_e90l" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">45° elbow <span style="font-family:var(--mono)">K=0.35</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_e45" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Tee — run <span style="font-family:var(--mono)">K=0.40</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_teer" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Tee — branch <span style="font-family:var(--mono)">K=1.50</span></div>
+                <div class="input-row"><input type="number" id="h2_ml_teeb" value="0" min="0" step="1"><span class="unit">no.</span></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-faint);margin-bottom:3px;">Additional K (user)</div>
+                <div class="input-row"><input type="number" id="h2_ml_extra" value="0" min="0" step="0.1"><span class="unit">K</span></div>
+              </div>
+            </div>
+            <div id="h2-minor-loss-summary" class="hint" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <button class="run-btn" onclick="runModel()">Calculate pipeline size</button>
+
+      </div>
+    </div>
+
+    <!-- ============ RESULTS PANEL ============ -->
+    <div class="panel" id="results-panel">
+      <div class="panel-head">
+        <h2>Results</h2>
+        <span class="tag" id="results-tag">AWAITING INPUT</span>
+      </div>
+      <div id="results-body">
+        <div class="results-empty">
+          <div class="icon">▢</div>
+          Enter the required H₂ throughput and run the model to see the recommended pipeline size.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="note">
+    Methodology: steady-state mass flow converted to volumetric flow via truncated virial Z-factor (Pitzer correlation), then sized to achieve the target velocity at average line pressure. Pipe selected is the smallest ASME B36.10M NPS that meets both the required ID and the ASME B31.12 hoop-stress wall thickness (t_hoop + corrosion allowance). Pressure drop via Darcy–Weisbach with Colebrook–White friction factor; Weymouth equation (Ef = 77%) included in Detailed Study for comparison. Minor losses via sum-of-K method (D–W) and equivalent pipe length (Weymouth). This is a feasibility/early-engineering sizing aid, not a substitute for a full B31.12 stress analysis, hydraulic model, or material qualification programme.
+  </footer>
+
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const MH2    = 0.002016;
+const Ru     = 8.314;
+const R_SP   = Ru / MH2;
+const GAMMA  = 1.4;
+const PATM   = 1.01325;
+const MU     = 9e-6;
+const EPS    = 0.046e-3;
+const G_H2   = 0.0695;
+const E_JT   = 1.0;
+const Y_COEF = 0.4;
+
+// ASME B36.10M
+const PIPE_TABLE = [
+  { nps:2,  od:60.3,  sch:[{s:"40",t:3.91},{s:"80",t:5.54},{s:"160",t:8.74}] },
+  { nps:3,  od:88.9,  sch:[{s:"40",t:5.49},{s:"80",t:7.62},{s:"160",t:11.13}] },
+  { nps:4,  od:114.3, sch:[{s:"40",t:6.02},{s:"80",t:8.56},{s:"160",t:13.49}] },
+  { nps:6,  od:168.3, sch:[{s:"40",t:7.11},{s:"80",t:10.97},{s:"160",t:18.26}] },
+  { nps:8,  od:219.1, sch:[{s:"40",t:8.18},{s:"80",t:12.70},{s:"160",t:23.01}] },
+  { nps:10, od:273.1, sch:[{s:"40",t:9.27},{s:"80",t:15.09},{s:"160",t:28.58}] },
+  { nps:12, od:323.9, sch:[{s:"Std",t:9.53},{s:"40",t:10.31},{s:"80",t:17.48}] },
+  { nps:14, od:355.6, sch:[{s:"Std",t:9.53},{s:"40",t:11.13},{s:"80",t:19.05}] },
+  { nps:16, od:406.4, sch:[{s:"Std",t:9.53},{s:"40",t:12.70},{s:"80",t:21.44}] },
+  { nps:18, od:457.2, sch:[{s:"Std",t:9.53},{s:"40",t:14.27},{s:"80",t:23.83}] },
+  { nps:20, od:508.0, sch:[{s:"Std",t:9.53},{s:"40",t:15.09},{s:"80",t:26.19}] },
+  { nps:24, od:609.6, sch:[{s:"Std",t:9.53},{s:"40",t:17.48},{s:"80",t:30.96}] },
+  { nps:30, od:762.0, sch:[{s:"Std",t:9.53},{s:"40",t:19.05}] },
+  { nps:36, od:914.4, sch:[{s:"Std",t:9.53},{s:"40",t:19.05}] },
+];
+
+const FITTING_K_H2 = {
+  h2_ml_ball:  0.05, h2_ml_gate:  0.10, h2_ml_globe: 6.40,
+  h2_ml_check: 2.00, h2_ml_e90s:  0.75, h2_ml_e90l:  0.45,
+  h2_ml_e45:   0.35, h2_ml_teer:  0.40, h2_ml_teeb:  1.50,
+};
+
+function getMinorLossK() {
+  let K = 0;
+  for (const [id, k] of Object.entries(FITTING_K_H2)) {
+    const el = document.getElementById(id);
+    if (el) K += (parseFloat(el.value) || 0) * k;
+  }
+  const extra = document.getElementById('h2_ml_extra');
+  if (extra) K += parseFloat(extra.value) || 0;
+  return K;
+}
+
+// ============================================================
+// GAS PHYSICS
+// ============================================================
+function calcZ(P_bar, T_K) {
+  const Tc = 33.2, Pc = 13.0;
+  const Tr = T_K / Tc, Pr = P_bar / Pc;
+  const B0 = 0.083 - 0.422 / Math.pow(Tr, 1.6);
+  return 1 + B0 * Pr / Tr;
+}
+function calcRho(P_bar, T_K) {
+  const Z = calcZ(P_bar, T_K);
+  return (P_bar * 1e5 * MH2) / (Z * Ru * T_K);
+}
+function colebrook(Re, D_m) {
+  if (Re < 2300) return 64 / Re;
+  let f = 0.02;
+  for (let i = 0; i < 50; i++) {
+    f = 1 / Math.pow(-2 * Math.log10(EPS / (3.7 * D_m) + 2.51 / (Re * Math.sqrt(f))), 2);
+  }
+  return f;
+}
+function selectPipe(D_req_mm, MAOP_bar_abs, SMYS, F, CA) {
+  const Pdes_Pa = MAOP_bar_abs * 1e5;
+  for (const p of PIPE_TABLE) {
+    for (const s of p.sch) {
+      const id_mm = p.od - 2 * s.t;
+      const denom = 2 * (SMYS * 1e6 * E_JT * F - Pdes_Pa * Y_COEF);
+      if (denom <= 0) continue;
+      const t_hoop = (Pdes_Pa * (p.od / 1000)) / denom * 1000;
+      if (id_mm >= D_req_mm && s.t >= t_hoop + CA) return { ...p, ...s, id_mm };
+    }
+  }
+  const od_c = D_req_mm * 1.12;
+  const Pdes_Pa = MAOP_bar_abs * 1e5;
+  const denom = 2 * (SMYS * 1e6 * E_JT * F - Pdes_Pa * Y_COEF);
+  const t_hoop = denom > 0 ? (Pdes_Pa * (od_c / 1000)) / denom * 1000 : 20;
+  return { nps: "Custom", od: od_c, s: "Custom", t: t_hoop + CA + 2, id_mm: D_req_mm };
+}
+function calcDW(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K, K_minor) {
+  const Pavg = (Pin_abs + Pout_abs) / 2;
+  const Z    = calcZ(Pavg, T_K);
+  const rho  = (Pavg * 1e5 * MH2) / (Z * Ru * T_K);
+  const A    = Math.PI * D_m * D_m / 4;
+  const V    = mdot / (rho * A);
+  const Re   = rho * V * D_m / MU;
+  const f    = colebrook(Re, D_m);
+  const dyn  = rho * V * V / 2;
+  const dP_friction = f * (L_m / D_m) * dyn / 1e5;
+  const dP_minor    = K_minor * dyn / 1e5;
+  const dP = dP_friction + dP_minor;
+  return { Z, rho, V, Re, f, dP, dP_friction, dP_minor, Pavg };
+}
+function calcWeymouth(mdot, D_m, L_m, Pin_abs, Pout_abs, T_K, Z, f_DW, K_minor, Ef) {
+  const L_equiv  = (K_minor > 0 && f_DW > 0) ? K_minor * D_m / f_DW : 0;
+  const L_eff_m  = L_m + L_equiv;
+  const D_in     = D_m * 39.3701;
+  const L_eff_mi = L_eff_m / 1609.344;
+  const P2_psia  = Pout_abs * 14.5038;
+  const T_R      = T_K * 1.8;
+  const Tb_K = 288.71, Pb_Pa = 101325;
+  const Tb_R = Tb_K * 1.8, Pb_psia = Pb_Pa / 6894.76;
+  const Qb_std    = mdot * Ru * Tb_K / (MH2 * Pb_Pa);
+  const Qb_mmscfd = Qb_std * 86400 / 28316.85;
+  const coeff_sq  = Math.pow(433.5 * Ef * (Tb_R / Pb_psia) * Math.pow(D_in, 8 / 3), 2);
+  const P1_sq     = Math.pow(Qb_mmscfd * 1e6, 2) * G_H2 * T_R * Z * L_eff_mi / coeff_sq + P2_psia * P2_psia;
+  const P1_bar    = Math.sqrt(Math.max(0, P1_sq)) / 14.5038;
+  return { dP: P1_bar - Pout_abs, P1_req_bar: P1_bar, Qb_mmscfd, L_equiv_m: L_equiv };
+}
+function derivePin(mdot, D_m, L_m, Pout_g, T_K, K_minor) {
+  let Pin_g = Pout_g + 0.5;
+  for (let i = 0; i < 40; i++) {
+    const { dP } = calcDW(mdot, D_m, L_m, Pin_g + PATM, Pout_g + PATM, T_K, K_minor);
+    const newPin = Pout_g + dP;
+    if (Math.abs(newPin - Pin_g) < 0.0005) break;
+    Pin_g = newPin;
+  }
+  return Pin_g;
+}
+
+// ============================================================
+// MODE
+// ============================================================
+let currentMode = "feasibility";
+function setMode(mode) {
+  currentMode = mode;
+  document.body.classList.remove("mode-feasibility", "mode-detailed");
+  document.body.classList.add("mode-" + mode);
+  document.getElementById("btn-feasibility").classList.toggle("active", mode === "feasibility");
+  document.getElementById("btn-detailed").classList.toggle("active", mode === "detailed");
+  document.getElementById("mode-caption").textContent = mode === "feasibility"
+    ? "Feasibility Study mode: quick sizing on fixed engineering assumptions — nominal diameter, schedule, velocity and pressure-drop check only."
+    : "Detailed Study mode: adds inlet pressure override, temperature, design factor, corrosion allowance, fitting minor losses, Darcy–Weisbach vs Weymouth comparison, wall thickness calculation, and material suitability assessment.";
+  if (document.getElementById("results-tag").textContent !== "AWAITING INPUT") runModel();
+}
+
+document.querySelectorAll(".radio-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const fs = card.closest("fieldset");
+    (fs || document).querySelectorAll(".radio-card").forEach(c => c.classList.remove("selected"));
+    card.classList.add("selected");
+  });
+});
+function onRadioChange() {}
+
+// ============================================================
+// CORE MODEL
+// ============================================================
+function runModel() {
+  const h2Ktpa = parseFloat(document.getElementById("h2-rate").value) || 0;
+  const Lkm    = parseFloat(document.getElementById("pipe-length-h2").value) || 0;
+  const Pout_g = parseFloat(document.getElementById("pout-h2").value);
+  const Vt     = parseFloat(document.getElementById("vdes-h2").value) || 15;
+  const smysEl = document.querySelector('input[name="smys"]:checked');
+  const SMYS   = smysEl ? parseFloat(smysEl.value) : 360;
+
+  const isDetailed = currentMode === "detailed";
+  const T_C  = isDetailed ? (parseFloat(document.getElementById("temp-h2").value) ?? 20)   : 20;
+  const Hyr  = isDetailed ? (parseFloat(document.getElementById("hyr-h2").value)  || 8760) : 8760;
+  const F    = isDetailed ? (parseFloat(document.getElementById("dfac-h2").value) || 0.72) : 0.72;
+  const CA   = isDetailed ? (parseFloat(document.getElementById("ca-h2").value)   ?? 1.5)  : 1.5;
+  const K_minor  = isDetailed ? getMinorLossK() : 0;
+  const pinRaw   = isDetailed ? document.getElementById("pin-h2").value.trim() : "";
+  const autoPin  = pinRaw === "" || isNaN(parseFloat(pinRaw));
+  const Pin_g_user = autoPin ? 0 : parseFloat(pinRaw);
+
+  if (isDetailed) {
+    const el = document.getElementById("h2-minor-loss-summary");
+    if (el) el.textContent = K_minor > 0
+      ? `ΣK = ${K_minor.toFixed(3)} — minor losses included in pressure-drop estimate.`
+      : "No fittings entered — pipe friction only.";
+  }
+
+  if (h2Ktpa <= 0 || Lkm <= 0 || !isFinite(Pout_g) || Pout_g < 0) {
+    document.getElementById("results-body").innerHTML =
+      `<div class="results-empty"><div class="icon">!</div>Enter valid positive inputs and click Calculate.</div>`;
+    document.getElementById("results-tag").textContent = "INVALID INPUT";
+    return;
+  }
+
+  try {
+    const r = compute({ h2Ktpa, Lkm, Pout_g, Pin_g_user, autoPin, T_C, Vt, Hyr, SMYS, F, CA, K_minor });
+    renderResults(r);
+  } catch (e) {
+    document.getElementById("results-body").innerHTML =
+      `<div class="results-empty"><div class="icon">!</div>Calculation error: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+function compute({ h2Ktpa, Lkm, Pout_g, Pin_g_user, autoPin, T_C, Vt, Hyr, SMYS, F, CA, K_minor }) {
+  const T_K       = T_C + 273.15;
+  const L_m       = Lkm * 1000;
+  const mdot      = (h2Ktpa * 1e6) / (Hyr * 3600);
+  const Pout_abs  = Pout_g + PATM;
+
+  // Estimate avg pressure for initial density
+  const Pin_g_est   = autoPin ? Pout_g + 0.5 : Pin_g_user;
+  const Pin_abs_est = Pin_g_est + PATM;
+  const Pavg_est    = (Pin_abs_est + Pout_abs) / 2;
+  const rho_est     = calcRho(Pavg_est, T_K);
+
+  const D_req_mm = Math.sqrt(4 * mdot / (Math.PI * rho_est * Vt)) * 1000;
+  const MAOP_bar = Math.max(Pin_abs_est, Pout_abs);
+  const sel      = selectPipe(D_req_mm, MAOP_bar, SMYS, F, CA);
+  const D_sel    = sel.id_mm / 1000;
+
+  const Pin_g_final   = autoPin ? derivePin(mdot, D_sel, L_m, Pout_g, T_K, K_minor) : Pin_g_user;
+  const Pin_abs_final = Pin_g_final + PATM;
+
+  const dw = calcDW(mdot, D_sel, L_m, Pin_abs_final, Pout_abs, T_K, K_minor);
+  const wy = calcWeymouth(mdot, D_sel, L_m, Pin_abs_final, Pout_abs, T_K, dw.Z, dw.f, K_minor, 0.77);
+
+  const dP_avail     = Pin_g_final - Pout_g;
+  const dP_excess_dw = dP_avail - dw.dP;
+  const dP_ratio_dw  = (dw.dP / ((Pin_g_final + Pout_g) / 2 + PATM)) * 100;
+  const dP_ratio_wy  = (wy.dP / ((Pin_g_final + Pout_g) / 2 + PATM)) * 100;
+  const dw_valid     = dP_ratio_dw < 10;
+
+  const MAOP_wt_bar = Pin_abs_final;
+  const MAOP_wt_Pa  = MAOP_wt_bar * 1e5;
+  const denom_wt    = 2 * (SMYS * 1e6 * E_JT * F - MAOP_wt_Pa * Y_COEF);
+  const t_hoop      = denom_wt > 0 ? (MAOP_wt_Pa * (sel.od / 1000)) / denom_wt * 1000 : 0;
+  const t_total     = t_hoop + CA;
+
+  const sonic = Math.sqrt(GAMMA * R_SP * T_K);
+  const mach  = dw.V / sonic;
+  const T_R   = T_K * 1.8;
+  const Ve    = 100 / Math.sqrt(29 * G_H2 * (Pout_abs * 14.5038) / (dw.Z * 1545 * T_R));
+
+  const velStatus = dw.V > 30 ? "exceeds-alert" : dw.V > 20 ? "elevated" : dw.V < 5 ? "below-min" : "in-range";
+  const wallOK    = sel.t >= t_total;
+
+  return {
+    h2Ktpa, Lkm, Pout_g, T_C, Vt, Hyr, SMYS, F, CA, autoPin, K_minor,
+    mdot, T_K, D_req_mm, sel, D_sel,
+    Pin_g_final, Pin_abs_final, dP_avail, dP_excess_dw,
+    dw, dP_ratio_dw, dw_valid, wy, dP_ratio_wy,
+    t_hoop, t_total, MAOP_wt_bar, wallOK,
+    sonic, mach, Ve, velStatus,
+    Z_warn: dw.Pavg > 50,
+  };
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+const fmt = (n, d = 2) => Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+const fi  = n => Math.round(n).toLocaleString();
+
+function renderResults(r) {
+  document.getElementById("results-tag").textContent = currentMode.toUpperCase() + " RESULT";
+
+  // Verdict
+  let vc, vi, vt, vb;
+  if (!r.wallOK || r.velStatus === "exceeds-alert") {
+    vc = "danger"; vi = "✕";
+    if (!r.wallOK && r.velStatus === "exceeds-alert") {
+      vt = "Velocity exceeds 30 m/s and wall thickness is insufficient";
+      vb = `NPS ${r.sel.nps}" Sch ${r.sel.s}: ${fmt(r.dw.V,2)} m/s and wall ${fmt(r.sel.t,2)} mm < required ${fmt(r.t_total,2)} mm. Upsize pipe or reduce pressure.`;
+    } else if (!r.wallOK) {
+      vt = "Wall thickness of selected schedule is insufficient";
+      vb = `Sch ${r.sel.s} wall ${fmt(r.sel.t,2)} mm < required ${fmt(r.t_total,2)} mm (t_hoop ${fmt(r.t_hoop,2)} + CA ${fmt(r.CA,1)} mm). Increase schedule or reduce MAOP.`;
+    } else {
+      vt = "Velocity exceeds 30 m/s — pipe is undersized for this flow";
+      vb = `NPS ${r.sel.nps}" Sch ${r.sel.s} gives ${fmt(r.dw.V,2)} m/s. Lower the velocity target or select a larger NPS.`;
+    }
+  } else if (r.velStatus === "elevated" || r.velStatus === "below-min") {
+    vc = "warn"; vi = "!";
+    if (r.velStatus === "elevated") {
+      vt = `Velocity elevated at ${fmt(r.dw.V,2)} m/s — above AIGA 033/15 guideline of 20 m/s`;
+      vb = `NPS ${r.sel.nps}" Sch ${r.sel.s}. Noise and erosion risk increase above 20 m/s. Consider increasing NPS or reducing velocity target.`;
+    } else {
+      vt = `Velocity ${fmt(r.dw.V,2)} m/s is below the 5 m/s minimum — pipe may be oversized`;
+      vb = `Debris carry and slug risk increase below 5 m/s. Reduce velocity target or select a smaller NPS.`;
+    }
+  } else {
+    vc = "ok"; vi = "✓";
+    vt = `NPS ${r.sel.nps}" Schedule ${r.sel.s} recommended`;
+    vb = `Velocity ${fmt(r.dw.V,2)} m/s within 5–20 m/s range. Wall thickness adequate. ${r.autoPin ? `Required inlet pressure: ${fmt(r.Pin_g_final,2)} barg (auto-derived).` : `Pressure balance: ${r.dP_excess_dw >= 0 ? `+${fmt(r.dP_excess_dw,3)} bar excess.` : `${fmt(r.dP_excess_dw,3)} bar deficit.`}`}`;
+  }
+
+  const velColor = r.velStatus === "in-range" ? "var(--ok)" : r.velStatus === "exceeds-alert" ? "var(--danger)" : "var(--warn)";
+
+  let html = `
+    <div class="verdict-banner ${vc}">
+      <div class="verdict-icon">${vi}</div>
+      <div class="verdict-text"><strong>${vt}</strong><span>${vb}</span></div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="label">Mass Flow</div>
+        <div class="value">${fmt(r.mdot,3)}<small> kg/s</small></div>
+        <div class="sub">${fmt(r.h2Ktpa,1)} ktpa ÷ ${fi(r.Hyr)} h/yr</div>
+      </div>
+      <div class="stat">
+        <div class="label">Actual Velocity</div>
+        <div class="value" style="color:${velColor}">${fmt(r.dw.V,2)}<small> m/s</small></div>
+        <div class="sub">target ${fmt(r.Vt,0)} m/s · guidance 5–20 m/s</div>
+      </div>
+      <div class="stat">
+        <div class="label">Recommended Size</div>
+        <div class="value">${r.sel.nps}"<small> NPS</small></div>
+        <div class="sub">Schedule ${r.sel.s} · ID ${fmt(r.sel.id_mm,1)} mm</div>
+      </div>
+      <div class="stat">
+        <div class="label">ΔP (D–W total)</div>
+        <div class="value">${fmt(r.dw.dP,3)}<small> bar</small></div>
+        <div class="sub">${r.autoPin ? `inlet ${fmt(r.Pin_g_final,2)} barg (auto)` : `avail ${fmt(r.dP_avail,3)} bar`}</div>
+      </div>
+    </div>
+
+    <div class="velocity-gauge">
+      <div class="section-title" style="padding:0 0 8px;">Velocity Range Check — AIGA 033/15</div>
+      ${buildGauge(r.dw.V)}
+      <div class="gauge-legend">
+        <span><span class="legend-swatch" style="background:repeating-linear-gradient(45deg,#f0f1f3,#f0f1f3 3px,#e7e9ec 3px,#e7e9ec 6px)"></span>Below 5 m/s — debris risk</span>
+        <span><span class="legend-swatch" style="background:var(--accent-soft)"></span>5–20 m/s — recommended</span>
+        <span><span class="legend-swatch" style="background:repeating-linear-gradient(45deg,#fdf3df,#fdf3df 3px,#f5e8c4 3px,#f5e8c4 6px)"></span>20–30 m/s — elevated</span>
+        <span><span class="legend-swatch" style="background:repeating-linear-gradient(45deg,#fbeceb,#fbeceb 3px,#f6dcda 3px,#f6dcda 6px)"></span>&gt;30 m/s — exceeds limit</span>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <h3>Pressure balance — ${r.autoPin ? "auto-derived inlet" : "user-specified inlet"}</h3>
+      <div class="info-fact-row">
+        <div class="info-fact">Inlet (${r.autoPin ? "derived" : "user"})<br><b>${fmt(r.Pin_g_final,2)} barg</b></div>
+        <div class="info-fact">Outlet<br><b>${fmt(r.Pout_g,1)} barg</b></div>
+        <div class="info-fact">ΔP friction<br><b>${fmt(r.dw.dP_friction,4)} bar</b></div>
+        ${r.K_minor > 0 ? `<div class="info-fact">ΔP minor (ΣK=${fmt(r.K_minor,2)})<br><b>${fmt(r.dw.dP_minor,4)} bar</b></div>` : ''}
+        ${!r.autoPin ? `<div class="info-fact">Balance<br><b style="color:${r.dP_excess_dw >= 0 ? 'var(--ok)' : 'var(--danger)'}">${r.dP_excess_dw >= 0 ? '+' : ''}${fmt(r.dP_excess_dw,3)} bar</b></div>` : ''}
+      </div>
+      <p>${r.autoPin
+        ? `Inlet ${fmt(r.Pin_g_final,2)} barg derived iteratively from D–W ΔP (${fmt(r.dw.dP,4)} bar). This is the minimum required inlet pressure to maintain ${fmt(r.Pout_g,1)} barg at the outlet.`
+        : `User-specified inlet ${fmt(r.Pin_g_final,2)} barg. Available ΔP ${fmt(r.dP_avail,3)} bar; D–W requires ${fmt(r.dw.dP,4)} bar — ${r.dP_excess_dw >= 0 ? `${fmt(r.dP_excess_dw,4)} bar excess (OK).` : `${fmt(Math.abs(r.dP_excess_dw),4)} bar deficit — outlet pressure not achieved.`}`}
+      </p>
+    </div>
+
+    ${buildAdvisory(r)}
+
+    <div class="section-title">Alternative Sizes (±2 NPS from recommended, same schedule)</div>
+    ${buildAltTable(r)}
+
+    ${currentMode === "detailed" ? buildDetailBlock(r) : ""}
+
+    ${buildAssumptions(r)}`;
+
+  document.getElementById("results-body").innerHTML = html;
+}
+
+function buildGauge(V) {
+  const gaugeMax = Math.max(40, V * 1.2);
+  const pct = v => Math.min(100, (v / gaugeMax) * 100);
+  const p5 = pct(5), p20 = pct(20), p30 = pct(30), pV = pct(V);
+  return `<div class="gauge-track">
+    <div class="gauge-zone low"   style="left:0;width:${p5}%"></div>
+    <div class="gauge-zone good"  style="left:${p5}%;width:${p20-p5}%"></div>
+    <div class="gauge-zone high"  style="left:${p20}%;width:${p30-p20}%"></div>
+    <div class="gauge-zone alert" style="left:${p30}%;width:${100-p30}%"></div>
+    <div class="gauge-marker actual" style="left:${pV}%"><span class="marker-label">${fmt(V,2)} m/s</span></div>
+  </div>
+  <div class="gauge-labels"><span>0</span><span>5 m/s</span><span>20 m/s</span><span>30 m/s</span><span>${gaugeMax.toFixed(0)} m/s</span></div>`;
+}
+
+function buildAdvisory(r) {
+  if (r.SMYS >= 480) {
+    return `<div class="advisory danger"><h3>Material warning — X70 not recommended for H₂ service without full qualification</h3><ul>
+      <li>ASME B31.12 Table A-1 requires deration of X70 to 359 MPa effective SMYS — equivalent to X52 performance at higher cost and HE risk.</li>
+      <li>Hardness ≤ 22 HRC across base metal and welds is difficult to achieve consistently in X70.</li>
+      <li><strong>Recommendation:</strong> switch to X52 unless a full B31.12 material qualification programme is in place.</li>
+    </ul></div>`;
+  }
+  if (r.velStatus === "exceeds-alert") {
+    return `<div class="advisory danger"><h3>Velocity exceeds 30 m/s</h3><ul>
+      <li>At ${fmt(r.dw.V,2)} m/s the pipe is significantly undersized. Erosion, noise, and transient risk are elevated.</li>
+      <li>Lower the velocity target (try 10–15 m/s) or accept a larger NPS recommendation.</li>
+    </ul></div>`;
+  }
+  if (!r.autoPin && r.dP_excess_dw < 0) {
+    return `<div class="advisory danger"><h3>Pressure deficit — outlet pressure not maintained</h3><ul>
+      <li>Available ΔP (${fmt(r.dP_avail,3)} bar) is less than the D–W requirement (${fmt(r.dw.dP,4)} bar) by ${fmt(Math.abs(r.dP_excess_dw),4)} bar.</li>
+      <li>Increase inlet pressure, reduce pipeline length, upsize the pipe, or reduce throughput.</li>
+    </ul></div>`;
+  }
+  if (r.velStatus === "elevated") {
+    return `<div class="advisory warn"><h3>Velocity above 20 m/s AIGA 033/15 guidance</h3><ul>
+      <li>At ${fmt(r.dw.V,2)} m/s noise and erosion risk are elevated. Review with project basis before accepting.</li>
+      <li>Reduce velocity target to move the recommendation to a larger NPS.</li>
+    </ul></div>`;
+  }
+  if (r.velStatus === "below-min") {
+    return `<div class="advisory warn"><h3>Velocity below 5 m/s minimum</h3><ul>
+      <li>At ${fmt(r.dw.V,2)} m/s the line may be oversized — debris carry and slug risk increase below 5 m/s.</li>
+      <li>Increase the velocity target to select a smaller, more economical pipe.</li>
+    </ul></div>`;
+  }
+  if (r.SMYS >= 415) {
+    return `<div class="advisory warn"><h3>X60 — conditional use under ASME B31.12</h3><ul>
+      <li>X60 requires hardness ≤ 22 HRC in all zones, controlled heat input, and possible PWHT. See material assessment below.</li>
+      <li>If X52 gives the same NPS and schedule at this MAOP, it is the lower-risk selection.</li>
+    </ul></div>`;
+  }
+  return `<div class="advisory ok"><h3>No flagged issues</h3><ul>
+    <li>Velocity, pressure balance, wall thickness, and material grade checks all pass for the recommended size.</li>
+  </ul></div>`;
+}
+
+function buildAltTable(r) {
+  const npsList = PIPE_TABLE.map(p => p.nps);
+  const recIdx  = npsList.indexOf(r.sel.nps);
+  const indices = new Set();
+  for (let i = Math.max(0, recIdx - 2); i <= Math.min(npsList.length - 1, recIdx + 2); i++) indices.add(i);
+
+  const MAOP_Pa = r.MAOP_wt_bar * 1e5;
+  const rows = [...indices].map(idx => {
+    const p   = PIPE_TABLE[idx];
+    const sch = p.sch.find(s => s.s === r.sel.s) || p.sch[0];
+    const id_m = (p.od - 2 * sch.t) / 1000;
+    const A    = Math.PI * (id_m / 2) ** 2;
+    const V    = r.mdot / (r.dw.rho * A);
+    const d2   = 2 * (r.SMYS * 1e6 * E_JT * r.F - MAOP_Pa * Y_COEF);
+    const t_h  = d2 > 0 ? (MAOP_Pa * (p.od / 1000)) / d2 * 1000 : 0;
+    const wOK  = sch.t >= t_h + r.CA;
+    const isRec = p.nps === r.sel.nps && sch.s === r.sel.s;
+    const vLabel = V > 30 ? "Exceeds 30 m/s" : V > 20 ? "Elevated (>20)" : V < 5 ? "Below 5 m/s" : "In range";
+    const vColor = V > 30 ? "var(--danger)" : (V > 20 || V < 5) ? "var(--warn)" : "var(--ok)";
+    return `<tr class="${isRec ? "highlight" : ""}">
+      <td>${p.nps}"${isRec ? " — recommended" : ""}</td>
+      <td>Sch ${sch.s}</td>
+      <td class="num">${fmt(p.od,1)}</td>
+      <td class="num">${fmt(id_m*1000,1)}</td>
+      <td class="num" style="color:${vColor};font-weight:600">${fmt(V,2)}</td>
+      <td style="color:${vColor};font-weight:600">${vLabel}</td>
+      <td style="color:${wOK ? "var(--ok)" : "var(--danger)"};font-weight:600">${wOK ? "OK" : "Insufficient"}</td>
+    </tr>`;
+  });
+
+  return `<table class="specs">
+    <thead><tr><th>NPS</th><th>Schedule</th><th>OD (mm)</th><th>ID (mm)</th><th>Velocity (m/s)</th><th>Vel. status</th><th>Wall t</th></tr></thead>
+    <tbody>${rows.join("")}</tbody>
+  </table>`;
+}
+
+function buildDetailBlock(r) {
+  return `
+    <div class="section-title">Pressure Drop — Darcy–Weisbach vs Weymouth</div>
+    <div class="detail-block">
+      <div class="formula-strip">D–W: ΔP = f·(L/D)·(ρv²/2) + ΣK·(ρv²/2)　|　Weymouth: P₁²= P₂²+ C·Qb²·G·T·Z·L_eff / D^(16/3)</div>
+      <div class="two-col">
+        <div class="sub-panel">
+          <h4>Darcy–Weisbach</h4>
+          <table class="specs">
+            <tbody>
+              <tr><td>Avg density</td><td class="num">${fmt(r.dw.rho,4)} kg/m³</td></tr>
+              <tr><td>Reynolds number</td><td class="num">${fi(r.dw.Re)} (${r.dw.Re < 2300 ? "Laminar" : r.dw.Re < 4000 ? "Transitional" : "Turbulent"})</td></tr>
+              <tr><td>Darcy f</td><td class="num">${fmt(r.dw.f,5)}</td></tr>
+              <tr><td>ΔP friction</td><td class="num">${fmt(r.dw.dP_friction,4)} bar</td></tr>
+              ${r.K_minor > 0 ? `<tr><td>ΔP minor (ΣK=${fmt(r.K_minor,3)})</td><td class="num">${fmt(r.dw.dP_minor,4)} bar</td></tr>` : ""}
+              <tr class="highlight"><td>ΔP total</td><td class="num">${fmt(r.dw.dP,4)} bar</td></tr>
+              <tr><td>ΔP / P_avg</td><td class="num">${fmt(r.dP_ratio_dw,2)}% — ${r.dw_valid ? "✓ D–W valid" : "⚠ use Weymouth"}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sub-panel">
+          <h4>Weymouth (Ef = 77%)</h4>
+          <table class="specs">
+            <tbody>
+              <tr><td>Z factor (avg)</td><td class="num">${fmt(r.dw.Z,5)}</td></tr>
+              <tr><td>Pipe length</td><td class="num">${fmt(r.Lkm,3)} km</td></tr>
+              ${r.K_minor > 0 ? `<tr><td>Equiv. length (fittings)</td><td class="num">${fmt(r.wy.L_equiv_m/1000,3)} km</td></tr>` : ""}
+              <tr><td>ΔP total</td><td class="num">${fmt(r.wy.dP,4)} bar</td></tr>
+              <tr><td>ΔP / P_avg</td><td class="num">${fmt(r.dP_ratio_wy,2)}% — ${r.dP_ratio_wy < 10 ? "✓ valid" : "⚠ high ratio"}</td></tr>
+              <tr class="highlight"><td>P₁ required</td><td class="num">${fmt(r.wy.P1_req_bar - PATM,4)} barg</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Wall Thickness — ASME B31.12</div>
+    <div class="detail-block">
+      <div class="formula-strip">t_hoop = P·OD / [2·(SMYS·E·F − P·Y)]　|　t_min = t_hoop + CA</div>
+      <div class="two-col">
+        <div class="sub-panel">
+          <h4>Hoop stress</h4>
+          <table class="specs">
+            <tbody>
+              <tr><td>MAOP (inlet)</td><td class="num">${fmt(r.MAOP_wt_bar - PATM,3)} barg</td></tr>
+              <tr><td>SMYS</td><td class="num">${r.SMYS} MPa</td></tr>
+              <tr><td>Design factor F</td><td class="num">${r.F}</td></tr>
+              <tr><td>Joint efficiency E</td><td class="num">1.00 (seamless)</td></tr>
+              <tr><td>Temp coefficient Y</td><td class="num">0.40</td></tr>
+              <tr><td>t_hoop</td><td class="num">${fmt(r.t_hoop,3)} mm</td></tr>
+              <tr><td>Corrosion allowance</td><td class="num">${fmt(r.CA,1)} mm</td></tr>
+              <tr class="highlight"><td>t_min required</td><td class="num">${fmt(r.t_total,3)} mm</td></tr>
+              <tr><td>t_selected (Sch ${r.sel.s})</td>
+                <td class="num" style="color:${r.wallOK ? "var(--ok)" : "var(--danger)"};font-weight:700">
+                  ${fmt(r.sel.t,2)} mm — ${r.wallOK ? "adequate ✓" : "insufficient ✕"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sub-panel">
+          <h4>Velocity limits</h4>
+          <table class="specs">
+            <tbody>
+              <tr><td>Erosional velocity Ve</td><td class="num">${fmt(r.Ve,1)} m/s (${fmt(r.dw.V/r.Ve*100,1)}% utilisation)</td></tr>
+              <tr><td>Sonic velocity</td><td class="num">${fmt(r.sonic,1)} m/s</td></tr>
+              <tr><td>Mach number</td><td class="num">${fmt(r.mach,5)}</td></tr>
+              <tr><td>AIGA 033 ≤ 20 m/s</td>
+                <td class="num" style="color:${r.dw.V <= 20 ? "var(--ok)" : "var(--warn)"}">
+                  ${r.dw.V <= 20 ? "✓ OK" : "⚠ Exceeds guidance"}
+                </td>
+              </tr>
+              <tr><td>50% turndown</td>
+                <td class="num" style="color:${r.dw.V*0.5 >= 5 ? "var(--ok)" : "var(--warn)"}">
+                  ${fmt(r.dw.V*0.5,1)} m/s ${r.dw.V*0.5 >= 5 ? "(≥ 5 m/s ✓)" : "(< 5 m/s ⚠)"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Material Suitability — ASME B31.12 / H₂ Service</div>
+    <div class="detail-block">
+      ${buildMaterialAssessment(r)}
+    </div>`;
+}
+
+function buildMaterialAssessment(r) {
+  const MAOP_g  = r.MAOP_wt_bar - PATM;
+  const MAOP_Pa = r.MAOP_wt_bar * 1e5;
+  const iconMap = { ok: "✓", warn: "⚠", bad: "✕", info: "ℹ" };
+
+  let findings = [];
+  if (r.SMYS >= 480) {
+    findings.push({ level:"bad",  title:"X70 — High H₂ embrittlement risk (ASME B31.12)", body:`X70 (480 MPa) SMYS is derated to 359 MPa effective per B31.12 Table A-1, making it equivalent to X52 at higher cost and risk. Hardness ≤ 22 HRC across all zones is difficult to achieve consistently. X52 is strongly preferred unless a full qualification programme is in place.` });
+  } else if (r.SMYS >= 415) {
+    findings.push({ level:"warn", title:"X60 — Conditional under ASME B31.12", body:`X60 (415 MPa) is permitted but requires hardness ≤ 22 HRC, controlled welding heat input, and may require PWHT. If X52 achieves the same NPS and schedule at MAOP ${fmt(MAOP_g,1)} barg, it remains the lower-risk choice.` });
+  } else if (r.SMYS >= 360) {
+    findings.push({ level:"ok",   title:"X52 — Recommended baseline for H₂ transmission", body:`X52 (360 MPa) is well-established for hydrogen pipelines under ASME B31.12 without SMYS deration up to ~100 bar. Standard hardness limits are readily achievable. Confirm Charpy CVN per B31.12 Appendix B for the operating temperature.` });
+  } else {
+    findings.push({ level:"ok",   title:"X42 — Conservative, fully acceptable for H₂ service", body:`X42 (290 MPa) has the lowest embrittlement susceptibility of all API 5L grades and is fully acceptable under B31.12. At MAOP ${fmt(MAOP_g,1)} barg, verify that the required wall thickness is practical and economical.` });
+  }
+  const findingsHtml = findings.map(f =>
+    `<div class="finding ${f.level}"><div class="finding-title">${iconMap[f.level]}  ${f.title}</div><div class="finding-body">${f.body}</div></div>`
+  ).join("");
+
+  const grades = [
+    { smys:290, name:"X42", label:"Conservative — lowest HE risk" },
+    { smys:360, name:"X52", label:"Recommended baseline for H₂" },
+    { smys:415, name:"X60", label:"Conditional — B31.12 qualification required" },
+    { smys:480, name:"X70", label:"Not recommended without full qualification" },
+  ];
+  const gradeRows = grades.map(g => {
+    const d2   = 2 * (g.smys * 1e6 * E_JT * r.F - MAOP_Pa * Y_COEF);
+    const t_h  = d2 > 0 ? (MAOP_Pa * (r.sel.od / 1000)) / d2 * 1000 : 0;
+    const t_tot = t_h + r.CA;
+    const isSel = g.smys === r.SMYS;
+    const heColor = g.smys >= 480 ? "var(--danger)" : g.smys >= 415 ? "var(--warn)" : "var(--ok)";
+    const heLabel = g.smys >= 480 ? "High — derated by B31.12" : g.smys >= 415 ? "Moderate — qualification req'd" : g.smys >= 360 ? "Low — standard practice" : "Lowest";
+    return `<tr class="${isSel ? "selected-row" : ""}">
+      <td><strong>${g.name}</strong>${isSel ? " ← selected" : ""}<div style="font-size:10px;color:var(--ink-faint)">${g.label}</div></td>
+      <td class="num">${g.smys}</td>
+      <td class="num">${fmt(t_h,2)}</td>
+      <td class="num">${fmt(t_tot,2)}</td>
+      <td style="color:${heColor};font-weight:600;font-size:12px">${heLabel}</td>
+    </tr>`;
+  }).join("");
+
+  return `${findingsHtml}
+    <table class="specs" style="margin-top:12px">
+      <thead><tr><th>Grade</th><th>SMYS (MPa)</th><th>t_hoop (mm)</th><th>t_total incl CA (mm)</th><th>H₂ embrittlement risk</th></tr></thead>
+      <tbody>${gradeRows}</tbody>
+    </table>`;
+}
+
+function buildAssumptions(r) {
+  return `<div class="assumptions">
+    <h3>Assumptions &amp; basis</h3>
+    <ul>
+      <li><b>Flow basis:</b> ${fmt(r.h2Ktpa,1)} ktpa H₂ ÷ ${fi(r.Hyr)} h/yr = ${fmt(r.mdot,4)} kg/s steady-state mass flow.</li>
+      <li><b>Fluid:</b> gaseous H₂, isothermal at ${fmt(r.T_C,0)}°C. Z-factor: Pitzer virial correlation (Tc=33.2 K, Pc=13.0 bar). ${r.Z_warn ? "⚠ avg pressure >50 bar — verify Z with NIST REFPROP." : "Z valid at current pressures."}</li>
+      <li><b>Viscosity:</b> μ = 9×10⁻⁶ Pa·s (H₂ ~20°C, 1 atm).</li>
+      <li><b>Pipe roughness:</b> ε = 0.046 mm (commercial steel, per Moody/Colebrook references).</li>
+      <li><b>Pipe data:</b> ASME B36.10M, NPS 2"–36"; smallest NPS satisfying both ID and wall thickness requirements is selected.</li>
+      <li><b>Wall thickness:</b> ASME B31.12 hoop stress formula; F=${r.F}, E=1.0 (seamless), Y=0.40, CA=${fmt(r.CA,1)} mm. Sizing aid only — not a full B31.12 pressure design.</li>
+      <li><b>Velocity range:</b> 5–20 m/s per AIGA 033/15. Design target: ${fmt(r.Vt,0)} m/s.</li>
+      <li><b>Pressure drop:</b> D–W (Colebrook–White f) primary method. Valid when ΔP/P_avg &lt; 10% (currently ${fmt(r.dP_ratio_dw,2)}%). Weymouth shown in Detailed Study for comparison (Ef=77%, unpigged).</li>
+      <li><b>Minor losses:</b> ${currentMode === "detailed" ? `ΣK = ${fmt(r.K_minor,3)} from fitting inventory; D–W: ΔP_minor = ΣK·ρv²/2; Weymouth: converted to equivalent length.` : "Not applied in Feasibility Study. Switch to Detailed Study to enter fitting counts."}</li>
+      <li><b>Excluded:</b> elevation profile, surge/water-hammer, compressor NPSH, thermal transients, first-fill conditions.</li>
+    </ul>
+  </div>`;
+}
+</script>
+</body>
+</html>
