@@ -467,6 +467,35 @@
   #lbl-cofiring.active { background: #8E0320 !important; color: #fff !important; }
   #lbl-cracker.active  { background: #8E0320 !important; color: #fff !important; }
 
+  /* ── Tariff Converter panel ── */
+  .tariff-result-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .tariff-header {
+    background: linear-gradient(135deg, #1a2e40 0%, #1c2330 100%);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  html.light .tariff-header { background: linear-gradient(135deg, #ddf4ff 0%, #f0f8ff 100%); }
+  .tariff-title { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--info); }
+  html.light .tariff-title { color: #0969da; }
+  .tariff-body { padding: 16px; }
+  .tariff-primary-value {
+    font-size: 36px; font-weight: 700; color: var(--accent2);
+    font-family: var(--mono); letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .tariff-primary-unit { font-size: 16px; color: var(--text2); font-weight: 400; margin-left: 4px; }
+  .tariff-step-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0; }
+  .tariff-step-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  .tariff-step-table tr:last-child td { border-bottom: none; }
+  .tariff-step-table td:first-child { color: var(--text3); width: 45%; font-family: var(--mono); }
+  .tariff-step-table td:last-child { color: var(--accent2); font-family: var(--mono); font-weight: 600; }
+  .tariff-also-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 8px; margin-top: 10px; }
+
   /* ── Light mode ── */
   html.light {
     --bg:        #f0f2f5;
@@ -716,6 +745,78 @@
       </div>
 
       <button class="calc-btn" onclick="calculateCoFiring()">Calculate Co-Firing</button>
+
+      <hr class="hdiv"/>
+      <div class="section-label accent">Fuel Tariff → Electricity Cost</div>
+      <div class="msg msg-info" style="font-size:11px; margin-bottom:10px; line-height:1.6;">
+        Convert a fuel commodity price into the equivalent cost of electricity generation, accounting for turbine efficiency (LHV basis).
+      </div>
+
+      <div class="field">
+        <label>Fuel Tariff Value</label>
+        <input type="number" id="cfTariff" placeholder="e.g. 40" min="0" step="any"/>
+      </div>
+
+      <div class="field">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label>Currency</label>
+            <select id="cfTariffCurrency" onchange="cfTariffOnChange()">
+              <option value="USD">USD</option>
+              <option value="MYR">MYR</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div>
+            <label>Per (denominator)</label>
+            <select id="cfTariffDenom" onchange="cfTariffOnChange()">
+              <option value="MMBtu">MMBtu</option>
+              <option value="MJ">MJ</option>
+              <option value="mmSCF">mmSCF</option>
+              <option value="kg">kg</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="cfTariffFxRow" class="field" style="display:none;">
+        <label id="cfTariffFxLabel">Exchange rate (1 USD = ? local)</label>
+        <input type="number" id="cfTariffFxRate" value="4.40" min="0.0001" step="0.0001"/>
+        <div style="font-size:10px; color:var(--text3); margin-top:3px;">Enter current mid-market rate. E.g. MYR: ~4.40, EUR: ~0.92 per USD.</div>
+      </div>
+
+      <div id="cfTariffFuelRow" class="field" style="display:none;">
+        <label>Fuel (for mass/volume denominator)</label>
+        <select id="cfTariffFuel">
+          <option value="NG" selected>Natural Gas</option>
+          <option value="H2">Hydrogen (H₂)</option>
+          <option value="NH3">Ammonia (NH₃)</option>
+          <option value="MGO">Marine Gas Oil (MGO)</option>
+          <option value="IND_DIESEL">Industrial Diesel</option>
+          <option value="MeOH">Methanol</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label>Output unit</label>
+            <select id="cfTariffOutput">
+              <option value="MWh">USD/MWh</option>
+              <option value="kWh">USD/kWh</option>
+            </select>
+          </div>
+          <div>
+            <label>Plant efficiency η (%)</label>
+            <input type="number" id="cfTariffEff" value="58" min="1" max="100" step="0.1"
+              title="Overall plant LHV efficiency. Auto-filled from blended CCGT η above when values are set."/>
+          </div>
+        </div>
+        <div style="font-size:10px; color:var(--text3); margin-top:3px;">η auto-filled from blended CCGT efficiency above.</div>
+      </div>
+
+      <button class="calc-btn" onclick="calculateTariff()" style="background:#1a4d6b;">⚡ Convert Tariff</button>
+
     </div><!-- /coFiringBlock -->
 
     <!-- ══ AMMONIA CRACKER BLOCK ══ -->
@@ -805,6 +906,7 @@
   <div class="content">
     <div id="resultArea">
       <div class="placeholder">
+
         <div class="placeholder-icon">⚗</div>
         <div class="placeholder-text">
           Select fuel(s), enter a value and units, then press Calculate.<br><br>
@@ -812,6 +914,7 @@
         </div>
       </div>
     </div>
+    <div id="tariffResultArea"></div>
   </div>
 
 </div><!-- /main -->
@@ -1084,6 +1187,8 @@ function setMode(m) {
   document.getElementById('crackerBlock').style.display       = m === 'cracker'  ? '' : 'none';
   document.getElementById('standardInputBlock').style.display = isTool           ? 'none' : '';
   document.getElementById('basisSection').style.display       = isTool           ? 'none' : '';
+
+  document.getElementById('tariffResultArea').innerHTML = '';
 
   if (m === 'cofiring') {
     renderPropPanel('');
@@ -1960,6 +2065,214 @@ function calculate() {
 }
 
 // ================================================================
+// TARIFF CONVERTER — show/hide helpers
+// ================================================================
+const FX_DEFAULTS = { USD: 1, MYR: 4.40, EUR: 0.92 };
+
+function cfTariffOnChange() {
+  const currency = document.getElementById('cfTariffCurrency').value;
+  const denom    = document.getElementById('cfTariffDenom').value;
+
+  const fxRow   = document.getElementById('cfTariffFxRow');
+  const fuelRow = document.getElementById('cfTariffFuelRow');
+  const fxLabel = document.getElementById('cfTariffFxLabel');
+
+  if (currency !== 'USD') {
+    fxRow.style.display = '';
+    fxLabel.textContent = `Exchange rate (1 USD = ? ${currency})`;
+    const defaultRate = FX_DEFAULTS[currency] || 1;
+    const currentVal  = parseFloat(document.getElementById('cfTariffFxRate').value);
+    // Only reset if currency just changed (compare to stored last currency)
+    if (state._lastTariffCurrency !== currency) {
+      document.getElementById('cfTariffFxRate').value = defaultRate;
+    }
+  } else {
+    fxRow.style.display = 'none';
+  }
+  state._lastTariffCurrency = currency;
+
+  fuelRow.style.display = (denom === 'kg' || denom === 'mmSCF') ? '' : 'none';
+}
+
+// ================================================================
+// TARIFF CONVERTER — sync η from co-firing blend fields
+// ================================================================
+function cfSyncTariffEff() {
+  const effNG = parseFloat(document.getElementById('cfEffNG').value);
+  const effF  = parseFloat(document.getElementById('cfEffFuel').value);
+  const blend = parseFloat(document.getElementById('cfBlend').value) / 100;
+  if (isNaN(effNG) || isNaN(effF) || isNaN(blend)) return;
+  const blended = effNG + blend * (effF - effNG);
+  document.getElementById('cfTariffEff').value = blended.toFixed(2);
+}
+
+// ================================================================
+// TARIFF CONVERTER — calculate
+// ================================================================
+function calculateTariff() {
+  const tariff   = parseFloat(document.getElementById('cfTariff').value);
+  const currency = document.getElementById('cfTariffCurrency').value;
+  const denom    = document.getElementById('cfTariffDenom').value;
+  const outUnit  = document.getElementById('cfTariffOutput').value;
+  const eff_pct  = parseFloat(document.getElementById('cfTariffEff').value);
+  const fuelKey  = document.getElementById('cfTariffFuel').value;
+
+  const tariffArea = document.getElementById('tariffResultArea');
+
+  function showErr(msg) {
+    tariffArea.innerHTML = `<div class="msg msg-err" style="margin-top:6px;">${msg}</div>`;
+  }
+
+  if (isNaN(tariff) || tariff <= 0) return showErr('Enter a valid positive fuel tariff value.');
+  if (isNaN(eff_pct) || eff_pct <= 0 || eff_pct > 100) return showErr('Plant efficiency must be between 1 and 100%.');
+
+  const eff = eff_pct / 100;
+
+  // ── Step 1: Convert tariff to USD ──────────────────────────────
+  let tariff_USD, fxRate, fxDesc;
+  if (currency === 'USD') {
+    tariff_USD = tariff;
+    fxRate     = 1;
+    fxDesc     = null;
+  } else {
+    fxRate = parseFloat(document.getElementById('cfTariffFxRate').value);
+    if (isNaN(fxRate) || fxRate <= 0) return showErr('Enter a valid exchange rate.');
+    tariff_USD = tariff / fxRate;
+    fxDesc = `${fmt(tariff)} ${currency} ÷ ${fxRate} ${currency}/USD = ${tariff_USD.toFixed(6)} USD`;
+  }
+
+  // ── Step 2: Convert denominator → MJ ──────────────────────────
+  let MJ_per_unit, denomDesc, denomNote = '', fuelNameForDisplay = '';
+  switch (denom) {
+    case 'MMBtu':
+      MJ_per_unit = CONSTANTS.MJ_per_MMBtu;
+      denomDesc   = `1 MMBtu = ${CONSTANTS.MJ_per_MMBtu.toFixed(3)} MJ (ISO 31-4)`;
+      break;
+    case 'MJ':
+      MJ_per_unit = 1.0;
+      denomDesc   = `Denominator is MJ — direct.`;
+      break;
+    case 'kg': {
+      const fuel = FUELS[fuelKey];
+      fuelNameForDisplay = fuel.name;
+      const lhv = fuel.LHV_MJ_kg;
+      if (lhv === null) return showErr(`LHV not defined for ${fuel.name}. Cannot use kg denominator.`);
+      MJ_per_unit = lhv;
+      denomDesc   = `1 kg ${fuel.name} × ${lhv} MJ/kg (LHV) = ${lhv} MJ/kg`;
+      if (fuel.LHV_confidence && fuel.LHV_confidence !== 'ESTABLISHED')
+        denomNote = `LHV for ${fuel.name} is PROVISIONAL — verify with certified data.`;
+      break;
+    }
+    case 'mmSCF': {
+      const fuel = FUELS[fuelKey];
+      fuelNameForDisplay = fuel.name;
+      const lhv     = fuel.LHV_MJ_kg;
+      const density = fuel.density_gas_SCF_kg_Nm3;
+      if (lhv === null)     return showErr(`LHV not defined for ${fuel.name}.`);
+      if (density === null) return showErr(`Gas density (SCF conditions) not defined for ${fuel.name}. Not applicable for liquid-only fuels.`);
+      const kg_per_mmSCF = density * CONSTANTS.m3_per_mmSCF;
+      MJ_per_unit = kg_per_mmSCF * lhv;
+      denomDesc   = `1 mmSCF = ${CONSTANTS.m3_per_mmSCF.toFixed(2)} m³ × ${density} kg/m³ × ${lhv} MJ/kg = ${MJ_per_unit.toFixed(2)} MJ`;
+      if (fuel.LHV_confidence && fuel.LHV_confidence !== 'ESTABLISHED')
+        denomNote = `Density and LHV for ${fuel.name} are PROVISIONAL.`;
+      break;
+    }
+    default: return showErr(`Unknown denominator: ${denom}`);
+  }
+
+  // ── Step 3: USD/MJ fuel cost ───────────────────────────────────
+  const tariff_USD_per_MJ = tariff_USD / MJ_per_unit;
+
+  // ── Step 4: Electricity cost ───────────────────────────────────
+  // Fuel energy per 1 MWh electricity = 3600 MJ / η
+  // Cost per MWh = (3600 / η) × USD/MJ = USD/MJ × 3600 / η
+  const MJ_per_MWh    = 3600;
+  const cost_per_MWh  = tariff_USD_per_MJ * MJ_per_MWh / eff;
+  const cost_per_kWh  = cost_per_MWh / 1000;
+  const primaryCost   = outUnit === 'MWh' ? cost_per_MWh : cost_per_kWh;
+  const primaryLabel  = `USD/${outUnit}`;
+
+  // Also compute the alternate output
+  const altCost  = outUnit === 'MWh' ? cost_per_kWh : cost_per_MWh;
+  const altLabel = outUnit === 'MWh' ? 'USD/kWh' : 'USD/MWh';
+
+  // Fuel energy per MWh at given η
+  const fuel_MJ_per_MWh_e = MJ_per_MWh / eff;
+
+  const denomLabel = fuelNameForDisplay ? `${denom} (${fuelNameForDisplay})` : denom;
+
+  tariffArea.innerHTML = `
+  <div class="tariff-result-panel">
+    <div class="tariff-header">
+      <span class="tariff-title">⚡ Fuel Tariff → Electricity Cost</span>
+      <span style="font-size:11px; color:var(--text3); margin-left:auto;">LHV basis · η = ${eff_pct.toFixed(1)}%</span>
+    </div>
+    <div class="tariff-body">
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:4px;">Electricity generation cost</div>
+        <div>
+          <span class="tariff-primary-value">${cost_per_MWh.toFixed(2)}</span>
+          <span class="tariff-primary-unit">USD/MWh</span>
+        </div>
+        <div style="margin-top:4px;">
+          <span style="font-size:22px; font-weight:700; color:var(--text2); font-family:var(--mono);">${cost_per_kWh.toFixed(4)}</span>
+          <span style="font-size:13px; color:var(--text3); margin-left:3px;">USD/kWh</span>
+        </div>
+        <div style="font-size:12px; color:var(--text3); margin-top:5px;">
+          Input: <strong>${tariff} ${currency}/${denom}</strong>
+          ${fuelNameForDisplay ? `· Fuel: <strong>${fuelNameForDisplay}</strong>` : ''}
+          · η = <strong>${eff_pct.toFixed(1)}%</strong>
+        </div>
+      </div>
+
+      <div class="section-label">Calculation Trace</div>
+      <table class="tariff-step-table">
+        <tbody>
+          ${fxDesc ? `<tr><td>① Currency → USD</td><td>${fxDesc}</td></tr>` : ''}
+          <tr><td>② Denominator → MJ</td><td>${denomDesc}</td></tr>
+          <tr><td>③ Fuel cost (USD/MJ)</td><td>${tariff_USD.toFixed(6)} USD ÷ ${MJ_per_unit.toFixed(4)} MJ = <strong>${tariff_USD_per_MJ.toFixed(6)} USD/MJ</strong></td></tr>
+          <tr><td>④ Fuel energy per MWhe</td><td>3,600 MJ ÷ ${(eff*100).toFixed(1)}% = <strong>${fuel_MJ_per_MWh_e.toFixed(2)} MJ / MWhe</strong></td></tr>
+          <tr><td>⑤ Electricity cost</td><td>${tariff_USD_per_MJ.toFixed(6)} × ${fuel_MJ_per_MWh_e.toFixed(2)} = <strong>${cost_per_MWh.toFixed(4)} USD/MWh</strong></td></tr>
+        </tbody>
+      </table>
+
+      <div class="tariff-also-grid">
+        <div class="result-card">
+          <div class="result-card-label">USD/MWh</div>
+          <div class="result-card-value" style="color:var(--accent2);">${cost_per_MWh.toFixed(2)}</div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">USD/kWh</div>
+          <div class="result-card-value">${cost_per_kWh.toFixed(5)}</div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">Fuel cost (USD/MJ)</div>
+          <div class="result-card-value">${tariff_USD_per_MJ.toFixed(5)}</div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">Fuel/MWhe (MJ)</div>
+          <div class="result-card-value">${fuel_MJ_per_MWh_e.toFixed(1)}</div>
+        </div>
+        ${currency !== 'USD' ? `
+        <div class="result-card">
+          <div class="result-card-label">${currency}/MWh</div>
+          <div class="result-card-value">${(cost_per_MWh * fxRate).toFixed(2)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">at ${fxRate} ${currency}/USD</div>
+        </div>` : ''}
+      </div>
+
+      ${denomNote ? `<div class="msg msg-warn" style="font-size:11px; margin-top:10px;">${denomNote}</div>` : ''}
+
+      <div style="font-size:10px; color:var(--text3); padding-top:8px; border-top:1px solid var(--border); margin-top:12px; line-height:1.7;">
+        <strong>Formula:</strong> Electricity cost (USD/MWh) = [Fuel tariff (${currency}/${denom}) × (USD/1${currency !== 'USD' ? ' ×1/'+fxRate : ''})] ÷ [MJ/${denom}] × 3,600 MJ/MWh ÷ η<br>
+        Energy constants: 1 MWh = 3,600 MJ (exact). 1 MMBtu = 1,055.056 MJ (ISO 31-4). All on LHV basis.
+      </div>
+    </div>
+  </div>`;
+}
+
+// ================================================================
 // THEME TOGGLE
 // ================================================================
 function toggleTheme() {
@@ -2044,6 +2357,7 @@ function cfLiveUpdate() {
     html += `&nbsp; | &nbsp;<strong>${(blend*100).toFixed(0)}% energy</strong> ≈ <strong>${massPct.toFixed(1)} mass%</strong> NH₃ in total fuel`;
   }
   el.innerHTML = html;
+  cfSyncTariffEff();
 }
 
 // ================================================================
