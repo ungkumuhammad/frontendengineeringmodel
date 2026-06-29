@@ -1,0 +1,2571 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Multi-Fuel Energy Equivalency Calculator v2</title>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg2:       #161b22;
+    --bg3:       #1c2330;
+    --bg4:       #111720;
+    --border:    #30363d;
+    --border-hi: #484f58;
+    --text:      #e6edf3;
+    --text2:     #8b949e;
+    --text3:     #6e7681;
+    --accent:    #d29922;
+    --accent2:   #f0b429;
+    --info:      #388bfd;
+    --info-bg:   #1f2d3d;
+    --success:   #3fb950;
+    --success-bg:#162316;
+    --warn:      #e3b341;
+    --warn-bg:   #2d2309;
+    --danger:    #f85149;
+    --danger-bg: #2d1317;
+    --purple:    #c197f5;
+    --purple-bg: #1f1535;
+    --teal:      #39d3c3;
+    --teal-bg:   #0d2421;
+    --mono: 'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
+    --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .header-badge {
+    background: var(--accent);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .header h1 { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .header-sub { font-size: 11px; color: var(--text3); margin-left: auto; white-space: nowrap; }
+
+  /* ── Layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 52px);
+  }
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 18px;
+    overflow-y: auto;
+  }
+  .content {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 9px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-label.accent { color: var(--accent); border-color: rgba(210,153,34,0.4); }
+
+  /* ── Form controls ── */
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 4px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--sans);
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select:focus, input[type="number"]:focus { border-color: var(--accent); }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
+
+  /* ── Radio toggle group ── */
+  .radio-group {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .radio-group label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    background: var(--bg3);
+    border-right: 1px solid var(--border);
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .radio-group label:last-child { border-right: none; }
+  .radio-group label.active { background: var(--accent); color: #000; font-weight: 700; }
+
+  /* ── Basis toggle ── */
+  .inline-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .inline-label-row label { margin: 0; }
+  .basis-toggle { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .basis-toggle button {
+    flex: 1; background: var(--bg3); border: none; color: var(--text2);
+    font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer;
+    border-right: 1px solid var(--border);
+    transition: background 0.12s, color 0.12s;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .basis-toggle button:last-child { border-right: none; }
+  .basis-toggle button.active { background: var(--accent); color: #000; }
+
+  /* ── Cross-fuel row ── */
+  .xfuel-row { display: grid; grid-template-columns: 1fr 20px 1fr; gap: 6px; align-items: center; }
+  .xfuel-arrow { text-align: center; color: var(--accent); font-size: 18px; line-height: 1; }
+
+  /* ── Calculate button ── */
+  .calc-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    color: #000;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 4px;
+  }
+  .calc-btn:hover { background: var(--accent2); }
+  .calc-btn:active { transform: scale(0.98); }
+
+  /* ── Divider ── */
+  .hdiv { border: none; border-top: 1px solid var(--border); margin: 13px 0; }
+
+  /* ── Property panel ── */
+  .prop-panel {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .prop-panel-header {
+    background: var(--bg2);
+    padding: 7px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .prop-panel-title { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 0.07em; text-transform: uppercase; }
+  .prop-panel-fuel  { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .prop-table { width: 100%; border-collapse: collapse; }
+  .prop-table tr { border-bottom: 1px solid var(--border); }
+  .prop-table tr:last-child { border-bottom: none; }
+  .prop-table td { padding: 6px 12px; font-size: 12px; vertical-align: top; }
+  .prop-table td:first-child { color: var(--text2); width: 44%; }
+  .prop-table td:nth-child(2) { color: var(--text); font-family: var(--mono); font-size: 12px; }
+  .prop-table td:last-child { color: var(--text3); font-size: 10px; text-align: right; }
+  .tag-req  { background: var(--danger-bg);  color: var(--danger);  font-size: 10px; font-weight:700; padding:1px 5px; border-radius:3px; }
+  .tag-prov { background: var(--warn-bg);    color: var(--warn);    font-size: 10px; font-weight:700; padding:1px 5px; border-radius:3px; }
+  .tag-ok   { background: var(--success-bg); color: var(--success); font-size: 10px; font-weight:700; padding:1px 5px; border-radius:3px; }
+
+  /* ── Messages ── */
+  .msg { border-radius: 6px; padding: 10px 14px; font-size: 13px; line-height: 1.5; }
+  .msg-info  { background: var(--info-bg);    border-left: 3px solid var(--info);    color: var(--text2); }
+  .msg-warn  { background: var(--warn-bg);    border-left: 3px solid var(--warn);    color: var(--text2); }
+  .msg-err   { background: var(--danger-bg);  border-left: 3px solid var(--danger);  color: var(--text2); }
+  .msg-stoich{ background: var(--purple-bg);  border-left: 3px solid var(--purple);  color: var(--text2); }
+  .msg-energy{ background: var(--teal-bg);    border-left: 3px solid var(--teal);    color: var(--text2); }
+
+  /* ── Balance panel (top of results for cross-fuel) ── */
+  .balance-panel {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-hi);
+  }
+  .balance-header {
+    padding: 9px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .balance-header.stoich  { background: linear-gradient(135deg, #1f1535 0%, #1c2330 100%); }
+  .balance-header.energy  { background: linear-gradient(135deg, #0d2421 0%, #1c2330 100%); }
+  .balance-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .balance-title.stoich { color: var(--purple); }
+  .balance-title.energy { color: var(--teal); }
+  .balance-subtitle { font-size: 11px; color: var(--text3); margin-left: auto; }
+
+  .balance-body { background: var(--bg3); padding: 14px 16px; }
+
+  /* Reaction equation display */
+  .reaction-eq {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    line-height: 1.8;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .reaction-eq .reagent  { color: var(--accent2); font-weight: 600; }
+  .reaction-eq .product  { color: var(--success); font-weight: 600; }
+  .reaction-eq .arrow    { color: var(--text3); }
+  .reaction-eq .heat     { color: var(--danger); }
+  .reaction-eq .ratio    { color: var(--purple); }
+
+  /* Balance table */
+  .balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .balance-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .balance-card.highlight { border-color: var(--accent2); }
+  .balance-card-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+  .balance-card-value { font-size: 16px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .balance-card-unit  { font-size: 11px; color: var(--text2); margin-left: 3px; }
+  .balance-card-note  { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+  /* energy delta row */
+  .energy-delta-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .edel-block {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    text-align: center;
+  }
+  .edel-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+  .edel-value { font-size: 18px; font-weight: 700; font-family: var(--mono); margin-top: 2px; }
+  .edel-value.input-v  { color: var(--accent2); }
+  .edel-value.heat-v   { color: var(--danger); }
+  .edel-value.output-v { color: var(--success); }
+  .edel-op { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text3); font-weight: 300; }
+
+  /* ── Result panel ── */
+  .result-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .result-header {
+    background: var(--bg3);
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .result-header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
+  .result-mode-badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 3px;
+    font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .mode-same  { background: var(--info-bg);    color: var(--info); }
+  .mode-cross { background: var(--purple-bg);  color: var(--purple); }
+  .mode-cross-energy { background: var(--teal-bg); color: var(--teal); }
+  .result-body { padding: 16px; }
+  .result-primary {
+    font-size: 32px; font-weight: 700; color: var(--accent2);
+    font-family: var(--mono); letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .result-unit { font-size: 16px; color: var(--text2); font-weight: 400; margin-left: 4px; }
+  .result-context { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .result-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+  }
+  .result-card-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+  .result-card-value { font-size: 15px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+  .result-card-unit  { font-size: 11px; color: var(--text2); margin-left: 2px; }
+
+  /* ── Trace panel ── */
+  .trace-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .trace-header {
+    background: var(--bg3);
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--text2);
+  }
+  .trace-body { padding: 12px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.9; }
+  .trace-step { display: flex; gap: 8px; align-items: flex-start; }
+  .trace-idx { color: var(--text3); min-width: 22px; user-select: none; }
+  .trace-text { color: var(--text2); }
+  .trace-val  { color: var(--accent2); font-weight: 600; }
+  .trace-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+  .trace-section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text3);
+    margin: 6px 0 2px 0; padding: 2px 6px;
+    background: var(--bg3); border-radius: 3px; display: inline-block;
+  }
+  .footer-note {
+    font-size: 11px; color: var(--text3);
+    padding: 10px 16px; border-top: 1px solid var(--border); line-height: 1.5;
+  }
+  .footer-note strong { color: var(--text2); }
+
+  /* placeholder */
+  .placeholder {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 56px 24px; text-align: center; gap: 8px;
+  }
+  .placeholder-icon { font-size: 40px; color: var(--text3); }
+  .placeholder-text { font-size: 13px; color: var(--text3); max-width: 320px; line-height: 1.5; }
+
+  /* ── Co-Firing ── */
+  .cf-result-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .cf-header {
+    background: linear-gradient(135deg, #0e2618 0%, #1c2330 100%);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .cf-title { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--success); }
+  .cf-body { padding: 16px; }
+  .cf-eff-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .cf-eff-card {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px; text-align: center;
+  }
+  .cf-eff-card.active { border-width: 2px; }
+  .cf-eff-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+  .cf-eff-value { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+  .cf-eff-sub   { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .cf-fuel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .cf-fuel-card {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+  }
+  .cf-fuel-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 4px; }
+  .cf-fuel-value { font-size: 26px; font-weight: 700; font-family: var(--mono); }
+  .cf-fuel-unit  { font-size: 12px; color: var(--text2); margin-left: 3px; }
+  .cf-fuel-sub   { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .cf-compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+  .cf-compare-table th { text-align: left; padding: 6px 8px; color: var(--text3); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+  .cf-compare-table th.num { text-align: right; }
+  .cf-compare-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .cf-compare-table td.num { text-align: right; font-family: var(--mono); }
+  .cf-compare-table tr.selected { background: rgba(210,153,34,0.07); }
+  .cf-compare-table tr:last-child td { border-bottom: none; }
+  .blend-bar-wrap { margin-bottom: 14px; }
+  .blend-bar { height: 22px; border-radius: 6px; overflow: hidden; display: flex; border: 1px solid var(--border); }
+  .blend-bar-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: var(--text3); }
+
+  /* ── Mode button colour overrides ── */
+  #lbl-cofiring.active { background: #8E0320 !important; color: #fff !important; }
+  #lbl-cracker.active  { background: #8E0320 !important; color: #fff !important; }
+
+  /* ── Light mode ── */
+  html.light {
+    --bg:        #f0f2f5;
+    --bg2:       #ffffff;
+    --bg3:       #f6f8fa;
+    --bg4:       #eaeef2;
+    --border:    #d0d7de;
+    --border-hi: #9ea7b3;
+    --text:      #1c2128;
+    --text2:     #424a53;
+    --text3:     #656d76;
+    --accent:    #b07800;
+    --accent2:   #d4961a;
+    --info:      #0969da;
+    --info-bg:   #ddf4ff;
+    --success:   #1a7f37;
+    --success-bg:#dafbe1;
+    --warn:      #9a6700;
+    --warn-bg:   #fff8c5;
+    --danger:    #cf222e;
+    --danger-bg: #ffebe9;
+    --purple:    #8250df;
+    --purple-bg: #fbefff;
+    --teal:      #0d7c6c;
+    --teal-bg:   #d3f8f3;
+  }
+
+  /* ── Theme toggle ── */
+  .theme-toggle {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    font-size: 15px;
+    line-height: 1;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { background: var(--bg4); border-color: var(--border-hi); }
+
+  /* ── Ammonia Cracker result panel ── */
+  .ac-result-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .ac-header {
+    background: linear-gradient(135deg, #051e22 0%, #0c2830 50%, #1c2330 100%);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  html.light .ac-header { background: linear-gradient(135deg, #d3f8f3 0%, #e8f4f6 100%); }
+  .ac-title { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #39d3c3; }
+  html.light .ac-title { color: #0d7c6c; }
+  .ac-body { padding: 16px; }
+  .ac-mode-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 3px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .ac-mode-clean { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal); }
+  .ac-mode-blend { background: var(--info-bg);  color: var(--info);  border: 1px solid var(--info); }
+  .ac-big-card {
+    background: var(--bg3); border-radius: 8px; padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .ac-big-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); }
+  .ac-big-value { font-size: 36px; font-weight: 700; font-family: var(--mono); line-height: 1.1; }
+  .ac-big-unit  { font-size: 16px; color: var(--text2); font-weight: 400; margin-left: 4px; }
+  .ac-big-sub   { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .ac-flow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 8px; margin: 12px 0; }
+  .ac-flow-card {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px;
+  }
+  .ac-flow-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+  .ac-flow-value { font-size: 16px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .ac-flow-unit  { font-size: 11px; color: var(--text2); margin-left: 2px; }
+  .ac-compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0 14px; }
+  .ac-compare-table th { text-align: left; padding: 6px 8px; color: var(--text3); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+  .ac-compare-table th.num { text-align: right; }
+  .ac-compare-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  .ac-compare-table td.num { text-align: right; font-family: var(--mono); }
+  .ac-compare-table tr.active-row { background: rgba(13,124,108,0.08); }
+  .ac-compare-table tr:last-child td { border-bottom: none; }
+  .ac-mass-bar { height: 18px; border-radius: 4px; overflow: hidden; display: flex; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">TCOE</div>
+  <h1>Multi-Fuel Energy & Mass Balance Calculator</h1>
+  <span class="header-sub">Rev 0</span>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">🌙</button>
+</div>
+
+<div class="main">
+
+  <!-- ══ SIDEBAR ══ -->
+  <div class="sidebar">
+
+    <div class="section-label accent">Conversion mode</div>
+    <div class="field">
+      <div class="radio-group" id="modeGroup" style="flex-wrap:wrap;">
+        <label id="lbl-same" class="active" onclick="setMode('same')"><span>Same fuel</span></label>
+        <label id="lbl-cross" onclick="setMode('cross')"><span>Cross-fuel</span></label>
+        <label id="lbl-cofiring" onclick="setMode('cofiring')"><span>Co-Firing</span></label>
+        <label id="lbl-cracker" onclick="setMode('cracker')"><span>NH₃ Cracker</span></label>
+      </div>
+    </div>
+
+    <!-- Cross-fuel sub-mode: stoichiometric vs energy-equivalency -->
+    <div id="crossMethodBlock" style="display:none;">
+      <div class="field">
+        <label>Cross-fuel method</label>
+        <div class="radio-group" id="crossMethodGroup">
+          <label id="lbl-stoich" class="active" onclick="setCrossMethod('stoich')"><span>Stoichiometric</span></label>
+          <label id="lbl-energy-eq" onclick="setCrossMethod('energy_eq')"><span>Energy-equivalent</span></label>
+        </div>
+      </div>
+      <div id="methodHint" class="msg msg-stoich" style="font-size:11px; margin-bottom:10px;"></div>
+    </div>
+
+    <div id="basisSection" class="field">
+      <div class="inline-label-row">
+        <label>Heating value basis</label>
+        <div class="basis-toggle">
+          <button id="btn-lhv" class="active" onclick="setBasis('LHV')">LHV</button>
+          <button id="btn-hhv" onclick="setBasis('HHV')">HHV</button>
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--text3); margin-top:4px;">
+        LHV = net (lower) heating value &nbsp;|&nbsp; HHV = gross (higher) heating value
+      </div>
+    </div>
+
+    <hr class="hdiv"/>
+    <div class="section-label">Fuel selection</div>
+
+    <!-- Same-fuel block -->
+    <div id="sameFuelBlock">
+      <div class="field">
+        <label>Fuel</label>
+        <select id="fuelA" onchange="onFuelChange()">
+          <option value="">— Select fuel —</option>
+          <option value="H2">Hydrogen (H₂)</option>
+          <option value="NH3">Ammonia (NH₃)</option>
+          <option value="NG">Natural Gas</option>
+          <option value="MGO">Diesel – Marine Gas Oil (MGO)</option>
+          <option value="VLSFO">Diesel – VLSFO</option>
+          <option value="IND_DIESEL">Industrial Diesel (EN590)</option>
+          <option value="MeOH">Methanol</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cross-fuel block -->
+    <div id="crossFuelBlock" style="display:none;">
+      <div class="xfuel-row">
+        <div class="field" style="margin:0;">
+          <label>From fuel</label>
+          <select id="fuelFrom" onchange="onFuelChange()">
+            <option value="">— Select —</option>
+            <option value="H2">Hydrogen</option>
+            <option value="NH3">Ammonia</option>
+            <option value="NG">Natural Gas</option>
+            <option value="MGO">MGO</option>
+            <option value="VLSFO">VLSFO</option>
+            <option value="IND_DIESEL">Ind. Diesel</option>
+            <option value="MeOH">Methanol</option>
+          </select>
+        </div>
+        <div class="xfuel-arrow">→</div>
+        <div class="field" style="margin:0;">
+          <label>To fuel</label>
+          <select id="fuelTo" onchange="onFuelChange()">
+            <option value="">— Select —</option>
+            <option value="H2">Hydrogen</option>
+            <option value="NH3">Ammonia</option>
+            <option value="NG">Natural Gas</option>
+            <option value="MGO">MGO</option>
+            <option value="VLSFO">VLSFO</option>
+            <option value="IND_DIESEL">Ind. Diesel</option>
+            <option value="MeOH">Methanol</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CO-FIRING BLOCK ══ -->
+    <div id="coFiringBlock" style="display:none;">
+
+      <div class="field">
+        <label>Co-firing fuel</label>
+        <div class="radio-group" id="coFuelGroup">
+          <label id="lbl-cf-h2" class="active" onclick="setCoFuel('H2')"><span>Hydrogen (H₂)</span></label>
+          <label id="lbl-cf-nh3" onclick="setCoFuel('NH3')"><span>Ammonia (NH₃)</span></label>
+        </div>
+      </div>
+
+      <div class="msg msg-info" style="font-size:11px; margin-bottom:10px;">
+        Efficiencies pre-populated from published industry data (LHV basis). Edit for your specific turbine or project.
+      </div>
+
+      <div class="section-label accent">CCGT Efficiency (LHV basis)</div>
+
+      <div class="field">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label>NG CCGT η (%)</label>
+            <input type="number" id="cfEffNG" value="58" min="20" max="75" step="0.1"
+              title="Modern combined-cycle gas turbine on natural gas. Typical range 55–62% LHV. Source: GE/Siemens/MHI H-class published data; DNV Energy Transition Outlook 2023."/>
+          </div>
+          <div>
+            <label id="cfEffFuelLabel">H₂ CCGT η (%)</label>
+            <input type="number" id="cfEffFuel" value="43" min="20" max="65" step="0.1"
+              title="100% H₂ CCGT. Typical range 40–44% LHV. Source: Mitsubishi Power (2021); IEA Hydrogen (2019); IRENA Green Hydrogen (2022)."/>
+          </div>
+        </div>
+        <div id="cfEffSource" style="font-size:10px; color:var(--text3); margin-top:5px; line-height:1.5;"></div>
+      </div>
+
+      <div class="section-label accent">Plant Parameters</div>
+
+      <div class="field">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label>Output (MWe)</label>
+            <input type="number" id="cfMW" placeholder="e.g. 500" min="0" step="any" oninput="cfLiveUpdate()"/>
+          </div>
+          <div>
+            <label>Capacity Factor (%)</label>
+            <input type="number" id="cfCF" value="85" min="1" max="100" step="1" oninput="cfLiveUpdate()"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label accent">Co-firing Blend (by energy content)</div>
+
+      <div class="field">
+        <label id="cfBlendLabel">H₂ energy blend (%)</label>
+        <input type="number" id="cfBlend" value="20" min="0" max="100" step="1" oninput="cfLiveUpdate()"/>
+        <div id="cfBlendInfo" style="font-size:11px; color:var(--text2); margin-top:5px; padding:6px 8px; background:var(--bg3); border-radius:4px; border:1px solid var(--border); min-height:22px;"></div>
+      </div>
+
+      <button class="calc-btn" onclick="calculateCoFiring()">Calculate Co-Firing</button>
+    </div><!-- /coFiringBlock -->
+
+    <!-- ══ AMMONIA CRACKER BLOCK ══ -->
+    <div id="crackerBlock" style="display:none;">
+
+      <div class="msg msg-info" style="font-size:11px; margin-bottom:10px; line-height:1.6;">
+        Calculates NH₃ feedstock required to meet a H₂ production target.
+        Stoichiometric ratios account for real-world cracker efficiency and product purity requirements.
+      </div>
+
+      <div class="section-label accent">Fuel Mode</div>
+
+      <div class="field">
+        <div class="radio-group" id="crackerModeGroup">
+          <label id="lbl-ac-clean" class="active" onclick="setCrackerMode('clean')"><span>Clean Fuel</span></label>
+          <label id="lbl-ac-blend" onclick="setCrackerMode('blend')"><span>NG Blend Fuel</span></label>
+        </div>
+      </div>
+
+      <div id="crackerModeInfo" style="font-size:11px; color:var(--text2); margin-bottom:12px; padding:8px 10px; background:var(--bg3); border-radius:5px; border:1px solid var(--border); line-height:1.7;"></div>
+
+      <div class="section-label accent">NH₃ : H₂ Stoichiometric Ratio</div>
+
+      <div class="field">
+        <label id="crackerRatioLabel">NH₃ required per kg H₂ (kg/kg)</label>
+        <input type="number" id="crackerRatio" value="7.2" min="5" max="15" step="0.01"
+          title="Practical stoichiometric ratio of NH₃ feed to H₂ product. Clean Fuel default 7.2; NG Blend default 6.5. Edit to match your specific cracker design."/>
+        <div id="crackerRatioNote" style="font-size:10px; color:var(--text3); margin-top:4px; line-height:1.5;"></div>
+      </div>
+
+      <div class="section-label accent">H₂ Demand</div>
+
+      <div class="field">
+        <label>H₂ Production Target (KTPA)</label>
+        <input type="number" id="crackerH2KTPA" placeholder="e.g. 50" min="0" step="any" oninput="crackerLiveUpdate()"/>
+        <div style="font-size:11px; color:var(--text3); margin-top:3px;">KTPA = kilo-tonnes per annum = 1,000 t/yr</div>
+      </div>
+
+      <button class="calc-btn" onclick="calculateCracker()" style="background:#095c6b;">Calculate NH₃ Cracker</button>
+    </div><!-- /crackerBlock -->
+
+    <div id="standardInputBlock">
+    <hr class="hdiv"/>
+    <div class="section-label">Input value</div>
+
+    <div class="field">
+      <label>Amount</label>
+      <input type="number" id="inputVal" placeholder="e.g. 1000" min="0" step="any"/>
+    </div>
+    <div class="field">
+      <label>Input unit</label>
+      <select id="inputUnit" onchange="onFuelChange()">
+        <option value="">— Select unit —</option>
+        <option value="kg">kg (mass)</option>
+        <option value="t">t — metric tonne (mass)</option>
+        <option value="m3_liq">m³ (liquid volume)</option>
+        <option value="MJ">MJ (energy)</option>
+        <option value="kWh">kWh (energy)</option>
+        <option value="MMBtu">MMBtu (energy)</option>
+        <option value="Nm3">Nm³ (gas vol @ 0 °C, 101.325 kPa)</option>
+        <option value="mmSCF">mmSCF (gas vol @ 15 °C, 101.325 kPa)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Output unit</label>
+      <select id="outputUnit" onchange="onFuelChange()">
+        <option value="">— Select unit —</option>
+        <option value="kg">kg</option>
+        <option value="t">t (metric tonne)</option>
+        <option value="m3_liq">m³ (liquid volume)</option>
+        <option value="MJ">MJ</option>
+        <option value="kWh">kWh</option>
+        <option value="MMBtu">MMBtu</option>
+        <option value="Nm3">Nm³</option>
+        <option value="mmSCF">mmSCF</option>
+      </select>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">Calculate</button>
+    </div><!-- /standardInputBlock -->
+
+    <div id="propPanel"></div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ══ CONTENT ══ -->
+  <div class="content">
+    <div id="resultArea">
+      <div class="placeholder">
+        <div class="placeholder-icon">⚗</div>
+        <div class="placeholder-text">
+          Select fuel(s), enter a value and units, then press Calculate.<br><br>
+          For cross-fuel conversion: choose <strong>Stoichiometric</strong> to convert via chemical reaction (e.g. H₂ → NH₃ via Haber-Bosch) or <strong>Energy-equivalent</strong> to match energy content only.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ================================================================
+// FUEL PROPERTIES DATABASE
+// All values documented with source, basis, and confidence tag.
+// null = property not defined or requires project-specific input.
+// Do NOT access these properties directly in conversion logic —
+// always use FUELS[key] and null-guard explicitly.
+// ================================================================
+const FUELS = {
+
+  H2: {
+    name: "Hydrogen (H₂)",
+    formula: "H₂",
+    phase: "gas",
+    molar_mass_g_mol: 2.016,          // IUPAC
+    density_liquid_kg_m3: 70.8,
+    density_liquid_source: "NIST Webbook / Perry's; liquid H₂ at NBP (-253°C, 1 atm)",
+    density_liquid_confidence: "ESTABLISHED",
+    density_gas_kg_Nm3: 0.0899,        // ideal gas, 0°C, 101.325 kPa
+    density_gas_source: "Ideal gas law; M=2.016 g/mol, 0°C, 101.325 kPa",
+    density_gas_confidence: "ESTABLISHED",
+    density_gas_SCF_kg_Nm3: 0.0854,    // 15°C, 101.325 kPa
+    density_gas_SCF_source: "Ideal gas law; 288.15 K, 101.325 kPa",
+    density_gas_SCF_confidence: "ESTABLISHED",
+    LHV_MJ_kg: 120.00,
+    LHV_source: "ISO 13443 / IEA. 120.00 MJ/kg well-established.",
+    LHV_confidence: "ESTABLISHED",
+    HHV_MJ_kg: 141.88,
+    HHV_source: "NIST / IEA. HHV = LHV + latent heat of water condensation.",
+    HHV_confidence: "ESTABLISHED",
+    notes: "Compressed H₂ volume requires P,T from user — not calculated here. Liquid density at NBP only."
+  },
+
+  NH3: {
+    name: "Ammonia (NH₃)",
+    formula: "NH₃",
+    phase: "gas_liq",
+    molar_mass_g_mol: 17.031,         // IUPAC
+    density_liquid_kg_m3: 682.0,
+    density_liquid_source: "Perry's / NIST; liquid NH₃ at NBP (-33.4°C, 1 atm). Pressurised ambient: ~600–610 kg/m³.",
+    density_liquid_confidence: "ESTABLISHED — note temperature-dependency",
+    density_gas_kg_Nm3: 0.7710,
+    density_gas_source: "Ideal gas; M=17.031, 0°C, 101.325 kPa",
+    density_gas_confidence: "ESTABLISHED",
+    density_gas_SCF_kg_Nm3: 0.7305,
+    density_gas_SCF_source: "Ideal gas; 288.15 K, 101.325 kPa",
+    density_gas_SCF_confidence: "ESTABLISHED",
+    LHV_MJ_kg: 18.60,
+    LHV_source: "IEA / IRENA; range 18.6–18.8 MJ/kg. 18.60 used (conservative).",
+    LHV_confidence: "ESTABLISHED — small literature range",
+    HHV_MJ_kg: 22.50,
+    HHV_source: "Perry's / literature; 22.4–22.5 MJ/kg range.",
+    HHV_confidence: "ESTABLISHED",
+    notes: "NH₃ energy density is much lower than H₂ on a mass basis. Cross-fuel stoichiometric path (H₂↔NH₃) uses Haber-Bosch mass ratios."
+  },
+
+  NG: {
+    name: "Natural Gas",
+    formula: "CH₄-dominant (~90 mol%)",
+    phase: "gas",
+    molar_mass_g_mol: null,
+    density_liquid_kg_m3: 422.0,
+    density_liquid_source: "IEA / DNV; LNG at -162°C, 1 atm. Composition-dependent.",
+    density_liquid_confidence: "PROVISIONAL — use project-specific value",
+    density_gas_kg_Nm3: 0.8250,
+    density_gas_source: "Typical pipeline gas; M_avg ≈18.45 g/mol. ±5% composition-dependent.",
+    density_gas_confidence: "PROVISIONAL",
+    density_gas_SCF_kg_Nm3: 0.7818,
+    density_gas_SCF_source: "Derived from Nm³ density at 288.15 K.",
+    density_gas_SCF_confidence: "PROVISIONAL",
+    LHV_MJ_kg: 47.10,
+    LHV_source: "ISO 6976 / IEA; range 46.5–48.5 MJ/kg. 47.1 typical pipeline gas.",
+    LHV_confidence: "PROVISIONAL — use GC analysis if available",
+    HHV_MJ_kg: 52.21,
+    HHV_source: "ISO 6976 / IEA; HHV/LHV ≈ 1.109 for CH₄-dominant gas.",
+    HHV_confidence: "PROVISIONAL",
+    notes: "Composition-dependent. Provide GC analysis for project-specific work."
+  },
+
+  MGO: {
+    name: "Marine Gas Oil (MGO / DMA)",
+    formula: "Complex hydrocarbon",
+    phase: "liquid",
+    molar_mass_g_mol: null,
+    density_liquid_kg_m3: 845.0,
+    density_liquid_source: "ISO 8217:2017 Table 1, grade DMA. Range 820–845 kg/m³ at 15°C.",
+    density_liquid_confidence: "PROVISIONAL — batch-specific; ISO upper bound used",
+    density_gas_kg_Nm3: null,
+    density_gas_source: null,
+    density_gas_SCF_kg_Nm3: null,
+    density_gas_SCF_source: null,
+    LHV_MJ_kg: 42.70,
+    LHV_source: "ISO 8217 / IMO MARPOL; distillate marine fuel range 42.5–43.0 MJ/kg.",
+    LHV_confidence: "PROVISIONAL — use certified test data",
+    HHV_MJ_kg: 45.50,
+    HHV_source: "Estimated; LHV/HHV ratio ~0.938 typical distillate.",
+    HHV_confidence: "PROVISIONAL",
+    notes: "Liquid fuel only. Nm³/mmSCF not applicable."
+  },
+
+  VLSFO: {
+    name: "VLSFO (Very Low Sulphur Fuel Oil)",
+    formula: "Residual/blended hydrocarbon",
+    phase: "liquid",
+    molar_mass_g_mol: null,
+    density_liquid_kg_m3: 991.0,
+    density_liquid_source: "ISO 8217:2017 Table 2, RMD 80. Max. 991 kg/m³. Typical blend: 940–970.",
+    density_liquid_confidence: "PROVISIONAL — batch-specific; upper bound used",
+    density_gas_kg_Nm3: null,
+    density_gas_source: null,
+    density_gas_SCF_kg_Nm3: null,
+    density_gas_SCF_source: null,
+    LHV_MJ_kg: 40.20,
+    LHV_source: "IMO MARPOL default; 40.0–40.5 MJ/kg. IMO MRV default: 40.5 MJ/kg.",
+    LHV_confidence: "PROVISIONAL — use BDN test data",
+    HHV_MJ_kg: 42.50,
+    HHV_source: "Estimated; LHV/HHV ratio ~0.946 residual fuel.",
+    HHV_confidence: "PROVISIONAL",
+    notes: "Properties highly blend/supplier-dependent. Use BDN certified data for fiscal/emissions calcs."
+  },
+
+  IND_DIESEL: {
+    name: "Industrial Diesel (EN 590)",
+    formula: "Complex hydrocarbon (C10–C15)",
+    phase: "liquid",
+    molar_mass_g_mol: null,
+    density_liquid_kg_m3: 835.0,
+    density_liquid_source: "EN 590:2013; 820–845 kg/m³ at 15°C. Midpoint 835 used.",
+    density_liquid_confidence: "PROVISIONAL — batch-specific",
+    density_gas_kg_Nm3: null,
+    density_gas_source: null,
+    density_gas_SCF_kg_Nm3: null,
+    density_gas_SCF_source: null,
+    LHV_MJ_kg: 42.80,
+    LHV_source: "EN ISO 8754 / ECMA; 42.7–43.2 MJ/kg.",
+    LHV_confidence: "PROVISIONAL — use certified test value",
+    HHV_MJ_kg: 45.60,
+    HHV_source: "Estimated from LHV; typical H/C ratio diesel.",
+    HHV_confidence: "PROVISIONAL",
+    notes: "EN 590 specification. For fiscal or emissions use, obtain certified laboratory test data."
+  },
+
+  MeOH: {
+    name: "Methanol (MeOH)",
+    formula: "CH₃OH",
+    phase: "liquid",
+    molar_mass_g_mol: 32.042,         // IUPAC
+    density_liquid_kg_m3: 792.0,
+    density_liquid_source: "NIST / Perry's; methanol at 20°C, 1 atm = 791–792 kg/m³.",
+    density_liquid_confidence: "ESTABLISHED",
+    density_gas_kg_Nm3: null,
+    density_gas_source: null,
+    density_gas_SCF_kg_Nm3: null,
+    density_gas_SCF_source: null,
+    LHV_MJ_kg: 19.93,
+    LHV_source: "NIST / IEA; 19.93 MJ/kg well-established.",
+    LHV_confidence: "ESTABLISHED",
+    HHV_MJ_kg: 22.66,
+    HHV_source: "NIST; HHV = 22.66 MJ/kg.",
+    HHV_confidence: "ESTABLISHED",
+    notes: "Liquid at ambient conditions. ~47% of diesel LHV on mass basis. Nm³/mmSCF not applicable."
+  }
+};
+
+// ================================================================
+// STOICHIOMETRIC PATHWAYS
+//
+// Each entry describes a chemical conversion between two fuel keys.
+// The object is keyed as "FUEL_A::FUEL_B" (canonical order, lower
+// key first alphabetically is arbitrary — we check both directions).
+//
+// ENGINEERING BASIS for H2 ↔ NH3 (Haber-Bosch):
+//   N₂ + 3H₂ → 2NH₃   ΔH_rxn = −91.8 kJ/mol NH₃ (exothermic)
+//   Molar masses: N₂ = 28.014 g/mol, H₂ = 2.016 g/mol, NH₃ = 17.031 g/mol
+//
+//   Mass balance: 3 × 2.016 g H₂ → 2 × 17.031 g NH₃
+//     → 1 kg H₂ → (2×17.031)/(3×2.016) kg NH₃ = 34.062/6.048 = 5.634 kg NH₃
+//
+//   Heat released per kg H₂ converted:
+//     ΔH per mol H₂ = −91.8/3 × 1000 J/g / 2.016 g/mol
+//     = −30.6 kJ/mol H₂ → per kg H₂: −30,600/2.016 × 1000 ≈ −15,179 kJ/kg H₂ = −15.18 MJ/kg H₂
+//
+//   Energy balance per kg H₂ → NH₃:
+//     H₂ LHV input: 120.00 MJ/kg H₂
+//     Heat released to environment: 15.18 MJ/kg H₂
+//     Chemical energy in NH₃ product: 5.634 kg NH₃ × 18.60 MJ/kg = 104.79 MJ
+//     Check: 120.00 − 15.18 ≈ 104.78 MJ  ✓ (within rounding)
+//
+//   REFERENCE: IEA Hydrogen; Smil V. "Enriching the Earth" (2001); NIST-JANAF tables
+//              ΔH°f(NH₃) = -46.11 kJ/mol at 298 K; ΔH_rxn = 2×(-46.11) = -92.22 kJ per 2 mol NH₃
+//              Used: -91.8 kJ/mol NH₃ (rounded from published sources, within ±0.5%)
+//
+// ================================================================
+const STOICH_PATHWAYS = {
+
+  "H2::NH3": {
+    label: "Haber-Bosch synthesis: N₂ + 3H₂ → 2NH₃",
+    reaction_display: "N₂  +  3 H₂  →  2 NH₃   (ΔH = −91.8 kJ/mol NH₃)",
+    source_key: "H2",
+    target_key: "NH3",
+    // kg of target produced per kg of source
+    mass_ratio_target_per_source: (2 * 17.031) / (3 * 2.016),  // = 5.6340 kg NH₃ per kg H₂
+    mass_ratio_source_per_target: (3 * 2.016) / (2 * 17.031),  // = 0.1775 kg H₂ per kg NH₃
+    // Heat released per kg SOURCE (MJ/kg source) — positive = exothermic release
+    // ΔH_rxn = −91.8 kJ/mol NH₃ → per mol H₂ = −30.6 kJ/mol H₂ → per kg H₂
+    heat_released_MJ_per_kg_source: (91.8 / 3) / 2.016,        // = 15.18 MJ/kg H₂
+    // Heat absorbed per kg SOURCE when reversing (NH₃ cracking)
+    heat_absorbed_MJ_per_kg_target: (91.8 / 3) / 2.016 / ((2 * 17.031) / (3 * 2.016)), // = 2.69 MJ/kg NH₃
+    reversible: true,
+    direction_forward_label: "H₂ → NH₃ (synthesis, exothermic)",
+    direction_reverse_label: "NH₃ → H₂ (cracking, endothermic)",
+    reaction_note: "Haber-Bosch: N₂ + 3H₂ → 2NH₃ (ΔH = −91.8 kJ/mol NH₃). Forward reaction releases heat to environment. Reverse (NH₃ cracking) requires energy input equal to reaction enthalpy. N₂ from air is not an energy carrier and is excluded from the mass/energy balance for H₂↔NH₃ fuel conversion purposes.",
+    source_ref: "NIST-JANAF Thermochemical Tables; IEA (2019) Hydrogen; Smil V. (2001). ΔH°f(NH₃)=−46.11 kJ/mol."
+  }
+
+  // ─── Future pathways can be added here ─────────────────────
+  // "H2::MeOH": methanol synthesis from H₂ + CO₂ (needs CO₂ mass input)
+  // "NG::MeOH": steam methane reforming + methanol synthesis
+  // ────────────────────────────────────────────────────────────
+};
+
+// ================================================================
+// UNIT CONVERSION CONSTANTS
+// Only universally defined, exact or internationally standardised
+// constants are included. Do not add fuel-specific values here.
+// ================================================================
+const CONSTANTS = {
+  MJ_per_kWh:   3.6,            // exact: 1 kWh = 3,600,000 J = 3.6 MJ
+  MJ_per_MMBtu: 1055.05585,     // 1 BTU = 1055.05585 J (ISO 31-4 / ASTM E230)
+  kg_per_t:     1000.0,         // exact
+  Nm3_T_K:      273.15,         // 0°C
+  SCF_T_K:      288.15,         // 15°C — ISO 13443
+  P_std_kPa:    101.325,
+  m3_per_SCF:   0.0283168466,   // 1 ft³ = 0.0283168466 m³ (exact)
+  m3_per_mmSCF: 28316.8466      // 28,316.8466 m³ at 15°C / 101.325 kPa
+};
+
+// ================================================================
+// STATE
+// ================================================================
+let state = {
+  mode: 'same',       // 'same' | 'cross'
+  basis: 'LHV',       // 'LHV' | 'HHV'
+  crossMethod: 'stoich'  // 'stoich' | 'energy_eq'
+};
+
+// ================================================================
+// UI HELPERS
+// ================================================================
+const TOOL_MODES = ['same','cross','cofiring','cracker'];
+
+function setMode(m) {
+  state.mode = m;
+  TOOL_MODES.forEach(id => {
+    const el = document.getElementById('lbl-' + (id === 'same' ? 'same' : id === 'cross' ? 'cross' : id === 'cofiring' ? 'cofiring' : 'cracker'));
+    if (el) el.classList.toggle('active', id === m);
+  });
+
+  const isTool   = m === 'cofiring' || m === 'cracker';
+  const isCross  = m === 'cross';
+
+  document.getElementById('sameFuelBlock').style.display      = m === 'same'     ? '' : 'none';
+  document.getElementById('crossFuelBlock').style.display     = isCross          ? '' : 'none';
+  document.getElementById('crossMethodBlock').style.display   = isCross          ? '' : 'none';
+  document.getElementById('coFiringBlock').style.display      = m === 'cofiring' ? '' : 'none';
+  document.getElementById('crackerBlock').style.display       = m === 'cracker'  ? '' : 'none';
+  document.getElementById('standardInputBlock').style.display = isTool           ? 'none' : '';
+  document.getElementById('basisSection').style.display       = isTool           ? 'none' : '';
+
+  if (m === 'cofiring') {
+    renderPropPanel('');
+    cfUpdateEffSource();
+    cfLiveUpdate();
+    document.getElementById('resultArea').innerHTML = `
+      <div class="placeholder">
+        <div class="placeholder-icon">🔥</div>
+        <div class="placeholder-text">
+          Select co-firing fuel, set CCGT efficiencies, enter MW target and blend %, then press <strong>Calculate Co-Firing</strong>.
+        </div>
+      </div>`;
+  } else if (m === 'cracker') {
+    renderPropPanel('');
+    setCrackerMode(state.crackerMode || 'clean');
+    document.getElementById('resultArea').innerHTML = `
+      <div class="placeholder">
+        <div class="placeholder-icon">⚗</div>
+        <div class="placeholder-text">
+          Select Fuel Mode, confirm the stoichiometric ratio, enter your H₂ production target (KTPA), then press <strong>Calculate NH₃ Cracker</strong>.
+        </div>
+      </div>`;
+  } else {
+    onFuelChange();
+  }
+}
+
+function setCrossMethod(method) {
+  state.crossMethod = method;
+  document.getElementById('lbl-stoich').classList.toggle('active', method === 'stoich');
+  document.getElementById('lbl-energy-eq').classList.toggle('active', method === 'energy_eq');
+  updateMethodHint();
+  onFuelChange();
+}
+
+function updateMethodHint() {
+  const hint = document.getElementById('methodHint');
+  const from = document.getElementById('fuelFrom')?.value;
+  const to   = document.getElementById('fuelTo')?.value;
+
+  if (state.crossMethod === 'stoich') {
+    const pathway = findStoichPathway(from, to);
+    if (pathway) {
+      hint.className = 'msg msg-stoich';
+      hint.innerHTML = `<strong>Stoichiometric path available:</strong> ${pathway.label}<br>
+        <span style="font-size:10px; color:var(--text3);">Conversion uses chemical mass ratios. Heat release/absorption is shown explicitly.</span>`;
+    } else if (from && to && from !== to) {
+      hint.className = 'msg msg-warn';
+      hint.innerHTML = `<strong>No stoichiometric pathway defined</strong> for ${FUELS[from]?.name || from} → ${FUELS[to]?.name || to}.<br>
+        <span style="font-size:10px;">Switch to <em>Energy-equivalent</em> mode, or this will fall back to energy equivalency with a warning.</span>`;
+    } else {
+      hint.className = 'msg msg-stoich';
+      hint.innerHTML = `Stoichiometric mode: conversion uses chemical reaction mass ratios and accounts for heat release/absorption. Best for H₂ ↔ NH₃.`;
+    }
+  } else {
+    hint.className = 'msg msg-energy';
+    hint.innerHTML = `<strong>Energy-equivalent mode:</strong> the output quantity has the same energy content (${state.basis}) as the input. No chemical reaction is assumed.`;
+  }
+}
+
+function setBasis(b) {
+  state.basis = b;
+  document.getElementById('btn-lhv').classList.toggle('active', b === 'LHV');
+  document.getElementById('btn-hhv').classList.toggle('active', b === 'HHV');
+  updateMethodHint();
+  onFuelChange();
+}
+
+function onFuelChange() {
+  const fuelKey = state.mode === 'same'
+    ? document.getElementById('fuelA').value
+    : document.getElementById('fuelFrom').value;
+  renderPropPanel(fuelKey);
+  if (state.mode === 'cross') updateMethodHint();
+}
+
+// ================================================================
+// STOICH PATHWAY LOOKUP
+// ================================================================
+function findStoichPathway(fromKey, toKey) {
+  if (!fromKey || !toKey) return null;
+  const k1 = `${fromKey}::${toKey}`;
+  const k2 = `${toKey}::${fromKey}`;
+  if (STOICH_PATHWAYS[k1]) return { ...STOICH_PATHWAYS[k1], reversed: false };
+  if (STOICH_PATHWAYS[k2]) return { ...STOICH_PATHWAYS[k2], reversed: true };
+  return null;
+}
+
+// ================================================================
+// PROPERTY PANEL RENDERER
+// ================================================================
+function renderPropPanel(fuelKey) {
+  const el = document.getElementById('propPanel');
+  if (!fuelKey || !FUELS[fuelKey]) { el.innerHTML = ''; return; }
+  const f = FUELS[fuelKey];
+  const hv = state.basis === 'LHV' ? f.LHV_MJ_kg : f.HHV_MJ_kg;
+  const hv_src  = state.basis === 'LHV' ? f.LHV_source : f.HHV_source;
+  const hv_conf = state.basis === 'LHV' ? f.LHV_confidence : f.HHV_confidence;
+
+  const rows = [
+    { label: 'Formula',            val: f.formula,       src: '',       conf: 'ESTABLISHED' },
+    { label: 'Phase',              val: f.phase,         src: '',       conf: 'ESTABLISHED' },
+    {
+      label: `${state.basis} (MJ/kg)`,
+      val: hv !== null ? hv.toFixed(2) : 'DATA REQUIRED',
+      src: hv_src, conf: hv !== null ? hv_conf : 'MISSING'
+    },
+    {
+      label: `${state.basis} (kWh/kg)`,
+      val: hv !== null ? (hv / CONSTANTS.MJ_per_kWh).toFixed(3) : '—',
+      src: 'Derived: MJ/kg ÷ 3.6', conf: hv !== null ? hv_conf : 'MISSING'
+    },
+    {
+      label: 'Density liq (kg/m³)',
+      val: f.density_liquid_kg_m3 !== null ? f.density_liquid_kg_m3.toFixed(1) : 'N/A',
+      src: f.density_liquid_source || '',
+      conf: f.density_liquid_confidence || (f.density_liquid_kg_m3 !== null ? 'ESTABLISHED' : 'N/A')
+    },
+    {
+      label: 'Density Nm³ (kg/Nm³)',
+      val: f.density_gas_kg_Nm3 !== null ? f.density_gas_kg_Nm3.toFixed(4) : 'N/A',
+      src: f.density_gas_source || '', conf: f.density_gas_confidence || 'N/A'
+    },
+    {
+      label: 'Density SCF (kg/m³)',
+      val: f.density_gas_SCF_kg_Nm3 !== null ? f.density_gas_SCF_kg_Nm3.toFixed(4) : 'N/A',
+      src: f.density_gas_SCF_source || '', conf: f.density_gas_SCF_confidence || 'N/A'
+    }
+  ];
+
+  function confBadge(c) {
+    if (!c || c === 'N/A') return '';
+    if (c === 'ESTABLISHED')  return '<span class="tag-ok">OK</span>';
+    if (c === 'MISSING')      return '<span class="tag-req">MISSING</span>';
+    return '<span class="tag-prov">PROV</span>';
+  }
+
+  el.innerHTML = `
+    <div class="prop-panel">
+      <div class="prop-panel-header">
+        <span class="prop-panel-title">Active properties</span>
+        <span class="prop-panel-fuel">${f.name}</span>
+      </div>
+      <table class="prop-table">
+        ${rows.map(r => `<tr><td>${r.label}</td><td>${r.val}</td><td>${confBadge(r.conf)}</td></tr>`).join('')}
+      </table>
+      ${f.notes ? `<div class="footer-note" style="padding:8px 12px;"><strong>Note:</strong> ${f.notes}</div>` : ''}
+    </div>`;
+}
+
+// ================================================================
+// FORMAT HELPERS
+// ================================================================
+function fmt(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs === 0) return '0';
+  if (abs >= 1e9) return v.toExponential(4);
+  if (abs >= 1000) return v.toLocaleString('en-US', { maximumFractionDigits: 3 });
+  if (abs >= 1) return parseFloat(v.toPrecision(6)).toString();
+  if (abs >= 0.001) return parseFloat(v.toPrecision(5)).toString();
+  return v.toExponential(4);
+}
+
+function unitLabel(unit) {
+  return { kg:'kg', t:'t', m3_liq:'m³(liq)', MJ:'MJ', kWh:'kWh', MMBtu:'MMBtu', Nm3:'Nm³', mmSCF:'mmSCF' }[unit] || unit;
+}
+
+// ================================================================
+// CONVERSION ENGINE — toMJ
+// Converts inputVal in inputUnit for a given fuel to MJ.
+// Returns { MJ, kg_source, steps[], warnings[], error }
+// ================================================================
+function toMJ(amount, unit, fuelKey) {
+  const f = FUELS[fuelKey];
+  if (!f) return { error: `Unknown fuel: ${fuelKey}` };
+  const hv = state.basis === 'LHV' ? f.LHV_MJ_kg : f.HHV_MJ_kg;
+  const hvLabel = state.basis;
+  const steps = [], warnings = [];
+  let kg_source = null;
+
+  switch(unit) {
+    case 'MJ':
+      steps.push({ text: 'Input is already in MJ.', val: `${fmt(amount)} MJ` });
+      // Can't determine kg from MJ alone without HV
+      if (hv !== null) kg_source = amount / hv;
+      return { MJ: amount, kg_source, steps, warnings };
+
+    case 'kWh': {
+      const mj = amount * CONSTANTS.MJ_per_kWh;
+      steps.push({ text: `kWh → MJ: × 3.6 (exact)`, val: `${fmt(amount)} × 3.6 = ${fmt(mj)} MJ` });
+      if (hv !== null) kg_source = mj / hv;
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    case 'MMBtu': {
+      const mj = amount * CONSTANTS.MJ_per_MMBtu;
+      steps.push({ text: `MMBtu → MJ: × 1055.056 (ISO 31-4)`, val: `${fmt(amount)} × 1055.056 = ${fmt(mj)} MJ` });
+      if (hv !== null) kg_source = mj / hv;
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    case 'kg': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}. Cannot convert mass to energy.` };
+      kg_source = amount;
+      const mj = amount * hv;
+      if (f[`${hvLabel}_confidence`] && f[`${hvLabel}_confidence`] !== 'ESTABLISHED')
+        warnings.push(`${hvLabel} for ${f.name} is PROVISIONAL — verify with certified test data.`);
+      steps.push({ text: `Mass → energy: ${fmt(amount)} kg × ${hv} MJ/kg (${hvLabel})`, val: `= ${fmt(mj)} MJ` });
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    case 't': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      const kg = amount * CONSTANTS.kg_per_t;
+      kg_source = kg;
+      const mj = kg * hv;
+      steps.push({ text: `t → kg: ${fmt(amount)} × 1000 = ${fmt(kg)} kg`, val: '' });
+      steps.push({ text: `Mass → energy: ${fmt(kg)} kg × ${hv} MJ/kg`, val: `= ${fmt(mj)} MJ` });
+      if (f[`${hvLabel}_confidence`] && f[`${hvLabel}_confidence`] !== 'ESTABLISHED')
+        warnings.push(`${hvLabel} for ${f.name} is PROVISIONAL.`);
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    case 'm3_liq': {
+      if (f.density_liquid_kg_m3 === null) return { error: `Liquid density not defined for ${f.name}.` };
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      const kg = amount * f.density_liquid_kg_m3;
+      kg_source = kg;
+      const mj = kg * hv;
+      if (f.phase === 'gas') warnings.push(`${f.name} is a gas at standard conditions. Liquid volume applies only to cryogenic/pressurised storage.`);
+      steps.push({ text: `Liquid vol → mass: ${fmt(amount)} m³ × ${f.density_liquid_kg_m3} kg/m³`, val: `= ${fmt(kg)} kg` });
+      steps.push({ text: `Mass → energy: ${fmt(kg)} kg × ${hv} MJ/kg`, val: `= ${fmt(mj)} MJ` });
+      if (f.density_liquid_confidence && f.density_liquid_confidence !== 'ESTABLISHED')
+        warnings.push(`Liquid density for ${f.name} is PROVISIONAL: ${f.density_liquid_source}`);
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    case 'Nm3': {
+      if (f.density_gas_kg_Nm3 === null) return { error: `Gas density at Nm³ conditions not defined for ${f.name}. Not applicable for liquid-only fuels.` };
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      const kg = amount * f.density_gas_kg_Nm3;
+      kg_source = kg;
+      const mj = kg * hv;
+      steps.push({ text: `Nm³ → kg: ${fmt(amount)} × ${f.density_gas_kg_Nm3} kg/Nm³ (0°C, 101.325 kPa)`, val: `= ${fmt(kg)} kg` });
+      steps.push({ text: `Mass → energy: ${fmt(kg)} kg × ${hv} MJ/kg`, val: `= ${fmt(mj)} MJ` });
+      if (f.density_gas_confidence && f.density_gas_confidence !== 'ESTABLISHED')
+        warnings.push(`Gas density for ${f.name} is PROVISIONAL.`);
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    case 'mmSCF': {
+      if (f.density_gas_SCF_kg_Nm3 === null) return { error: `Gas density at SCF conditions not defined for ${f.name}. Not applicable for liquid-only fuels.` };
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      const m3 = amount * CONSTANTS.m3_per_mmSCF;
+      const kg  = m3 * f.density_gas_SCF_kg_Nm3;
+      kg_source = kg;
+      const mj = kg * hv;
+      steps.push({ text: `mmSCF → m³: ${fmt(amount)} × 28,316.85 m³/mmSCF`, val: `= ${fmt(m3)} m³ (15°C, 101.325 kPa)` });
+      steps.push({ text: `m³ → kg: ${fmt(m3)} × ${f.density_gas_SCF_kg_Nm3} kg/m³`, val: `= ${fmt(kg)} kg` });
+      steps.push({ text: `Mass → energy: ${fmt(kg)} kg × ${hv} MJ/kg`, val: `= ${fmt(mj)} MJ` });
+      return { MJ: mj, kg_source, steps, warnings };
+    }
+
+    default: return { error: `Unknown input unit: ${unit}` };
+  }
+}
+
+// ================================================================
+// CONVERSION ENGINE — fromMJ
+// Converts MJ to outputUnit for a given fuel.
+// Returns { value, kg_target, steps[], warnings[], error }
+// ================================================================
+function fromMJ(MJ, unit, fuelKey) {
+  const f = FUELS[fuelKey];
+  if (!f) return { error: `Unknown fuel: ${fuelKey}` };
+  const hv = state.basis === 'LHV' ? f.LHV_MJ_kg : f.HHV_MJ_kg;
+  const hvLabel = state.basis;
+  const steps = [], warnings = [];
+  let kg_target = null;
+
+  switch(unit) {
+    case 'MJ':
+      steps.push({ text: 'Output is MJ — direct.', val: `${fmt(MJ)} MJ` });
+      if (hv !== null) kg_target = MJ / hv;
+      return { value: MJ, kg_target, steps, warnings };
+
+    case 'kWh': {
+      const v = MJ / CONSTANTS.MJ_per_kWh;
+      steps.push({ text: `MJ → kWh: ÷ 3.6 (exact)`, val: `${fmt(MJ)} ÷ 3.6 = ${fmt(v)} kWh` });
+      if (hv !== null) kg_target = MJ / hv;
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    case 'MMBtu': {
+      const v = MJ / CONSTANTS.MJ_per_MMBtu;
+      steps.push({ text: `MJ → MMBtu: ÷ 1055.056 (ISO 31-4)`, val: `${fmt(MJ)} ÷ 1055.056 = ${fmt(v)} MMBtu` });
+      if (hv !== null) kg_target = MJ / hv;
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    case 'kg': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      const v = MJ / hv;
+      kg_target = v;
+      steps.push({ text: `Energy → mass: ${fmt(MJ)} MJ ÷ ${hv} MJ/kg (${hvLabel})`, val: `= ${fmt(v)} kg` });
+      if (f[`${hvLabel}_confidence`] && f[`${hvLabel}_confidence`] !== 'ESTABLISHED')
+        warnings.push(`${hvLabel} for ${f.name} is PROVISIONAL.`);
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    case 't': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      const kg = MJ / hv;
+      kg_target = kg;
+      const v = kg / CONSTANTS.kg_per_t;
+      steps.push({ text: `Energy → mass: ${fmt(MJ)} ÷ ${hv} = ${fmt(kg)} kg`, val: '' });
+      steps.push({ text: `kg → t: ÷ 1000`, val: `= ${fmt(v)} t` });
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    case 'm3_liq': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      if (f.density_liquid_kg_m3 === null) return { error: `Liquid density not defined for ${f.name}.` };
+      if (f.phase === 'gas') warnings.push(`${f.name} is a gas at standard conditions. Liquid volume applies to cryogenic/pressurised liquid storage only.`);
+      const kg = MJ / hv;
+      kg_target = kg;
+      const v = kg / f.density_liquid_kg_m3;
+      steps.push({ text: `Energy → mass: ${fmt(MJ)} ÷ ${hv} = ${fmt(kg)} kg`, val: '' });
+      steps.push({ text: `kg → m³(liq): ÷ ${f.density_liquid_kg_m3} kg/m³`, val: `= ${fmt(v)} m³` });
+      if (f.density_liquid_confidence && f.density_liquid_confidence !== 'ESTABLISHED')
+        warnings.push(`Liquid density for ${f.name} is PROVISIONAL.`);
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    case 'Nm3': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      if (f.density_gas_kg_Nm3 === null) return { error: `Gas density (Nm³) not defined for ${f.name}. Not applicable for liquid-only fuels.` };
+      const kg = MJ / hv;
+      kg_target = kg;
+      const v = kg / f.density_gas_kg_Nm3;
+      steps.push({ text: `Energy → mass: ${fmt(MJ)} ÷ ${hv} = ${fmt(kg)} kg`, val: '' });
+      steps.push({ text: `kg → Nm³: ÷ ${f.density_gas_kg_Nm3} kg/Nm³ (0°C, 101.325 kPa)`, val: `= ${fmt(v)} Nm³` });
+      if (f.density_gas_confidence && f.density_gas_confidence !== 'ESTABLISHED')
+        warnings.push(`Gas density for ${f.name} is PROVISIONAL.`);
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    case 'mmSCF': {
+      if (hv === null) return { error: `${hvLabel} not defined for ${f.name}.` };
+      if (f.density_gas_SCF_kg_Nm3 === null) return { error: `Gas density (SCF) not defined for ${f.name}. Not applicable for liquid-only fuels.` };
+      const kg = MJ / hv;
+      kg_target = kg;
+      const m3 = kg / f.density_gas_SCF_kg_Nm3;
+      const v  = m3 / CONSTANTS.m3_per_mmSCF;
+      steps.push({ text: `Energy → mass: ${fmt(MJ)} ÷ ${hv} = ${fmt(kg)} kg`, val: '' });
+      steps.push({ text: `kg → m³ (15°C): ÷ ${f.density_gas_SCF_kg_Nm3}`, val: `= ${fmt(m3)} m³` });
+      steps.push({ text: `m³ → mmSCF: ÷ 28,316.85`, val: `= ${fmt(v)} mmSCF` });
+      return { value: v, kg_target, steps, warnings };
+    }
+
+    default: return { error: `Unknown output unit: ${unit}` };
+  }
+}
+
+// ================================================================
+// STOICHIOMETRIC CONVERSION ENGINE
+// Converts kg of source fuel to kg of target fuel via chemical
+// mass balance, and returns full balance data.
+// Returns { kg_target, heat_MJ, steps[], warnings[], error }
+// ================================================================
+function stoichConvert(kg_source, fromKey, toKey, MJ_input) {
+  const pathway = findStoichPathway(fromKey, toKey);
+  if (!pathway) return { error: `No stoichiometric pathway defined for ${fromKey} → ${toKey}.`, fallback_to_energy: true };
+
+  const steps = [], warnings = [];
+  let kg_target, heat_MJ, direction_label;
+
+  // Determine if we are going forward or reverse
+  if (!pathway.reversed) {
+    // Forward: source → target (e.g. H2 → NH3)
+    kg_target = kg_source * pathway.mass_ratio_target_per_source;
+    heat_MJ   = kg_source * pathway.heat_released_MJ_per_kg_source; // positive = released
+    direction_label = pathway.direction_forward_label;
+
+    steps.push({ text: `Stoichiometric mass ratio (${fromKey}→${toKey}):`, val: `${fmt(pathway.mass_ratio_target_per_source)} kg ${toKey} per kg ${fromKey}` });
+    steps.push({ text: `Target mass: ${fmt(kg_source)} kg × ${fmt(pathway.mass_ratio_target_per_source)}`, val: `= ${fmt(kg_target)} kg ${FUELS[toKey].name}` });
+    steps.push({ text: `Reaction heat released: ${fmt(kg_source)} kg × ${fmt(pathway.heat_released_MJ_per_kg_source)} MJ/kg`, val: `= ${fmt(heat_MJ)} MJ (exothermic, exits system)` });
+  } else {
+    // Reverse: e.g. NH3 → H2 (cracking)
+    // reversed: source=NH3, target=H2
+    // mass_ratio_source_per_target: kg NH3 per kg H2
+    // So kg H2 from kg NH3 = kg_source / mass_ratio_source_per_target
+    kg_target = kg_source * pathway.mass_ratio_source_per_target;
+    // Heat absorbed = endothermic (show as negative in balance = energy consumed)
+    heat_MJ = -(kg_source * pathway.heat_absorbed_MJ_per_kg_target); // negative = absorbed
+    direction_label = pathway.direction_reverse_label;
+
+    steps.push({ text: `Stoichiometric mass ratio (${fromKey}→${toKey}):`, val: `${fmt(pathway.mass_ratio_source_per_target)} kg ${toKey} per kg ${fromKey}` });
+    steps.push({ text: `Target mass: ${fmt(kg_source)} kg × ${fmt(pathway.mass_ratio_source_per_target)}`, val: `= ${fmt(kg_target)} kg ${FUELS[toKey].name}` });
+    steps.push({ text: `Reaction heat absorbed (endothermic): ${fmt(kg_source)} kg × ${fmt(pathway.heat_absorbed_MJ_per_kg_target)} MJ/kg`, val: `= ${fmt(Math.abs(heat_MJ))} MJ (must be supplied)` });
+  }
+
+  return { kg_target, heat_MJ, direction_label, pathway, steps, warnings };
+}
+
+// ================================================================
+// BUILD TARGET CARDS (all equivalent units for a fuel given MJ)
+// ================================================================
+function buildTargetCards(MJ, fuelKey) {
+  const f = FUELS[fuelKey];
+  const hv = state.basis === 'LHV' ? f.LHV_MJ_kg : f.HHV_MJ_kg;
+  const cards = [];
+
+  if (hv !== null) {
+    const kg = MJ / hv;
+    cards.push({ label: 'Mass (kg)', value: fmt(kg) + ' kg', flagged: false });
+    cards.push({ label: 'Mass (t)',  value: fmt(kg / 1000) + ' t', flagged: false });
+  } else {
+    cards.push({ label: 'Mass', value: 'DATA REQUIRED', flagged: true, note: 'HV not defined' });
+  }
+
+  if (f.density_liquid_kg_m3 !== null && hv !== null) {
+    const m3 = (MJ / hv) / f.density_liquid_kg_m3;
+    const prov = f.density_liquid_confidence !== 'ESTABLISHED';
+    cards.push({ label: 'Liquid vol (m³)', value: fmt(m3) + ' m³', flagged: prov, note: prov ? 'Provisional density' : '' });
+  } else if (f.density_liquid_kg_m3 === null) {
+    cards.push({ label: 'Liquid vol', value: 'N/A', note: 'Liquid basis not applicable' });
+  }
+
+  if (f.density_gas_kg_Nm3 !== null && hv !== null) {
+    const nm3 = (MJ / hv) / f.density_gas_kg_Nm3;
+    const prov = f.density_gas_confidence !== 'ESTABLISHED';
+    cards.push({ label: 'Gas vol (Nm³)', value: fmt(nm3) + ' Nm³', flagged: prov, note: prov ? 'Provisional' : '' });
+  }
+
+  if (f.density_gas_SCF_kg_Nm3 !== null && hv !== null) {
+    const kg = MJ / hv;
+    const m3 = kg / f.density_gas_SCF_kg_Nm3;
+    const mmscf = m3 / CONSTANTS.m3_per_mmSCF;
+    cards.push({ label: 'Gas vol (mmSCF)', value: fmt(mmscf) + ' mmSCF', flagged: false });
+  }
+
+  return cards;
+}
+
+// ================================================================
+// BUILD TARGET CARDS FROM KG (for stoichiometric results)
+// ================================================================
+function buildTargetCardsFromKg(kg_target, fuelKey) {
+  const f = FUELS[fuelKey];
+  const hv = state.basis === 'LHV' ? f.LHV_MJ_kg : f.HHV_MJ_kg;
+  const cards = [];
+
+  cards.push({ label: 'Mass (kg)', value: fmt(kg_target) + ' kg', flagged: false });
+  cards.push({ label: 'Mass (t)',  value: fmt(kg_target / 1000) + ' t', flagged: false });
+
+  if (hv !== null) {
+    cards.push({ label: `Energy (${state.basis})`, value: fmt(kg_target * hv) + ' MJ', flagged: false });
+    cards.push({ label: 'Energy (kWh)', value: fmt(kg_target * hv / CONSTANTS.MJ_per_kWh) + ' kWh', flagged: false });
+    cards.push({ label: 'Energy (MMBtu)', value: fmt(kg_target * hv / CONSTANTS.MJ_per_MMBtu) + ' MMBtu', flagged: false });
+  }
+
+  if (f.density_liquid_kg_m3 !== null) {
+    const m3 = kg_target / f.density_liquid_kg_m3;
+    const prov = f.density_liquid_confidence !== 'ESTABLISHED';
+    cards.push({ label: 'Liquid vol (m³)', value: fmt(m3) + ' m³', flagged: prov, note: prov ? 'Provisional density' : '' });
+  }
+
+  if (f.density_gas_kg_Nm3 !== null) {
+    const nm3 = kg_target / f.density_gas_kg_Nm3;
+    const prov = f.density_gas_confidence !== 'ESTABLISHED';
+    cards.push({ label: 'Gas vol (Nm³)', value: fmt(nm3) + ' Nm³', flagged: prov });
+  }
+
+  if (f.density_gas_SCF_kg_Nm3 !== null) {
+    const m3 = kg_target / f.density_gas_SCF_kg_Nm3;
+    const mmscf = m3 / CONSTANTS.m3_per_mmSCF;
+    cards.push({ label: 'Gas vol (mmSCF)', value: fmt(mmscf) + ' mmSCF', flagged: false });
+  }
+
+  return cards;
+}
+
+// ================================================================
+// RENDER BALANCE PANEL (shown at top of results for cross-fuel)
+// ================================================================
+function renderBalancePanel(mode, data) {
+  if (mode === 'stoich') {
+    const { kg_source, kg_target, heat_MJ, sf, tf, fromKey, toKey, pathway, inputVal, inputUnit } = data;
+    const hv_src = state.basis === 'LHV' ? sf.LHV_MJ_kg : sf.HHV_MJ_kg;
+    const hv_tgt = state.basis === 'LHV' ? tf.LHV_MJ_kg : tf.HHV_MJ_kg;
+
+    const energy_in      = hv_src !== null ? kg_source * hv_src : null;
+    const energy_product = hv_tgt !== null ? kg_target * hv_tgt : null;
+    const isExothermic   = heat_MJ >= 0;
+
+    // Build reaction equation HTML
+    const eq_label = pathway.reversed ? pathway.direction_reverse_label : pathway.direction_forward_label;
+
+    return `
+    <div class="balance-panel">
+      <div class="balance-header stoich">
+        <span class="balance-title stoich">⚗ Mass Balance &amp; Energy Balance — Stoichiometric</span>
+        <span class="balance-subtitle">${eq_label}</span>
+      </div>
+      <div class="balance-body">
+
+        <div class="reaction-eq">
+<span class="ratio">${pathway.reaction_display}</span>
+
+<span style="color:var(--text3);">─────────────────────────────────────────────────────</span>
+Mass ratio:  <span class="reagent">1 kg ${fromKey}</span>  →  <span class="product">${fmt(pathway.reversed ? pathway.mass_ratio_source_per_target : pathway.mass_ratio_target_per_source)} kg ${toKey}</span>  +  <span class="heat">${isExothermic ? fmt(Math.abs(heat_MJ/kg_source)) + ' MJ heat released' : fmt(Math.abs(heat_MJ/kg_source)) + ' MJ heat required'}</span> per kg ${fromKey}
+</div>
+
+        <div style="margin-bottom:6px; font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.07em;">Mass balance — per ${fmt(inputVal)} ${unitLabel(inputUnit)} of ${sf.name}</div>
+        <div class="balance-grid">
+          <div class="balance-card highlight">
+            <div class="balance-card-label">Input mass (source)</div>
+            <div class="balance-card-value">${fmt(kg_source)}<span class="balance-card-unit">kg ${sf.formula}</span></div>
+            <div class="balance-card-note">${sf.name}</div>
+          </div>
+          <div class="balance-card highlight">
+            <div class="balance-card-label">Output mass (product)</div>
+            <div class="balance-card-value">${fmt(kg_target)}<span class="balance-card-unit">kg ${tf.formula}</span></div>
+            <div class="balance-card-note">${tf.name}</div>
+          </div>
+          <div class="balance-card">
+            <div class="balance-card-label">Mass ratio</div>
+            <div class="balance-card-value">${fmt(kg_target/kg_source)}<span class="balance-card-unit">kg ${toKey}/kg ${fromKey}</span></div>
+            <div class="balance-card-note">Stoichiometric</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px; margin-bottom:6px; font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.07em;">Energy balance</div>
+        <div class="energy-delta-row">
+          <div class="edel-block">
+            <div class="edel-label">Chemical energy in (${state.basis})</div>
+            <div class="edel-value input-v">${energy_in !== null ? fmt(energy_in) : '—'}</div>
+            <div style="font-size:10px; color:var(--text3);">MJ · ${sf.name}</div>
+          </div>
+          <div class="edel-op">${isExothermic ? '−' : '+'}</div>
+          <div class="edel-block">
+            <div class="edel-label">${isExothermic ? 'Heat released' : 'Heat required'}</div>
+            <div class="edel-value heat-v">${fmt(Math.abs(heat_MJ))}</div>
+            <div style="font-size:10px; color:var(--text3);">MJ · ${isExothermic ? 'exits to environment' : 'must be supplied'}</div>
+          </div>
+          <div class="edel-op">=</div>
+          <div class="edel-block">
+            <div class="edel-label">Chemical energy in product (${state.basis})</div>
+            <div class="edel-value output-v">${energy_product !== null ? fmt(energy_product) : '—'}</div>
+            <div style="font-size:10px; color:var(--text3);">MJ · ${tf.name}</div>
+          </div>
+        </div>
+
+        ${energy_in !== null && energy_product !== null ? `
+        <div style="margin-top:10px; font-size:11px; color:var(--text3);">
+          <strong style="color:var(--text2);">Energy efficiency (chemical only):</strong>
+          ${fmt(energy_product/energy_in*100)}% of source energy content retained in product.
+          ${isExothermic ? `The remaining ${fmt(Math.abs(heat_MJ)/energy_in*100)}% is released as reaction heat — <em>not</em> lost, but not retained in the fuel product.` : `An additional ${fmt(Math.abs(heat_MJ)/energy_in*100)}% of energy must be supplied as heat.`}
+        </div>` : ''}
+
+        <div style="margin-top:10px; font-size:11px; color:var(--text3); padding-top:8px; border-top:1px solid var(--border);">
+          <strong style="color:var(--warn);">⚠ Engineering note:</strong> ${pathway.reaction_note}<br>
+          <strong>Reference:</strong> ${pathway.source_ref}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Energy-equivalent balance panel
+  if (mode === 'energy_eq') {
+    const { MJ_bridge, sf, tf, kg_source, kg_target, inputVal, inputUnit } = data;
+    const hv_src = state.basis === 'LHV' ? sf.LHV_MJ_kg : sf.HHV_MJ_kg;
+    const hv_tgt = state.basis === 'LHV' ? tf.LHV_MJ_kg : tf.HHV_MJ_kg;
+
+    return `
+    <div class="balance-panel">
+      <div class="balance-header energy">
+        <span class="balance-title energy">⚡ Energy Balance — Energy-Equivalent Mode</span>
+        <span class="balance-subtitle">${sf.name} → ${tf.name}</span>
+      </div>
+      <div class="balance-body">
+        <div class="msg msg-energy" style="margin-bottom:12px; font-size:12px;">
+          <strong>Energy-equivalent basis:</strong> the output quantity of ${tf.name} contains the same ${state.basis} energy as the input quantity of ${sf.name}.
+          No chemical reaction is assumed. No heat release or absorption is modelled. This mode is appropriate for <em>comparing fuels by energy content</em>, not for modelling a chemical conversion process.
+        </div>
+
+        <div class="energy-delta-row">
+          <div class="edel-block">
+            <div class="edel-label">Input</div>
+            <div class="edel-value input-v">${fmt(inputVal)}</div>
+            <div style="font-size:10px; color:var(--text3);">${unitLabel(inputUnit)} · ${sf.name}</div>
+          </div>
+          <div class="edel-op">→</div>
+          <div class="edel-block">
+            <div class="edel-label">Energy bridge (${state.basis})</div>
+            <div class="edel-value" style="color:var(--info);">${fmt(MJ_bridge)}</div>
+            <div style="font-size:10px; color:var(--text3);">MJ</div>
+          </div>
+          <div class="edel-op">→</div>
+          <div class="edel-block">
+            <div class="edel-label">Equiv. mass (${tf.name})</div>
+            <div class="edel-value output-v">${kg_target !== null ? fmt(kg_target) : '—'}</div>
+            <div style="font-size:10px; color:var(--text3);">kg · ${tf.name}</div>
+          </div>
+        </div>
+
+        ${kg_source !== null && kg_target !== null ? `
+        <div style="margin-top:10px; font-size:11px; color:var(--text3);">
+          <strong style="color:var(--text2);">Mass ratio (energy-equivalent):</strong>
+          ${fmt(inputVal)} ${unitLabel(inputUnit)} of ${sf.name} ≡ ${fmt(kg_target)} kg of ${tf.name} on ${state.basis} basis.
+          Note: this ratio reflects energy density differences only — not stoichiometry.
+        </div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  return '';
+}
+
+// ================================================================
+// RENDER ERROR
+// ================================================================
+function renderError(msg) {
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-panel">
+      <div class="result-header"><span class="result-header-label">Calculation error</span></div>
+      <div class="result-body">
+        <div class="msg msg-err">${msg}</div>
+        <div class="msg msg-info" style="margin-top:10px; font-size:12px;">
+          Check that the selected input unit is compatible with the chosen fuel, that all required properties are defined, and (for stoichiometric mode) that a pathway exists between the selected fuels.
+        </div>
+      </div>
+    </div>`;
+}
+
+// ================================================================
+// MAIN CALCULATE FUNCTION
+// ================================================================
+function calculate() {
+  const resultArea = document.getElementById('resultArea');
+
+  const inputVal  = parseFloat(document.getElementById('inputVal').value);
+  const inputUnit = document.getElementById('inputUnit').value;
+  const outputUnit= document.getElementById('outputUnit').value;
+
+  if (isNaN(inputVal) || inputVal < 0) {
+    resultArea.innerHTML = `<div class="msg msg-err">Enter a valid non-negative number in the Amount field.</div>`; return;
+  }
+  if (!inputUnit)  { resultArea.innerHTML = `<div class="msg msg-err">Select an input unit.</div>`; return; }
+  if (!outputUnit) { resultArea.innerHTML = `<div class="msg msg-err">Select an output unit.</div>`; return; }
+
+  let fromKey, toKey;
+
+  if (state.mode === 'same') {
+    fromKey = document.getElementById('fuelA').value;
+    toKey   = fromKey;
+    if (!fromKey) { resultArea.innerHTML = `<div class="msg msg-err">Select a fuel.</div>`; return; }
+  } else {
+    fromKey = document.getElementById('fuelFrom').value;
+    toKey   = document.getElementById('fuelTo').value;
+    if (!fromKey || !toKey) { resultArea.innerHTML = `<div class="msg msg-err">Select both source and target fuels.</div>`; return; }
+    if (fromKey === toKey)  { resultArea.innerHTML = `<div class="msg msg-warn">Source and target fuels are identical. Switch to Same-fuel mode or choose different fuels.</div>`; return; }
+  }
+
+  const sf = FUELS[fromKey];
+  const tf = FUELS[toKey];
+
+  // ── Step 1: convert input → MJ and extract kg_source ──────────
+  const inResult = toMJ(inputVal, inputUnit, fromKey);
+  if (inResult.error) { renderError(inResult.error); return; }
+  const MJ_source  = inResult.MJ;
+  const kg_source  = inResult.kg_source;
+
+  let balancePanelHtml = '';
+  let primaryResultHtml = '';
+  let allWarnings = [...(inResult.warnings || [])];
+  let traceSteps  = [...inResult.steps];
+  let primaryValue = null;
+  let primaryUnit  = outputUnit;
+  let kg_target_display = null;
+  let MJ_product   = null;
+
+  // ──────────────────────────────────────────────────────────────
+  // CROSS-FUEL BRANCHING
+  // ──────────────────────────────────────────────────────────────
+  if (state.mode === 'cross') {
+
+    if (state.crossMethod === 'stoich') {
+      // ── Stoichiometric path ──────────────────────────────────
+      if (kg_source === null) {
+        renderError(`Stoichiometric conversion requires a mass basis. Input unit "${unitLabel(inputUnit)}" could not be converted to kg for ${sf.name}. Use kg or t as input unit, or switch to Energy-equivalent mode.`);
+        return;
+      }
+
+      const stoichResult = stoichConvert(kg_source, fromKey, toKey, MJ_source);
+
+      if (stoichResult.error && stoichResult.fallback_to_energy) {
+        // No pathway defined — warn and fall back to energy equivalency
+        allWarnings.push(`No stoichiometric pathway defined for ${sf.name} → ${tf.name}. Falling back to energy-equivalent conversion. Review result carefully.`);
+        // fall through to energy_eq below
+        state._tempFallback = true;
+      } else if (stoichResult.error) {
+        renderError(stoichResult.error); return;
+      } else {
+        state._tempFallback = false;
+        const { kg_target, heat_MJ, pathway } = stoichResult;
+        kg_target_display = kg_target;
+        allWarnings.push(...stoichResult.warnings);
+
+        // Balance panel
+        balancePanelHtml = renderBalancePanel('stoich', {
+          kg_source, kg_target, heat_MJ, sf, tf, fromKey, toKey, pathway, inputVal, inputUnit
+        });
+
+        // Now convert kg_target → outputUnit using target fuel
+        const hv_tgt = state.basis === 'LHV' ? tf.LHV_MJ_kg : tf.HHV_MJ_kg;
+        MJ_product = hv_tgt !== null ? kg_target * hv_tgt : null;
+
+        // Build output from kg_target
+        traceSteps.push({ divider: true });
+        traceSteps.push({ section: 'STOICHIOMETRIC MASS BALANCE' });
+        traceSteps.push(...stoichResult.steps);
+        traceSteps.push({ divider: true });
+
+        // Convert kg_target → outputUnit
+        if (MJ_product !== null) {
+          const outResult = fromMJ(MJ_product, outputUnit, toKey);
+          if (outResult.error) { renderError(outResult.error); return; }
+          primaryValue = outResult.value;
+          allWarnings.push(...(outResult.warnings || []));
+          traceSteps.push({ section: 'OUTPUT UNIT CONVERSION' });
+          traceSteps.push(...outResult.steps);
+        } else {
+          // Try direct kg conversion if output is mass-based
+          if (outputUnit === 'kg') primaryValue = kg_target;
+          else if (outputUnit === 't') primaryValue = kg_target / 1000;
+          else if (outputUnit === 'm3_liq' && tf.density_liquid_kg_m3 !== null)
+            primaryValue = kg_target / tf.density_liquid_kg_m3;
+          else if (outputUnit === 'Nm3' && tf.density_gas_kg_Nm3 !== null)
+            primaryValue = kg_target / tf.density_gas_kg_Nm3;
+          else if (outputUnit === 'mmSCF' && tf.density_gas_SCF_kg_Nm3 !== null)
+            primaryValue = (kg_target / tf.density_gas_SCF_kg_Nm3) / CONSTANTS.m3_per_mmSCF;
+          else {
+            allWarnings.push(`Cannot convert to ${unitLabel(outputUnit)} for ${tf.name} without heating value data. Showing mass (kg) instead.`);
+            primaryValue = kg_target;
+            primaryUnit  = 'kg';
+          }
+          traceSteps.push({ text: `Direct mass → ${unitLabel(outputUnit)} for ${tf.name}`, val: fmt(primaryValue) });
+        }
+      }
+    }
+
+    // Stoich fallback or energy_eq mode
+    if (state.crossMethod === 'energy_eq' || state._tempFallback) {
+      const outResult = fromMJ(MJ_source, outputUnit, toKey);
+      if (outResult.error) { renderError(outResult.error); return; }
+      primaryValue = outResult.value;
+      kg_target_display = outResult.kg_target;
+      allWarnings.push(...(outResult.warnings || []));
+
+      balancePanelHtml = renderBalancePanel('energy_eq', {
+        MJ_bridge: MJ_source, sf, tf, kg_source, kg_target: outResult.kg_target, inputVal, inputUnit
+      });
+
+      traceSteps.push({ divider: true });
+      traceSteps.push({ section: 'ENERGY BRIDGE' });
+      traceSteps.push({ text: `Energy bridge: ${fmt(MJ_source)} MJ (${state.basis}) transferred to ${tf.name}`, val: '' });
+      traceSteps.push({ divider: true });
+      traceSteps.push({ section: 'OUTPUT UNIT CONVERSION' });
+      traceSteps.push(...outResult.steps);
+    }
+
+  } else {
+    // ── Same-fuel mode: direct toMJ → fromMJ ─────────────────
+    const outResult = fromMJ(MJ_source, outputUnit, toKey);
+    if (outResult.error) { renderError(outResult.error); return; }
+    primaryValue = outResult.value;
+    allWarnings.push(...(outResult.warnings || []));
+    traceSteps.push({ divider: true });
+    traceSteps.push(...outResult.steps);
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // BUILD RESULT HTML
+  // ──────────────────────────────────────────────────────────────
+  const modeBadge = state.mode === 'same'
+    ? `<span class="result-mode-badge mode-same">Same fuel</span>`
+    : (state.crossMethod === 'stoich' && !state._tempFallback)
+      ? `<span class="result-mode-badge mode-cross">Stoichiometric</span>`
+      : `<span class="result-mode-badge mode-cross-energy">Energy-equivalent</span>`;
+
+  const warnHtml = allWarnings.map(w =>
+    `<div class="msg msg-warn" style="font-size:12px; margin-top:6px;">${w}</div>`).join('');
+
+  // Energy equivalents (source side)
+  const energyCardsHtml = `
+    <div class="result-grid">
+      <div class="result-card"><div class="result-card-label">Source energy (MJ)</div><div class="result-card-value">${fmt(MJ_source)}<span class="result-card-unit">MJ</span></div></div>
+      <div class="result-card"><div class="result-card-label">Source energy (kWh)</div><div class="result-card-value">${fmt(MJ_source/CONSTANTS.MJ_per_kWh)}<span class="result-card-unit">kWh</span></div></div>
+      <div class="result-card"><div class="result-card-label">Source energy (MMBtu)</div><div class="result-card-value">${fmt(MJ_source/CONSTANTS.MJ_per_MMBtu)}<span class="result-card-unit">MMBtu</span></div></div>
+    </div>`;
+
+  // Target fuel equivalents
+  let targetCardsHtml = '';
+  const targetCards = (state.mode === 'cross' && state.crossMethod === 'stoich' && !state._tempFallback && kg_target_display !== null)
+    ? buildTargetCardsFromKg(kg_target_display, toKey)
+    : (MJ_product !== null ? buildTargetCards(MJ_product, toKey) : buildTargetCards(MJ_source, toKey));
+
+  targetCardsHtml = `
+    <div class="result-grid">
+      ${targetCards.map(c => `
+        <div class="result-card" ${c.flagged ? 'style="border-color:var(--warn);"' : ''}>
+          <div class="result-card-label">${c.label}</div>
+          <div class="result-card-value" ${c.flagged ? 'style="color:var(--warn);"' : ''}>${c.value}</div>
+          ${c.note ? `<div style="font-size:10px;color:var(--warn);margin-top:2px;">${c.note}</div>` : ''}
+        </div>`).join('')}
+    </div>`;
+
+  // Build trace HTML
+  let stepCounter = 0;
+  const traceHtml = traceSteps.map(s => {
+    if (s.divider) return `<hr class="trace-divider"/>`;
+    if (s.section) return `<div class="trace-section-label">${s.section}</div>`;
+    stepCounter++;
+    return `<div class="trace-step">
+      <span class="trace-idx">${String(stepCounter).padStart(2,'0')}</span>
+      <span class="trace-text">${s.text} <span class="trace-val">${s.val || ''}</span></span>
+    </div>`;
+  }).join('');
+
+  resultArea.innerHTML = `
+    ${balancePanelHtml}
+
+    <div class="result-panel">
+      <div class="result-header">
+        <span class="result-header-label">Primary Result</span>
+        ${modeBadge}
+        <span style="font-size:11px; color:var(--text3); margin-left:auto;">${state.basis} basis</span>
+      </div>
+      <div class="result-body">
+        <div class="result-primary">${fmt(primaryValue)}<span class="result-unit">${unitLabel(primaryUnit)}</span></div>
+        <div class="result-context">
+          ${fmt(inputVal)} ${unitLabel(inputUnit)} of ${sf.name}
+          ${state.mode === 'cross' ? `→ ${tf.name}` : ''}
+        </div>
+        ${warnHtml}
+
+        <div style="margin-top:14px;">
+          <div class="section-label">Source energy content (${state.basis})</div>
+          ${energyCardsHtml}
+        </div>
+
+        <div style="margin-top:14px;">
+          <div class="section-label">${tf.name} — all equivalent units</div>
+          ${targetCardsHtml}
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-panel">
+      <div class="trace-header">Calculation trace — ${state.basis} basis · ${state.mode === 'cross' ? (state.crossMethod === 'stoich' && !state._tempFallback ? 'Stoichiometric' : 'Energy-equivalent') : 'Same-fuel'}</div>
+      <div class="trace-body">${traceHtml}</div>
+      <div class="footer-note">
+        <strong>Basis:</strong> ${state.basis} (${state.basis === 'LHV' ? 'lower / net heating value' : 'higher / gross heating value'}).
+        Energy unit constants: 1 kWh = 3.6 MJ (exact); 1 MMBtu = 1,055.056 MJ (ISO 31-4 / ASTM E230).
+        Standard gas conditions: Nm³ at 0°C, 101.325 kPa; mmSCF at 15°C, 101.325 kPa (ISO 13443).
+        Stoichiometric pathway (H₂↔NH₃): Haber-Bosch; ΔH = −91.8 kJ/mol NH₃; NIST-JANAF / IEA Hydrogen (2019).
+        Provisional values flagged — verify with project-specific certified data before use in contractual or regulatory calculations.
+      </div>
+    </div>
+  `;
+}
+
+// ================================================================
+// THEME TOGGLE
+// ================================================================
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  document.getElementById('themeToggle').textContent = isLight ? '🌙' : '☀️';
+}
+
+// ================================================================
+// CO-FIRING — CCGT EFFICIENCY REFERENCE DATA
+// Sources:
+//   NG CCGT (modern H/F-class):  55–62% LHV  → default 58%
+//     GE Power 7HA.03 / Siemens SGT5-9000HL / MHI M501JAC published specs
+//     DNV Energy Transition Outlook 2023
+//   H₂ CCGT (100% H₂):          40–44% LHV  → default 43%
+//     Mitsubishi Power (2021) "World's first H₂ gas turbine";
+//     IEA Hydrogen (2019); IRENA Green Hydrogen (2022)
+//   NH₃ CCGT (100% NH₃):        35–40% LHV  → default 38%
+//     IHI Corp / JERA (2021) Hekinan co-firing demo;
+//     MHI 100% NH₃ GT development programme;
+//     IRENA Ammonia as Fuel (2022)
+// All values PROVISIONAL/INDICATIVE — verify with OEM for project use.
+// Blended efficiency: linear interpolation on energy-blend fraction.
+//   This is a first-order feasibility approximation; actual curves are
+//   non-linear and combustor-design dependent.
+// ================================================================
+state.coFuel = 'H2';
+
+const CF_EFF_DEFAULTS = {
+  H2:  {
+    eff: 43,
+    src: 'Mitsubishi Power (2021); IEA Hydrogen (2019); IRENA Green Hydrogen (2022). Indicative range 40–44% LHV for 100% H₂ CCGT.'
+  },
+  NH3: {
+    eff: 38,
+    src: 'IHI Corp / JERA (2021); MHI 100% NH₃ GT programme; IRENA Ammonia as Fuel (2022). Indicative range 35–40% LHV for 100% NH₃ CCGT.'
+  },
+  NG:  {
+    eff: 58,
+    src: 'GE Power / Siemens Energy / MHI H/F-class published data. Indicative range 55–62% LHV. DNV Energy Transition Outlook 2023.'
+  }
+};
+
+function setCoFuel(fuel) {
+  state.coFuel = fuel;
+  document.getElementById('lbl-cf-h2').classList.toggle('active', fuel === 'H2');
+  document.getElementById('lbl-cf-nh3').classList.toggle('active', fuel === 'NH3');
+  document.getElementById('cfEffFuelLabel').textContent = fuel === 'H2' ? 'H₂ CCGT η (%)' : 'NH₃ CCGT η (%)';
+  document.getElementById('cfEffFuel').value = CF_EFF_DEFAULTS[fuel].eff;
+  document.getElementById('cfBlendLabel').textContent = fuel === 'H2' ? 'H₂ energy blend (%)' : 'NH₃ energy blend (%)';
+  cfUpdateEffSource();
+  cfLiveUpdate();
+}
+
+function cfUpdateEffSource() {
+  const fuel = state.coFuel;
+  document.getElementById('cfEffSource').innerHTML =
+    `<strong>${fuel === 'H2' ? 'H₂' : 'NH₃'} ref:</strong> ${CF_EFF_DEFAULTS[fuel].src}<br>` +
+    `<strong>NG ref:</strong> ${CF_EFF_DEFAULTS.NG.src}`;
+}
+
+function cfLiveUpdate() {
+  const fuel  = state.coFuel;
+  const blend = parseFloat(document.getElementById('cfBlend').value) / 100;
+  const effNG = parseFloat(document.getElementById('cfEffNG').value) / 100;
+  const effF  = parseFloat(document.getElementById('cfEffFuel').value) / 100;
+  const el    = document.getElementById('cfBlendInfo');
+  if (isNaN(blend)) { el.textContent = ''; return; }
+
+  const effBlended = effNG + blend * (effF - effNG);
+  let html = `<strong>Blended η:</strong> ${(effBlended * 100).toFixed(1)}% LHV`;
+
+  if (fuel === 'H2') {
+    const lhv_H2_v = FUELS.H2.LHV_MJ_kg * FUELS.H2.density_gas_kg_Nm3;   // ~10.79 MJ/Nm³
+    const lhv_NG_v = FUELS.NG.LHV_MJ_kg * FUELS.NG.density_gas_kg_Nm3;   // ~38.86 MJ/Nm³
+    const volPct = blend <= 0 ? 0 : blend >= 1 ? 100
+      : blend * lhv_NG_v / (lhv_H2_v * (1 - blend) + blend * lhv_NG_v) * 100;
+    html += `&nbsp; | &nbsp;<strong>${(blend*100).toFixed(0)}% energy</strong> ≈ <strong>${volPct.toFixed(1)} vol%</strong> H₂ in mixed gas`;
+  } else {
+    const massPct = blend <= 0 ? 0 : blend >= 1 ? 100
+      : (blend / FUELS.NH3.LHV_MJ_kg) /
+        (blend / FUELS.NH3.LHV_MJ_kg + (1 - blend) / FUELS.NG.LHV_MJ_kg) * 100;
+    html += `&nbsp; | &nbsp;<strong>${(blend*100).toFixed(0)}% energy</strong> ≈ <strong>${massPct.toFixed(1)} mass%</strong> NH₃ in total fuel`;
+  }
+  el.innerHTML = html;
+}
+
+// ================================================================
+// CO-FIRING CALCULATE
+// ================================================================
+function calculateCoFiring() {
+  const fuel       = state.coFuel;
+  const effNG_pct  = parseFloat(document.getElementById('cfEffNG').value);
+  const effF_pct   = parseFloat(document.getElementById('cfEffFuel').value);
+  const mw         = parseFloat(document.getElementById('cfMW').value);
+  const cf_pct     = parseFloat(document.getElementById('cfCF').value);
+  const blend_pct  = parseFloat(document.getElementById('cfBlend').value);
+
+  if (isNaN(mw) || mw <= 0)
+    return renderError('Enter a valid positive electrical output in MWe.');
+  if (isNaN(effNG_pct) || effNG_pct <= 0 || effNG_pct > 100)
+    return renderError('NG CCGT efficiency must be between 1 and 100%.');
+  if (isNaN(effF_pct) || effF_pct <= 0 || effF_pct > 100)
+    return renderError(`${fuel} CCGT efficiency must be between 1 and 100%.`);
+  if (isNaN(cf_pct) || cf_pct <= 0 || cf_pct > 100)
+    return renderError('Capacity factor must be between 1 and 100%.');
+  if (isNaN(blend_pct) || blend_pct < 0 || blend_pct > 100)
+    return renderError('Blend % must be between 0 and 100%.');
+
+  const effNG  = effNG_pct / 100;
+  const effF   = effF_pct  / 100;
+  const cf     = cf_pct    / 100;
+  const blend  = blend_pct / 100;  // energy fraction of co-fuel
+
+  // Blended efficiency — linear interpolation on energy blend fraction
+  const effBlended = effNG + blend * (effF - effNG);
+
+  // Annual operating hours
+  const hoursPerYear = 8760 * cf;
+
+  // Annual electrical output
+  const annualMWh = mw * hoursPerYear;
+  const annualGWh = annualMWh / 1000;
+
+  // Thermal input (MW_th) & annual thermal energy
+  const mw_thermal = mw / effBlended;
+  const annual_MJ  = mw_thermal * 3600 * hoursPerYear;  // MW × MJ/MWh × h = MJ
+
+  // Fuel energy split
+  const annual_MJ_fuel = annual_MJ * blend;
+  const annual_MJ_NG   = annual_MJ * (1 - blend);
+
+  // Masses (kg/year → KTPA; 1 KTPA = 10⁶ kg/year)
+  const lhv_fuel = FUELS[fuel].LHV_MJ_kg;
+  const lhv_NG   = FUELS.NG.LHV_MJ_kg;
+
+  const kg_fuel_yr = annual_MJ_fuel / lhv_fuel;
+  const kg_NG_yr   = annual_MJ_NG   / lhv_NG;
+  const ktpa_fuel  = kg_fuel_yr / 1e6;
+  const ktpa_NG    = kg_NG_yr   / 1e6;
+  const ktpa_total = ktpa_fuel + ktpa_NG;
+
+  // Reference: 100% co-fuel (no NG)
+  const mw_th_100     = mw / effF;
+  const ktpa_fuel_100 = (mw_th_100 * 3600 * hoursPerYear / lhv_fuel) / 1e6;
+
+  // Reference: 100% NG (no co-fuel)
+  const mw_th_NG100   = mw / effNG;
+  const ktpa_NG_100   = (mw_th_NG100 * 3600 * hoursPerYear / lhv_NG) / 1e6;
+
+  // Blend equivalents
+  let volPct_H2 = null, massPct_NH3 = null;
+  if (fuel === 'H2') {
+    const lhv_H2_v = FUELS.H2.LHV_MJ_kg * FUELS.H2.density_gas_kg_Nm3;
+    const lhv_NG_v = FUELS.NG.LHV_MJ_kg * FUELS.NG.density_gas_kg_Nm3;
+    volPct_H2 = blend <= 0 ? 0 : blend >= 1 ? 100
+      : blend * lhv_NG_v / (lhv_H2_v * (1 - blend) + blend * lhv_NG_v) * 100;
+  } else {
+    massPct_NH3 = blend <= 0 ? 0 : blend >= 1 ? 100
+      : (blend / lhv_fuel) / (blend / lhv_fuel + (1 - blend) / lhv_NG) * 100;
+  }
+
+  const blendEquivStr = fuel === 'H2'
+    ? `≈ ${volPct_H2.toFixed(1)} vol% H₂ in mixed gas`
+    : `≈ ${massPct_NH3.toFixed(1)} mass% NH₃ in total fuel`;
+
+  // Volumetric / liquid equivalent for logistics
+  const nm3_fuel_yr = fuel === 'H2'
+    ? kg_fuel_yr / FUELS.H2.density_gas_kg_Nm3 : null;
+  const m3_liq_fuel_yr = fuel === 'NH3'
+    ? kg_fuel_yr / FUELS.NH3.density_liquid_kg_m3 : null;
+
+  renderCoFiringResults({
+    fuel, effNG, effF, effBlended, blend, blend_pct,
+    mw, cf, cf_pct, hoursPerYear, annualMWh, annualGWh,
+    mw_thermal, annual_MJ, annual_MJ_fuel, annual_MJ_NG,
+    ktpa_fuel, ktpa_NG, ktpa_total,
+    ktpa_fuel_100, ktpa_NG_100,
+    blendEquivStr, volPct_H2, massPct_NH3,
+    nm3_fuel_yr, m3_liq_fuel_yr,
+    effNG_pct, effF_pct
+  });
+}
+
+// ================================================================
+// AMMONIA CRACKER
+// ================================================================
+// Stoichiometric basis — NH₃ cracking reaction:
+//   2 NH₃  →  N₂  +  3 H₂
+//   Molar masses: NH₃ = 17.031 g/mol, H₂ = 2.016 g/mol, N₂ = 28.014 g/mol
+//
+//   Theoretical mass ratio (feed/product):
+//     kg NH₃ per kg H₂ = (2×17.031)/(3×2.016) = 34.062/6.048 = 5.634
+//     kg N₂  per kg H₂ = 28.014/(3×2.016)     = 28.014/6.048 = 4.634
+//
+//   Practical ratios provided by project (account for cracker conversion
+//   efficiency, PSA/membrane H₂ recovery, NH₃ slip and purge losses):
+//     Clean Fuel (high-purity H₂ for direct fuel use):    7.2 kg NH₃/kg H₂
+//       → Implied overall H₂ recovery: 5.634/7.2 = 78.3 %
+//     Natural Gas Blend Fuel (H₂ to NG grid blend spec):  6.5 kg NH₃/kg H₂
+//       → Implied overall H₂ recovery: 5.634/6.5 = 86.7 %
+//
+//   N₂ byproduct is calculated from the H₂ produced via stoichiometry
+//   (the "extra" NH₃ above the theoretical 5.634 represents process losses,
+//    not additional N₂; N₂ scales with H₂ produced, not NH₃ fed).
+//
+// Source: IEA Hydrogen 2019; IRENA Green Hydrogen 2022;
+//         Lamb et al. (2019) ACS Catalysis; NIST-JANAF tables.
+// ================================================================
+
+const CRACKER_MODES = {
+  clean: {
+    label:       'Clean Fuel',
+    ratio:       7.2,
+    description: 'High-purity H₂ for direct combustion or fuel-cell-grade use. Higher NH₃ feed required due to stricter product purity specification and associated purification (PSA) losses.',
+    h2Recovery:  (5.634 / 7.2 * 100).toFixed(1),   // 78.3 %
+    color:       'var(--teal)',
+    badgeClass:  'ac-mode-clean',
+  },
+  blend: {
+    label:       'NG Blend Fuel',
+    ratio:       6.5,
+    description: 'H₂ blended into natural gas grid (lower purity spec acceptable). Reduced NH₃ feed requirement vs clean-fuel path; membrane or partial-PSA recovery sufficient.',
+    h2Recovery:  (5.634 / 6.5 * 100).toFixed(1),   // 86.7 %
+    color:       'var(--info)',
+    badgeClass:  'ac-mode-blend',
+  }
+};
+
+// Theoretical N₂ per kg H₂ produced (from stoichiometry, independent of feed ratio)
+const AC_N2_PER_KG_H2 = 28.014 / (3 * 2.016);  // 4.634 kg N₂/kg H₂
+
+state.crackerMode = 'clean';
+
+function setCrackerMode(mode) {
+  state.crackerMode = mode;
+  document.getElementById('lbl-ac-clean').classList.toggle('active', mode === 'clean');
+  document.getElementById('lbl-ac-blend').classList.toggle('active', mode === 'blend');
+
+  const m = CRACKER_MODES[mode];
+  document.getElementById('crackerRatio').value = m.ratio;
+
+  document.getElementById('crackerModeInfo').innerHTML =
+    `<strong style="color:${m.color};">${m.label}</strong> — ${m.description}<br>` +
+    `<span style="color:var(--text3);">Default ratio: <strong>${m.ratio} kg NH₃/kg H₂</strong> · Implied H₂ recovery: <strong>${m.h2Recovery}%</strong> vs theoretical 5.634 kg NH₃/kg H₂</span>`;
+
+  document.getElementById('crackerRatioNote').innerHTML =
+    `Theoretical minimum: 5.634 kg NH₃/kg H₂ · Theoretical N₂ byproduct: ${fmt(AC_N2_PER_KG_H2)} kg/kg H₂`;
+
+  crackerLiveUpdate();
+}
+
+function crackerLiveUpdate() {
+  // no live preview needed beyond the mode info — calculate on button press
+}
+
+function calculateCracker() {
+  const ratio   = parseFloat(document.getElementById('crackerRatio').value);
+  const h2_ktpa = parseFloat(document.getElementById('crackerH2KTPA').value);
+
+  if (isNaN(ratio) || ratio < 5 || ratio > 20)
+    return renderError('NH₃ : H₂ ratio must be between 5 and 20 kg/kg.');
+  if (isNaN(h2_ktpa) || h2_ktpa <= 0)
+    return renderError('Enter a valid positive H₂ production target in KTPA.');
+
+  const mode   = state.crackerMode;
+  const modeData = CRACKER_MODES[mode];
+
+  // Mass flows (annual)
+  const h2_tpa    = h2_ktpa  * 1000;          // t/yr
+  const nh3_ktpa  = h2_ktpa  * ratio;          // KTPA
+  const nh3_tpa   = nh3_ktpa * 1000;           // t/yr
+  const n2_ktpa   = h2_ktpa  * AC_N2_PER_KG_H2; // KTPA
+  const n2_tpa    = n2_ktpa  * 1000;
+
+  // Daily flows
+  const nh3_tpd   = nh3_tpa  / 365;
+  const h2_tpd    = h2_tpa   / 365;
+  const n2_tpd    = n2_tpa   / 365;
+
+  // Liquid NH₃ volume (at NBP density 682 kg/m³)
+  const nh3_m3d   = (nh3_tpd * 1000) / FUELS.NH3.density_liquid_kg_m3;
+  const nh3_m3yr  = (nh3_tpa * 1000) / FUELS.NH3.density_liquid_kg_m3;
+
+  // H₂ energy content
+  const h2_energy_PJ = (h2_ktpa * 1e6 * FUELS.H2.LHV_MJ_kg) / 1e15; // PJ/yr LHV
+  const h2_energy_TWh = h2_energy_PJ * 1000 / 3600;
+
+  // NH₃ energy content in feed
+  const nh3_energy_PJ = (nh3_ktpa * 1e6 * FUELS.NH3.LHV_MJ_kg) / 1e15;
+
+  // Cracking efficiency (chemical energy retained)
+  const chemEfficiency = (h2_energy_PJ / nh3_energy_PJ) * 100;
+
+  // Compare both modes side-by-side
+  const alt = mode === 'clean' ? 'blend' : 'clean';
+  const altData   = CRACKER_MODES[alt];
+  const altNH3    = h2_ktpa * altData.ratio;
+
+  renderCrackerResults({
+    mode, modeData, ratio,
+    h2_ktpa, h2_tpa, h2_tpd, h2_energy_PJ, h2_energy_TWh,
+    nh3_ktpa, nh3_tpa, nh3_tpd, nh3_m3d, nh3_m3yr, nh3_energy_PJ,
+    n2_ktpa, n2_tpa, n2_tpd,
+    chemEfficiency,
+    alt, altData, altNH3
+  });
+}
+
+function renderCrackerResults(d) {
+  const teal   = 'var(--teal)';
+  const blue   = 'var(--info)';
+  const amber  = 'var(--accent2)';
+  const mColor = d.mode === 'clean' ? teal : blue;
+  const altColor = d.mode === 'clean' ? blue : teal;
+
+  document.getElementById('resultArea').innerHTML = `
+  <div class="ac-result-panel">
+    <div class="ac-header">
+      <span class="ac-title">⚗ Ammonia Cracker — Mass Balance</span>
+      <span class="ac-mode-badge ${d.modeData.badgeClass}">${d.modeData.label}</span>
+      <span style="font-size:11px; color:var(--text3); margin-left:auto;">NH₃ feed → H₂ product · LHV basis</span>
+    </div>
+    <div class="ac-body">
+
+      <div class="section-label">Stoichiometric Basis</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
+        <div class="result-card">
+          <div class="result-card-label">NH₃ : H₂ ratio</div>
+          <div class="result-card-value" style="color:${mColor};">${fmt(d.ratio)}<span class="result-card-unit">kg/kg</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">Practical (incl. losses)</div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">H₂ recovery</div>
+          <div class="result-card-value">${fmt(5.634 / d.ratio * 100)}<span class="result-card-unit">%</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">vs theoretical 5.634</div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">Chemical efficiency</div>
+          <div class="result-card-value">${fmt(d.chemEfficiency)}<span class="result-card-unit">%</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">H₂ LHV / NH₃ LHV feed</div>
+        </div>
+      </div>
+
+      <div class="section-label">NH₃ Feedstock Required</div>
+      <div class="ac-big-card" style="border:2px solid ${mColor}; margin-bottom:12px;">
+        <div class="ac-big-label">Annual NH₃ Feed</div>
+        <div><span class="ac-big-value" style="color:${mColor};">${fmt(d.nh3_ktpa)}</span><span class="ac-big-unit">KTPA</span></div>
+        <div class="ac-big-sub">${fmt(d.nh3_tpa)} t/yr &nbsp;·&nbsp; ${fmt(d.nh3_tpd)} t/day &nbsp;·&nbsp; ${fmt(d.nh3_m3d)} m³/day (liquid, NBP)</div>
+        <div class="ac-big-sub">Energy content: ${fmt(d.nh3_energy_PJ)} PJ/yr LHV &nbsp;·&nbsp; ${fmt(d.nh3_energy_PJ * 1e6 / d.nh3_ktpa / 1e3)} GJ/t NH₃</div>
+      </div>
+
+      <div class="section-label">H₂ Production Output</div>
+      <div class="ac-big-card" style="border:2px solid var(--success); margin-bottom:12px;">
+        <div class="ac-big-label">Annual H₂ Production</div>
+        <div><span class="ac-big-value" style="color:var(--success);">${fmt(d.h2_ktpa)}</span><span class="ac-big-unit">KTPA</span></div>
+        <div class="ac-big-sub">${fmt(d.h2_tpa)} t/yr &nbsp;·&nbsp; ${fmt(d.h2_tpd)} t/day</div>
+        <div class="ac-big-sub">Energy content: ${fmt(d.h2_energy_PJ)} PJ/yr LHV &nbsp;·&nbsp; ${fmt(d.h2_energy_TWh)} TWh/yr</div>
+      </div>
+
+      <div class="section-label">All Annual Mass Flows</div>
+      <div class="ac-flow-grid">
+        <div class="ac-flow-card" style="border-color:${mColor};">
+          <div class="ac-flow-label">NH₃ Feed</div>
+          <div><span class="ac-flow-value" style="color:${mColor};">${fmt(d.nh3_ktpa)}</span><span class="ac-flow-unit">KTPA</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">${fmt(d.nh3_tpd)} t/day</div>
+        </div>
+        <div class="ac-flow-card" style="border-color:var(--success);">
+          <div class="ac-flow-label">H₂ Product</div>
+          <div><span class="ac-flow-value" style="color:var(--success);">${fmt(d.h2_ktpa)}</span><span class="ac-flow-unit">KTPA</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">${fmt(d.h2_tpd)} t/day</div>
+        </div>
+        <div class="ac-flow-card">
+          <div class="ac-flow-label">N₂ Byproduct</div>
+          <div><span class="ac-flow-value" style="color:var(--text2);">${fmt(d.n2_ktpa)}</span><span class="ac-flow-unit">KTPA</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">${fmt(d.n2_tpd)} t/day</div>
+        </div>
+        <div class="ac-flow-card">
+          <div class="ac-flow-label">NH₃ (liquid vol.)</div>
+          <div><span class="ac-flow-value">${fmt(d.nh3_m3yr / 1000)}</span><span class="ac-flow-unit">km³/yr</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">${fmt(d.nh3_m3d)} m³/day at NBP</div>
+        </div>
+      </div>
+
+      <div style="margin:10px 0 14px;">
+        <div style="font-size:11px; color:var(--text3); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Mass balance visual (annual flows)</div>
+        <div class="ac-mass-bar">
+          <div style="flex:${d.nh3_ktpa}; background:${mColor}; opacity:0.85;"></div>
+        </div>
+        <div style="display:flex; gap:16px; margin-top:5px; font-size:11px; flex-wrap:wrap;">
+          <span style="color:${mColor};">■ NH₃ feed: ${fmt(d.nh3_ktpa)} KTPA</span>
+          <span style="color:var(--success);">■ H₂ out: ${fmt(d.h2_ktpa)} KTPA</span>
+          <span style="color:var(--text3);">■ N₂ byproduct: ${fmt(d.n2_ktpa)} KTPA (stoichiometric)</span>
+        </div>
+      </div>
+
+      <div class="section-label">Mode Comparison — ${fmt(d.h2_ktpa)} KTPA H₂ Target</div>
+      <table class="ac-compare-table">
+        <thead>
+          <tr>
+            <th>Fuel Mode</th>
+            <th class="num">Ratio (kg/kg)</th>
+            <th class="num">H₂ Recovery</th>
+            <th class="num">NH₃ Feed (KTPA)</th>
+            <th class="num">N₂ Byproduct (KTPA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${['clean','blend'].map(m => {
+            const md = CRACKER_MODES[m];
+            const nh3 = d.h2_ktpa * md.ratio;
+            const isActive = m === d.mode;
+            return `<tr class="${isActive ? 'active-row' : ''}">
+              <td style="color:${isActive ? (m==='clean'?teal:blue) : 'var(--text2)'}; font-weight:${isActive?'700':'400'};">
+                ${isActive ? '▶ ' : ''}${md.label}
+              </td>
+              <td class="num">${md.ratio}</td>
+              <td class="num">${md.h2Recovery}%</td>
+              <td class="num" style="color:${isActive ? (m==='clean'?teal:blue) : 'var(--text)'}; font-weight:${isActive?'700':'400'};">${fmt(nh3)}</td>
+              <td class="num">${fmt(d.n2_ktpa)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+
+      <div style="padding:8px 10px; background:var(--bg3); border-radius:6px; border:1px solid var(--border); font-size:12px; color:var(--text2); margin-bottom:14px;">
+        <strong>NH₃ saving (NG Blend vs Clean Fuel):</strong>
+        ${fmt(d.h2_ktpa * (CRACKER_MODES.clean.ratio - CRACKER_MODES.blend.ratio))} KTPA NH₃
+        &nbsp;(${fmt((CRACKER_MODES.clean.ratio - CRACKER_MODES.blend.ratio) / CRACKER_MODES.clean.ratio * 100)}% reduction in NH₃ feed)
+      </div>
+
+      <div class="msg msg-warn" style="font-size:11px; margin-bottom:8px;">
+        <strong>⚠ Engineering Notes:</strong>
+        <ul style="margin:5px 0 0 16px; line-height:1.8;">
+          <li>Stoichiometric ratios (7.2 / 6.5) are <strong>practical design values</strong> incorporating cracker conversion efficiency, PSA/membrane H₂ recovery, and NH₃ slip. Theoretical minimum is 5.634 kg NH₃/kg H₂.</li>
+          <li><strong>N₂ byproduct</strong> is calculated from H₂ produced via reaction stoichiometry (2NH₃ → N₂ + 3H₂). Unreacted NH₃ (representing the efficiency gap) does not contribute additional N₂.</li>
+          <li>Liquid NH₃ volume uses density at normal boiling point (−33.4 °C, 1 atm): 682 kg/m³ (NIST). Pressurised ambient storage: ~600–610 kg/m³.</li>
+          <li><strong>KTPA</strong> = kilo-tonnes per annum = 1,000 t/yr = 10⁶ kg/yr.</li>
+          <li>All heating values on <strong>LHV basis</strong>.</li>
+        </ul>
+      </div>
+
+      <div style="font-size:10px; color:var(--text3); padding-top:8px; border-top:1px solid var(--border); line-height:1.7;">
+        <strong>References:</strong>
+        Reaction stoichiometry: NIST-JANAF Thermochemical Tables.
+        Practical ratios: IEA Hydrogen (2019); IRENA Green Hydrogen (2022); Lamb et al. (2019) <em>ACS Catalysis</em>.
+        NH₃ cracking efficiency values are PROVISIONAL — verify with equipment vendor for project-specific cracker design.
+      </div>
+    </div>
+  </div>`;
+}
+
+// ================================================================
+// CO-FIRING RESULT RENDERER
+// ================================================================
+function renderCoFiringResults(d) {
+  const fuel      = d.fuel;
+  const fuelName  = fuel === 'H2' ? 'Hydrogen (H₂)' : 'Ammonia (NH₃)';
+  const fuelColor = fuel === 'H2' ? 'var(--info)' : 'var(--purple)';
+  const coFuelPct = (d.blend * 100).toFixed(1);
+  const ngPct     = (100 - d.blend * 100).toFixed(1);
+
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = `
+  <div class="cf-result-panel">
+    <div class="cf-header">
+      <span class="cf-title">🔥 Co-Firing CCGT Analysis</span>
+      <span style="font-size:11px; color:var(--text3); margin-left:auto;">${fuelName} + Natural Gas · LHV basis</span>
+    </div>
+    <div class="cf-body">
+
+      <div class="section-label">Efficiency Summary (LHV)</div>
+      <div class="cf-eff-grid" style="margin-bottom:14px;">
+        <div class="cf-eff-card">
+          <div class="cf-eff-label">NG CCGT baseline</div>
+          <div class="cf-eff-value" style="color:var(--text2);">${(d.effNG*100).toFixed(1)}<span style="font-size:12px; color:var(--text3);">%</span></div>
+          <div class="cf-eff-sub">100% Natural Gas</div>
+        </div>
+        <div class="cf-eff-card active" style="border-color:${fuelColor};">
+          <div class="cf-eff-label">100% ${fuel} CCGT</div>
+          <div class="cf-eff-value" style="color:${fuelColor};">${(d.effF*100).toFixed(1)}<span style="font-size:12px; color:var(--text3);">%</span></div>
+          <div class="cf-eff-sub">No natural gas</div>
+        </div>
+        <div class="cf-eff-card active" style="border-color:var(--accent2);">
+          <div class="cf-eff-label">Blended @ ${coFuelPct}% ${fuel}</div>
+          <div class="cf-eff-value" style="color:var(--accent2);">${(d.effBlended*100).toFixed(1)}<span style="font-size:12px; color:var(--text3);">%</span></div>
+          <div class="cf-eff-sub">Linear interpolation</div>
+        </div>
+      </div>
+
+      <div class="section-label">Plant Operating Parameters</div>
+      <div class="result-grid" style="margin-bottom:14px;">
+        <div class="result-card">
+          <div class="result-card-label">Electrical Output</div>
+          <div class="result-card-value">${fmt(d.mw)}<span class="result-card-unit">MWe</span></div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">Thermal Input</div>
+          <div class="result-card-value">${fmt(d.mw_thermal)}<span class="result-card-unit">MW_th</span></div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">Annual Output</div>
+          <div class="result-card-value">${fmt(d.annualGWh)}<span class="result-card-unit">GWh/yr</span></div>
+          <div style="font-size:10px; color:var(--text3);">${d.cf_pct.toFixed(0)}% CF · ${fmt(d.hoursPerYear)} hrs/yr</div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-label">Annual Thermal Energy</div>
+          <div class="result-card-value">${fmt(d.annual_MJ / 1e9)}<span class="result-card-unit">TJ/yr</span></div>
+          <div style="font-size:10px; color:var(--text3);">${fmt(d.annual_MJ)} MJ/yr</div>
+        </div>
+      </div>
+
+      <div class="section-label">Co-firing Blend (by energy content)</div>
+      <div class="blend-bar-wrap">
+        <div class="blend-bar">
+          <div style="width:${coFuelPct}%; background:${fuelColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; padding:0 4px;">
+            ${d.blend > 0.05 ? coFuelPct + '% ' + fuel : ''}
+          </div>
+          <div style="flex:1; background:var(--border-hi); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--text2); white-space:nowrap; overflow:hidden; padding:0 4px;">
+            ${d.blend < 0.95 ? ngPct + '% NG' : ''}
+          </div>
+        </div>
+        <div class="blend-bar-labels">
+          <span style="color:${fuelColor};">${coFuelPct}% ${fuel} by energy &nbsp;(${d.blendEquivStr})</span>
+          <span>${ngPct}% Natural Gas</span>
+        </div>
+      </div>
+
+      <div class="section-label">Annual Fuel Requirements — ${d.blend_pct.toFixed(0)}% ${fuel} Energy Blend</div>
+      <div class="cf-fuel-grid">
+        <div class="cf-fuel-card" style="border-color:${fuelColor};">
+          <div class="cf-fuel-label" style="color:${fuelColor};">${fuelName}</div>
+          <div><span class="cf-fuel-value" style="color:${fuelColor};">${fmt(d.ktpa_fuel)}</span><span class="cf-fuel-unit">KTPA</span></div>
+          <div class="cf-fuel-sub">${fmt(d.ktpa_fuel * 1000)} t/yr</div>
+          <div class="cf-fuel-sub">${fmt(d.annual_MJ_fuel / 1e9)} TJ/yr thermal</div>
+          ${d.nm3_fuel_yr ? `<div class="cf-fuel-sub">${fmt(d.nm3_fuel_yr)} Nm³/yr</div>` : ''}
+          ${d.m3_liq_fuel_yr ? `<div class="cf-fuel-sub">${fmt(d.m3_liq_fuel_yr)} m³/yr (liq, NBP)</div>` : ''}
+        </div>
+        <div class="cf-fuel-card" style="border-color:var(--border-hi);">
+          <div class="cf-fuel-label">Natural Gas (balance)</div>
+          <div><span class="cf-fuel-value" style="color:var(--text2);">${fmt(d.ktpa_NG)}</span><span class="cf-fuel-unit">KTPA</span></div>
+          <div class="cf-fuel-sub">${fmt(d.ktpa_NG * 1000)} t/yr</div>
+          <div class="cf-fuel-sub">${fmt(d.annual_MJ_NG / 1e9)} TJ/yr thermal</div>
+          <div class="cf-fuel-sub">${fmt(d.ktpa_NG * 1e6 / FUELS.NG.density_gas_kg_Nm3 / 1e6)} Mm³/yr (gas, Nm³)</div>
+        </div>
+      </div>
+      <div style="padding:8px 10px; background:var(--bg3); border-radius:6px; border:1px solid var(--border); font-size:12px; color:var(--text2); margin:10px 0 14px;">
+        <strong>Total fuel:</strong> ${fmt(d.ktpa_total)} KTPA &nbsp;|&nbsp;
+        <strong>${fuel} share:</strong> ${fmt(d.ktpa_fuel / d.ktpa_total * 100)}% by mass &nbsp;|&nbsp;
+        <strong>NG share:</strong> ${fmt(d.ktpa_NG / d.ktpa_total * 100)}% by mass
+      </div>
+
+      <div class="section-label">Scenario Comparison — ${fmt(d.mw)} MWe, ${d.cf_pct.toFixed(0)}% CF</div>
+      <table class="cf-compare-table">
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th class="num">η LHV</th>
+            <th class="num" style="color:${fuelColor};">${fuel} KTPA</th>
+            <th class="num">NG KTPA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--text2);">100% Natural Gas (baseline)</td>
+            <td class="num">${(d.effNG*100).toFixed(1)}%</td>
+            <td class="num" style="color:var(--text3);">—</td>
+            <td class="num">${fmt(d.ktpa_NG_100)}</td>
+          </tr>
+          <tr class="selected">
+            <td style="color:var(--accent2); font-weight:600;">${d.blend_pct.toFixed(0)}% ${fuel} blend ← selected</td>
+            <td class="num" style="color:var(--accent2);">${(d.effBlended*100).toFixed(1)}%</td>
+            <td class="num" style="color:${fuelColor};">${fmt(d.ktpa_fuel)}</td>
+            <td class="num">${fmt(d.ktpa_NG)}</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);">100% ${fuelName}</td>
+            <td class="num">${(d.effF*100).toFixed(1)}%</td>
+            <td class="num" style="color:${fuelColor};">${fmt(d.ktpa_fuel_100)}</td>
+            <td class="num" style="color:var(--text3);">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="msg msg-warn" style="font-size:11px; margin-bottom:8px;">
+        <strong>⚠ Engineering Notes:</strong>
+        <ul style="margin:5px 0 0 16px; line-height:1.8;">
+          <li>Blended efficiency uses <strong>linear interpolation</strong> on energy-blend fraction — a first-order approximation for feasibility studies. Actual curves are non-linear and combustor-design-dependent.</li>
+          <li>CCGT η values are <strong>indicative / PROVISIONAL</strong>. Verify with OEM (GE, Siemens, MHI, etc.) for project-specific guaranteed performance.</li>
+          <li><strong>KTPA</strong> = kilo-tonnes per annum = 1,000 t/yr = 10⁶ kg/yr.</li>
+          ${fuel === 'H2' ? `<li>H₂ vol% is for gas-phase mixing at standard conditions. Pipeline blending may be limited to 5–20 vol% depending on grid code and jurisdiction.</li>` : ''}
+          ${fuel === 'NH3' ? `<li>NH₃ co-firing typically uses dedicated injection systems, not gas-stream blending. Mass% shown is for fuel logistics and supply-chain sizing.</li>` : ''}
+          <li>All calculations on <strong>LHV basis</strong> — standard for gas turbine performance specification.</li>
+          <li>Capacity factor: ${d.cf_pct.toFixed(0)}% → ${fmt(d.hoursPerYear)} equivalent full-load hours/year (based on 8,760 hrs/yr).</li>
+        </ul>
+      </div>
+
+      <div style="font-size:10px; color:var(--text3); padding-top:8px; border-top:1px solid var(--border); line-height:1.7;">
+        <strong>Efficiency references:</strong>
+        NG CCGT: GE Power / Siemens Energy / MHI H-class; range 55–62% LHV; DNV Energy Transition Outlook 2023.
+        ${fuel === 'H2' ? 'H₂ CCGT (100%): Mitsubishi Power (2021); IEA Hydrogen (2019); IRENA Green Hydrogen (2022); indicative range 40–44% LHV.' : ''}
+        ${fuel === 'NH3' ? 'NH₃ CCGT (100%): IHI Corporation / JERA (2021); MHI 100% NH₃ GT development programme; IRENA Ammonia as Fuel (2022); indicative range 35–40% LHV.' : ''}
+        All values PROVISIONAL — use OEM-guaranteed figures for project FEED and contracts.
+      </div>
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
