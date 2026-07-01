@@ -1,5 +1,10 @@
 # Memory: Gas Power LCOE Calculator
 
+> **Note:** This tool was consolidated into the Engineering Dashboard. The
+> calculator now lives at `Dashboard/public/modules/gas-power-lcoe.html` and is
+> served at the route `/modules/gas-power-lcoe`. These notes are retained as
+> historical context for the calculator's internals.
+
 Consolidated learnings from building `gas-power-lcoe-calculator.html` — an LCOE
 calculator for gas engine / gas turbine power generation on hydrogen, ammonia,
 natural gas, or NG–H₂ blends. Read this before making further changes.
