@@ -282,8 +282,14 @@
       </div>
 
       <div class="field" id="blendField">
-        <label><span id="blendFuelLabel">H₂</span> blending <span class="hint">(% by volume — balance is Natural Gas)</span></label>
-        <input type="number" id="blendPct" value="20" min="0" max="100" step="1"/>
+        <label><span id="blendFuelLabel">H₂</span> blending <span class="hint">— balance is Natural Gas</span></label>
+        <div class="row2">
+          <input type="number" id="blendPct" value="20" min="0" max="100" step="1"/>
+          <div class="radio-group" id="rgBlendBasis">
+            <label class="active" data-val="vol">% Volume</label>
+            <label data-val="mass">% Mass</label>
+          </div>
+        </div>
         <div class="src-note" id="blendNote"></div>
       </div>
 
@@ -737,6 +743,7 @@ function capexEquip(cat, fuel){
 let primeMover = "ENGINE";
 let viewMode = "single";      // "single" | "compare"
 let effMode = "overall";      // "overall" | "separate" — CCGT (TURBINE) efficiency input mode
+let blendBasis = "vol";       // "vol" | "mass" — basis of the fuel-blending % input
 let lastResult = null;        // last computed result (for "Save this analysis")
 let savedAnalyses = [];       // session tray of saved analyses
 
@@ -747,14 +754,22 @@ const $ = id => document.getElementById(id);
 const num = id => parseFloat($(id).value);
 function fmt(x, d=0){ if(!isFinite(x)) return "—"; return x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
-// Blend % (by volume) of `fuel` (H2 or NH3) in a NG/fuel blend -> energy fraction of `fuel` (LHV, volumetric).
-// pct=0 => pure natural gas; pct=100 => pure H2/NH3.
-function blendEnergyFrac(fuel, pct){
+// Blend % of `fuel` (H2 or NH3) in a NG/fuel blend -> energy fraction of `fuel` (LHV basis).
+// pct=0 => pure natural gas; pct=100 => pure H2/NH3. `basis` selects how the % itself is defined:
+//  "vol"  — % by volume (Nm3) — needs gas density to get to an energy split.
+//  "mass" — % by mass (kg) — LHV alone gives the energy split, no density needed.
+function blendEnergyFrac(fuel, pct, basis){
   const x = Math.max(0, Math.min(1, pct/100));
-  const volLHV_F  = FUELS[fuel].density_gas_kg_Nm3 * FUELS[fuel].LHV_MJ_kg;  // MJ/Nm3
-  const volLHV_NG = FUELS.NG.density_gas_kg_Nm3 * FUELS.NG.LHV_MJ_kg;        // MJ/Nm3
-  const eF  = x * volLHV_F;
-  const eNG = (1-x) * volLHV_NG;
+  let eF, eNG;
+  if(basis === "mass"){
+    eF  = x     * FUELS[fuel].LHV_MJ_kg;   // MJ per kg of the H2/NH3 mass fraction
+    eNG = (1-x) * FUELS.NG.LHV_MJ_kg;      // MJ per kg of the NG mass fraction
+  } else {
+    const volLHV_F  = FUELS[fuel].density_gas_kg_Nm3 * FUELS[fuel].LHV_MJ_kg;  // MJ/Nm3
+    const volLHV_NG = FUELS.NG.density_gas_kg_Nm3 * FUELS.NG.LHV_MJ_kg;        // MJ/Nm3
+    eF  = x     * volLHV_F;
+    eNG = (1-x) * volLHV_NG;
+  }
   return eF / (eF + eNG);
 }
 
@@ -767,16 +782,16 @@ function ccOverallPct(gtPct, stPct){
 
 // Referenced overall efficiency (LHV %) + ISBL ($/kW) default for a given prime mover & blend fuel,
 // interpolated NG <-> H2/NH3 by the blend's energy fraction.
-function fuelDefaults(pm, fuel, blendPct){
+function fuelDefaults(pm, fuel, blendPct, basis){
   const f = TECH[pm].fuels;
-  const x = blendEnergyFrac(fuel, blendPct==null?20:blendPct);
+  const x = blendEnergyFrac(fuel, blendPct==null?20:blendPct, basis);
   return { eff: f.NG.eff + x*(f[fuel].eff - f.NG.eff),
            isbl: Math.round(f.NG.isbl + x*(f[fuel].isbl - f.NG.isbl)) };
 }
 // Referenced GT (topping) / ST (bottoming) efficiency split for CCGT, same interpolation.
-function fuelDefaultsGtSt(pm, fuel, blendPct){
+function fuelDefaultsGtSt(pm, fuel, blendPct, basis){
   const f = TECH[pm].fuels;
-  const x = blendEnergyFrac(fuel, blendPct==null?20:blendPct);
+  const x = blendEnergyFrac(fuel, blendPct==null?20:blendPct, basis);
   return { gtEff: f.NG.gtEff + x*(f[fuel].gtEff - f.NG.gtEff),
            stEff: f.NG.stEff + x*(f[fuel].stEff - f.NG.stEff) };
 }
@@ -784,10 +799,10 @@ function fuelDefaultsGtSt(pm, fuel, blendPct){
 function applyFuelDefaults(){
   const fuel = $("fuel").value;
   const blendPct = num("blendPct");
-  const d = fuelDefaults(primeMover, fuel, blendPct);
+  const d = fuelDefaults(primeMover, fuel, blendPct, blendBasis);
   $("isblPerKw").value = d.isbl;
   if(primeMover==="TURBINE" && effMode==="separate"){
-    const g = fuelDefaultsGtSt(primeMover, fuel, blendPct);
+    const g = fuelDefaultsGtSt(primeMover, fuel, blendPct, blendBasis);
     $("gtEffPct").value = Math.round(g.gtEff*10)/10;
     $("stEffPct").value = Math.round(g.stEff*10)/10;
     updateOverallFromGtSt();
@@ -812,7 +827,7 @@ function updateOverallFromGtSt(){
 // single-analysis view and the engine-vs-turbine comparison view.
 function computeCase(pm, p){
   const { fuel, P_MW, cf, eff, unitRating, scheme, useOverride, overrideMW,
-          isbl, osblPct, indPct, fom, vom, r, co2Price, blendPct } = p;
+          isbl, osblPct, indPct, fom, vom, r, co2Price, blendPct, blendBasis } = p;
   const n = Math.round(p.n);
 
   // ---- validation ----
@@ -851,7 +866,7 @@ function computeCase(pm, p){
 
   // ---- Fuel split / cost / emissions ----
   // `fuel` is the blend component (H2 or NH3); `blendPct` (0-100 vol%) sets the mix with the NG balance.
-  const energyFracFuel = blendEnergyFrac(fuel, blendPct);
+  const energyFracFuel = blendEnergyFrac(fuel, blendPct, blendBasis);
 
   const heatNG_GJ   = heatLHV_GJ_yr * (1 - energyFracFuel);
   const heatH2_GJ   = (fuel==="H2")  ? heatLHV_GJ_yr * energyFracFuel : 0;
@@ -889,7 +904,7 @@ function computeCase(pm, p){
   const lcoe   = c_cap + c_fom + c_vomMWh + c_fuel + c_co2;
 
   return {
-    pm, fuel, P_MW, cf, eff, n, r, energyFracFuel, blendPct,
+    pm, fuel, P_MW, cf, eff, n, r, energyFracFuel, blendPct, blendBasis,
     annualMWh, capexTotal, annualCapital, opexAnnual, lcoe,
     isbl, osbl, indirect, directKw, totalKw, installed_kW, installedMW,
     unitRating, scheme, N, spares, instUnits, dutyCapMW, reservePct, useOverride,
@@ -912,6 +927,7 @@ function readShared(){
     cf: num("capFactor")/100,
     scheme: $("redundancy").value,
     blendPct: num("blendPct"),
+    blendBasis,
     priceNG: num("priceNG"), priceH2: num("priceH2"), priceNH3: num("priceNH3"),
     r: num("discountPct")/100,
     n: num("lifeYr"),
@@ -938,7 +954,7 @@ function readParamsSingle(){
 function techParams(pm){
   const T = TECH[pm];
   const shared = readShared();
-  const fd = fuelDefaults(pm, shared.fuel, shared.blendPct);   // fuel-specific eff + ISBL
+  const fd = fuelDefaults(pm, shared.fuel, shared.blendPct, shared.blendBasis);   // fuel-specific eff + ISBL
   return {
     ...shared,
     eff: fd.eff/100,
@@ -999,7 +1015,7 @@ function render(d){
   let cfg = `<strong>${T.label}</strong> on <strong>${fN}</strong> · ${fmt(d.P_MW,0)} MW firm · ${fmt(d.cf*100,0)}% capacity factor · `
           + `${fmt(d.eff*100,1)}% efficiency (LHV) · ${fmt(d.r*100,1)}% discount over ${d.n} yr.`;
   cfg += ` Sizing: ${d.useOverride ? "manual installed override" : schemeLabel} ⇒ ${d.useOverride ? "" : fmt(d.N,0)+" duty + "+fmt(d.spares,0)+" spare = "+fmt(d.instUnits,0)+" × "+fmt(d.unitRating,1)+" MW = "}<strong>${fmt(d.installedMW,1)} MW installed</strong> (reserve +${fmt(d.reservePct,0)}% over firm output).`;
-  if(d.blendPct>0 && d.blendPct<100) cfg += ` Blend = ${fmt(d.blendPct,0)} vol% ${fSym} (balance Natural Gas) ⇒ ${fmt(d.energyFracFuel*100,1)}% of energy (and of fuel cost) from ${fSym}; CO₂ falls by the same energy share.`;
+  if(d.blendPct>0 && d.blendPct<100) cfg += ` Blend = ${fmt(d.blendPct,0)} ${d.blendBasis==="mass"?"mass":"vol"}% ${fSym} (balance Natural Gas) ⇒ ${fmt(d.energyFracFuel*100,1)}% of energy (and of fuel cost) from ${fSym}; CO₂ falls by the same energy share.`;
   if(d.blendPct===100) cfg += ` 100% ${fSym} — zero combustion CO₂ (upstream/production emissions excluded).`;
   $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
 
@@ -1124,7 +1140,7 @@ function renderCompare(dE, dT){
 
   // config / shared-assumptions banner
   let cfg = `<strong>Engine vs Turbine</strong> on <strong>${fN}</strong> at a shared basis: ${fmt(dE.P_MW,0)} MW firm · ${fmt(dE.cf*100,0)}% CF · ${schemeLabel} redundancy · ${fmt(dE.r*100,1)}% discount over ${dE.n} yr.`;
-  if(dE.blendPct>0 && dE.blendPct<100) cfg += ` Blend ${fmt(dE.blendPct,0)} vol% ${fSym} (${fmt(dE.energyFracFuel*100,1)}% energy).`;
+  if(dE.blendPct>0 && dE.blendPct<100) cfg += ` Blend ${fmt(dE.blendPct,0)} ${dE.blendBasis==="mass"?"mass":"vol"}% ${fSym} (${fmt(dE.energyFracFuel*100,1)}% energy).`;
   cfg += ` Each technology uses its own referenced efficiency, CapEx and O&M defaults.`;
   $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
 
@@ -1219,8 +1235,11 @@ function refreshNotes(){
   $("omNote").innerHTML = `<b>O&M defaults</b> from EIA AEO2025 / NREL ATB 2024 for the matching technology; engines carry higher maintenance (top-end overhauls) than turbines.`;
   $("priceNote").innerHTML = `<b>Defaults:</b> NG $4.00/MMBtu (EIA STEO Dec-2025, 2026 Henry Hub ≈$4.01). H₂ $4.00/kg (clean-H₂ 2025 band $1.5–6/kg; US Gulf Coast Jan-2025 $2.3–3.2/kg). Ammonia $800/t (green NH₃ US Q1-2025 ≈$815/t, Q2 ≈$782/t; grey ≈$400–600/t).`;
   const fSym = fuel==="H2" ? "H₂" : "NH₃";
-  const energyFrac = blendEnergyFrac(fuel, blendPct)*100;
-  $("blendNote").innerHTML = `${fSym} has ~${fuel==="H2"?"3.4":"2.4"}× lower volumetric energy than natural gas, so <span class="pill">${fmt(blendPct,0)}% ${fSym} by volume ≈ ${fmt(energyFrac,1)}% of energy</span> (balance ${fmt(100-blendPct,0)}% NG by volume). Energy share drives the required ${fSym} KTPA, fuel cost split, and CO₂ reduction.${fuel==="NH3"?" NH₃ blending assumes vapour-phase co-firing; liquid-NH₃ handling is priced via the CapEx premium.":""}`;
+  const basisLabel = blendBasis==="mass" ? "mass" : "volume";
+  const basisUnit = blendBasis==="mass" ? "kg" : "Nm³";
+  const energyFrac = blendEnergyFrac(fuel, blendPct, blendBasis)*100;
+  const direction = energyFrac < blendPct-0.05 ? "lower" : (energyFrac > blendPct+0.05 ? "higher" : "about the same as");
+  $("blendNote").innerHTML = `<span class="pill">${fmt(blendPct,0)}% ${fSym} by ${basisLabel} ≈ ${fmt(energyFrac,1)}% of energy</span> (balance ${fmt(100-blendPct,0)}% NG by ${basisLabel}) — ${fSym}'s LHV energy content per ${basisUnit} is ${direction} than NG's, so the energy (and cost/CO₂) share is ${direction==="about the same as" ? direction : direction+" than"} the ${basisLabel}% entered. Energy share drives the required ${fSym} KTPA and the fuel cost split.${fuel==="NH3"?" NH₃ blending assumes vapour-phase co-firing; liquid-NH₃ handling is priced via the CapEx premium.":""}`;
   $("redundancyNote").innerHTML = `<b>${TECH[primeMover].label}.</b> ${TECH[primeMover].unit_note} N+1 ≠ 2×: installed = firm × (N+spares)/N, so the oversize shrinks as units get smaller. CapEx &amp; fixed O&M scale with installed capacity; generation stays on firm output.`;
 }
 
@@ -1352,6 +1371,15 @@ $("rgEffMode").querySelectorAll("label").forEach(l=>{
 $("fuel").addEventListener("change", ()=>{ applyFuelDefaults(); syncFuelUI(); run(); });
 // blend composition change also refreshes the interpolated efficiency + ISBL defaults
 $("blendPct").addEventListener("input", ()=>{ applyFuelDefaults(); run(); });
+$("rgBlendBasis").querySelectorAll("label").forEach(l=>{
+  l.addEventListener("click", ()=>{
+    $("rgBlendBasis").querySelectorAll("label").forEach(x=>x.classList.remove("active"));
+    l.classList.add("active");
+    blendBasis = l.getAttribute("data-val");
+    applyFuelDefaults();   // also refreshes notes
+    run();
+  });
+});
 ["gtEffPct","stEffPct"].forEach(id=> $(id).addEventListener("input", ()=>{ if(effMode==="separate"){ updateOverallFromGtSt(); run(); } }));
 $("redundancy").addEventListener("change", run);
 $("useInstalledOverride").addEventListener("change", ()=>{ syncRedundancyUI(); run(); });
@@ -1393,10 +1421,11 @@ function syncViewUI(){
 }
 
 $("resetBtn").addEventListener("click", ()=>{
-  primeMover="ENGINE"; viewMode="single"; effMode="overall";
+  primeMover="ENGINE"; viewMode="single"; effMode="overall"; blendBasis="vol";
   $("rgView").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="single"));
   $("rgPrime").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="ENGINE"));
   $("rgEffMode").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="overall"));
+  $("rgBlendBasis").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="vol"));
   $("fuel").value="H2";
   $("powerMW").value=50; $("capFactor").value=85;
   $("redundancy").value="N1"; $("useInstalledOverride").checked=false;
@@ -1561,6 +1590,7 @@ function analysisToRows(a){
     rows.push(["Saved", a.ts]); rows.push([]);
     H("Configuration");
     rows.push(["Fuel", fuelName(d.fuel, d.blendPct)]);
+    rows.push(["Blend basis", d.blendBasis==="mass" ? "% by mass" : "% by volume"]);
     rows.push(["Firm output (MW)", rnd(d.P_MW,1)]);
     rows.push(["Capacity factor (%)", rnd(d.cf*100,1)]);
     rows.push(["Electrical efficiency (%, LHV)", rnd(d.eff*100,1)]);
@@ -1621,6 +1651,7 @@ function analysisToRows(a){
     rows.push(["Saved", a.ts]); rows.push([]);
     H("Shared basis");
     rows.push(["Fuel", fuelName(dE.fuel, dE.blendPct)]);
+    rows.push(["Blend basis", dE.blendBasis==="mass" ? "% by mass" : "% by volume"]);
     rows.push(["Firm output (MW)", rnd(dE.P_MW,1)]);
     rows.push(["Capacity factor (%)", rnd(dE.cf*100,1)]);
     rows.push(["Redundancy scheme", SCHEME_LABEL[dE.scheme]]);
