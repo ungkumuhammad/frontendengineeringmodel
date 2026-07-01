@@ -205,7 +205,7 @@
 
       <div class="row2">
         <div class="field">
-          <label>Net power <span class="hint">MW</span></label>
+          <label>Firm output <span class="hint">MW (net, required)</span></label>
           <input type="number" id="powerMW" value="50" min="0.1" step="1"/>
         </div>
         <div class="field">
@@ -219,6 +219,36 @@
         <input type="number" id="effPct" value="45" min="10" max="65" step="0.5"/>
         <div class="src-note" id="effNote"></div>
       </div>
+
+      <hr class="hdiv"/>
+      <div class="section-label accent">Maintenance &amp; redundancy</div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Unit rating <span class="hint">MW / unit</span></label>
+          <input type="number" id="unitRatingMW" value="18.5" min="0.1" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>Redundancy</label>
+          <select id="redundancy">
+            <option value="N">None (N)</option>
+            <option value="N1" selected>N + 1</option>
+            <option value="N2">N + 2</option>
+            <option value="2N">2N (full standby)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:6px;">
+        <label style="display:flex; align-items:center; gap:7px; text-transform:none; letter-spacing:0; font-size:11px; cursor:pointer;">
+          <input type="checkbox" id="useInstalledOverride" style="width:auto; margin:0; accent-color:var(--accent);"/>
+          Override installed capacity manually
+        </label>
+      </div>
+      <div class="field" id="installedOverrideField" style="display:none;">
+        <label>Installed capacity <span class="hint">MW (overrides units × rating)</span></label>
+        <input type="number" id="installedMWOverride" value="100" min="0.1" step="1"/>
+      </div>
+      <div class="src-note" id="redundancyNote"></div>
 
       <hr class="hdiv"/>
       <div class="section-label accent">Capital cost (CapEx)</div>
@@ -311,6 +341,7 @@
           </div>
           <div class="hero-side">
             <div><div class="hero-stat-label">Annual generation</div><div class="hero-stat-value"><span id="annualMwh">—</span><span class="u">MWh/yr</span></div></div>
+            <div><div class="hero-stat-label">Installed capacity</div><div class="hero-stat-value"><span id="installedCap">—</span><span class="u">MW</span></div></div>
             <div><div class="hero-stat-label">Total CapEx</div><div class="hero-stat-value"><span id="totalCapex">—</span><span class="u">M$</span></div></div>
             <div><div class="hero-stat-label">Annual OpEx</div><div class="hero-stat-value"><span id="annualOpex">—</span><span class="u">M$/yr</span></div></div>
             <div><div class="hero-stat-label">CO₂ intensity</div><div class="hero-stat-value"><span id="co2Intensity">—</span><span class="u">kg/MWh</span></div></div>
@@ -325,6 +356,12 @@
           <div class="stacked" id="lcoeStack" style="margin-bottom:14px;"></div>
           <div class="legend" id="lcoeLegend"></div>
         </div>
+      </div>
+
+      <!-- PLANT SIZING / REDUNDANCY -->
+      <div class="result-panel">
+        <div class="result-header"><span class="result-header-label">Plant sizing &amp; redundancy</span><span class="result-header-sub" id="sizingSub"></span></div>
+        <table class="data-table" id="sizingTable"></table>
       </div>
 
       <!-- TWO COLUMN: CAPEX + LCOE TABLE -->
@@ -426,6 +463,8 @@ const TECH = {
   ENGINE: {
     label: "Reciprocating gas engine",
     eff_pct: 45,                      // Wartsila/INNIO medium-speed gas gensets, up to 46% simple cycle LHV
+    unit_rating_mw: 18.5,             // Wartsila 50SG-class genset (~18-19 MWe); modular
+    unit_note: "Default 18.5 MW/unit (Wärtsilä 50SG-class). Many small units ⇒ N+1 adds little capacity (cheap redundancy). INNIO Jenbacher units are smaller still (~1-10 MW).",
     isbl_per_kw: 1100,                // back-calculated so total ~ EIA ICE / Lazard gas-peaking band
     osbl_pct: 30,
     indirect_pct: 20,
@@ -438,6 +477,8 @@ const TECH = {
   TURBINE: {
     label: "Simple-cycle gas turbine",
     eff_pct: 40,                      // aeroderivative LM6000-class, 36-42% simple cycle LHV
+    unit_rating_mw: 50,               // GE/Baker Hughes LM6000-class aeroderivative (~50-54 MWe)
+    unit_note: "Default 50 MW/unit (LM6000-class aeroderivative). Fewer, larger units ⇒ N+1 adds a big % of capacity. Frame F/H-class machines (~230-450 MW) make N+1 costliest.",
     isbl_per_kw: 800,
     osbl_pct: 30,
     indirect_pct: 20,
@@ -476,10 +517,13 @@ function blendEnergyFracH2(volPctH2){
 // ---------------------------------------------------------------
 function calculate(){
   const fuel = $("fuel").value;
-  const P_MW = num("powerMW");
-  const P_kW = P_MW * 1000;
+  const P_MW = num("powerMW");                 // required firm (net) output
   const cf = num("capFactor")/100;
   const eff = num("effPct")/100;
+  const unitRating = num("unitRatingMW");
+  const scheme = $("redundancy").value;
+  const useOverride = $("useInstalledOverride").checked;
+  const overrideMW = num("installedMWOverride");
   const isbl = num("isblPerKw");
   const osblPct = num("osblPct")/100;
   const indPct = num("indirectPct")/100;
@@ -491,21 +535,33 @@ function calculate(){
 
   // ---- validation ----
   const errs = [];
-  if(!(P_MW>0)) errs.push("Net power must be &gt; 0.");
+  if(!(P_MW>0)) errs.push("Firm output must be &gt; 0.");
   if(!(cf>0 && cf<=1)) errs.push("Capacity factor must be between 0 and 100%.");
   if(!(eff>0.05 && eff<0.7)) errs.push("Electrical efficiency looks out of range (5–70%).");
+  if(!(unitRating>0)) errs.push("Unit rating must be &gt; 0.");
   if(!(n>=1)) errs.push("Project life must be ≥ 1 year.");
+  if(useOverride && !(overrideMW>0)) errs.push("Installed-capacity override must be &gt; 0.");
   if(errs.length){ $("configMsg").className="msg msg-err"; $("configMsg").innerHTML = "⚠ "+errs.join("  "); return; }
 
-  // ---- generation ----
+  // ---- plant sizing / maintenance redundancy ----
+  // N duty units cover firm output; spares are the redundancy margin.
+  const N = Math.max(1, Math.ceil(P_MW / unitRating));   // duty units
+  const spares = (scheme==="2N") ? N : (scheme==="N2" ? 2 : (scheme==="N1" ? 1 : 0));
+  const instUnits = N + spares;
+  const dutyCapMW = N * unitRating;                       // firm capability (>= P_MW)
+  const installedMW = useOverride ? overrideMW : instUnits * unitRating;
+  const reservePct = (installedMW - P_MW) / P_MW * 100;
+  const installed_kW = installedMW * 1000;
+
+  // ---- generation (firm-output basis; redundancy does not change energy) ----
   const annualMWh = P_MW * HOURS_YR * cf;
 
-  // ---- CapEx ----
+  // ---- CapEx (installed-capacity basis) ----
   const osbl = isbl * osblPct;
   const directKw = isbl + osbl;
   const indirect = directKw * indPct;
   const totalKw = directKw + indirect;
-  const capexTotal = totalKw * P_kW;                 // $
+  const capexTotal = totalKw * installed_kW;         // $  — on installed capacity
   const annualCapital = capexTotal * crf(r, n);      // $/yr
 
   // ---- Heat input (LHV basis) ----
@@ -539,15 +595,14 @@ function calculate(){
   const co2_kg_per_MWh = annualMWh>0 ? (co2_tonnes*1000)/annualMWh : 0;
 
   // ---- OpEx ----
-  const fomAnnual = fom * P_kW;
+  const fomAnnual = fom * installed_kW;   // fixed O&M scales with installed capacity (all units maintained)
   const vomAnnual = vom * annualMWh;
   const opexAnnual = fomAnnual + vomAnnual + fuelCost + carbonCost;
 
   // ---- LCOE components ($/MWh) ----
   const c_cap  = annualCapital / annualMWh;
   const c_fom  = fomAnnual    / annualMWh;
-  const c_vom  = vomAnnual;                 // already per generation; = vom (since vomAnnual/annualMWh = vom)
-  const c_vomMWh = vomAnnual  / annualMWh;
+  const c_vomMWh = vomAnnual  / annualMWh;  // = vom (variable O&M is already per-MWh)
   const c_fuel = fuelCost     / annualMWh;
   const c_co2  = carbonCost   / annualMWh;
   const lcoe   = c_cap + c_fom + c_vomMWh + c_fuel + c_co2;
@@ -555,7 +610,8 @@ function calculate(){
   render({
     fuel, P_MW, cf, eff, n, r, energyFracH2,
     annualMWh, capexTotal, annualCapital, opexAnnual, lcoe,
-    isbl, osbl, indirect, directKw, totalKw, P_kW,
+    isbl, osbl, indirect, directKw, totalKw, installed_kW, installedMW,
+    unitRating, scheme, N, spares, instUnits, dutyCapMW, reservePct, useOverride,
     fomAnnual, vomAnnual, fuelCost, carbonCost,
     c_cap, c_fom, c_vomMWh, c_fuel, c_co2,
     massNG, massH2, massNH3, heatLHV_GJ_yr,
@@ -573,9 +629,12 @@ function render(d){
   const T = TECH[primeMover];
   const fuelName = d.fuel==="BLEND" ? "NG–H₂ blend" : FUELS[d.fuel].name;
 
+  const schemeLabel = {N:"no redundancy (N)", N1:"N+1", N2:"N+2", "2N":"2N standby"}[d.scheme];
+
   // config message
-  let cfg = `<strong>${T.label}</strong> on <strong>${fuelName}</strong> · ${fmt(d.P_MW,0)} MW net · ${fmt(d.cf*100,0)}% capacity factor · `
+  let cfg = `<strong>${T.label}</strong> on <strong>${fuelName}</strong> · ${fmt(d.P_MW,0)} MW firm · ${fmt(d.cf*100,0)}% capacity factor · `
           + `${fmt(d.eff*100,1)}% efficiency (LHV) · ${fmt(d.r*100,1)}% discount over ${d.n} yr.`;
+  cfg += ` Sizing: ${d.useOverride ? "manual installed override" : schemeLabel} ⇒ ${d.useOverride ? "" : fmt(d.N,0)+" duty + "+fmt(d.spares,0)+" spare = "+fmt(d.instUnits,0)+" × "+fmt(d.unitRating,1)+" MW = "}<strong>${fmt(d.installedMW,1)} MW installed</strong> (reserve +${fmt(d.reservePct,0)}% over firm output).`;
   if(d.fuel==="BLEND") cfg += ` Blend = ${fmt(num('blendVolPct'),0)} vol% H₂ ⇒ ${fmt(d.energyFracH2*100,1)}% of energy (and of fuel cost) from H₂; CO₂ falls by the same energy share.`;
   if(d.fuel==="H2"||d.fuel==="NH3") cfg += ` Zero combustion CO₂ (upstream/production emissions excluded).`;
   $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
@@ -585,6 +644,7 @@ function render(d){
   $("lcoeCentsKwh").textContent = `= ${fmt(d.lcoe/10,2)} ¢/kWh`;
   $("heroSub").textContent = `${T.label} · ${fuelName}`;
   $("annualMwh").textContent = fmt(d.annualMWh,0);
+  $("installedCap").textContent = fmt(d.installedMW,0);
   $("totalCapex").textContent = fmt(d.capexTotal/1e6,1);
   $("annualOpex").textContent = fmt(d.opexAnnual/1e6,2);
   $("co2Intensity").textContent = fmt(d.co2_kg_per_MWh,0);
@@ -611,19 +671,34 @@ function render(d){
     `<div class="legend-item"><span class="legend-swatch ${s.cls}"></span>${s.name}: <b style="color:var(--text);font-family:var(--mono);margin-left:3px;">${fmt(s.v,2)}</b>&nbsp;(${fmt(s.v/d.lcoe*100,1)}%)</div>`
   ).join("");
 
-  // CapEx table
-  $("capexSub").textContent = `$${fmt(d.totalKw,0)}/kW installed`;
+  // Plant sizing / redundancy table
+  $("sizingSub").textContent = d.useOverride ? "manual override" : schemeLabel;
+  $("sizingTable").innerHTML = `
+    <thead><tr><th>Parameter</th><th class="num">Value</th><th>Basis</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">Required firm output</td><td class="num">${fmt(d.P_MW,1)} MW</td><td class="lbl">drives generation, fuel &amp; variable O&amp;M</td></tr>
+      <tr><td class="lbl">Unit rating</td><td class="num">${fmt(d.unitRating,1)} MW</td><td class="lbl">per engine / turbine unit</td></tr>
+      <tr><td class="lbl">Duty units (N)</td><td class="num">${fmt(d.N,0)}</td><td class="lbl">⌈firm ÷ unit rating⌉</td></tr>
+      <tr><td class="lbl">Spare units</td><td class="num">${fmt(d.spares,0)}</td><td class="lbl">${schemeLabel}</td></tr>
+      <tr><td class="lbl">Installed units</td><td class="num">${fmt(d.instUnits,0)}${d.useOverride?" (nominal)":""}</td><td class="lbl">N + spares</td></tr>
+      <tr><td class="lbl">Duty (firm) capacity</td><td class="num">${fmt(d.dutyCapMW,1)} MW</td><td class="lbl">N × unit rating (≥ firm output)</td></tr>
+      <tr class="total"><td class="lbl">Installed capacity</td><td class="num">${fmt(d.installedMW,1)} MW</td><td class="lbl">drives CapEx &amp; fixed O&amp;M</td></tr>
+      <tr><td class="lbl">Reserve margin</td><td class="num">+${fmt(d.reservePct,0)}%</td><td class="lbl">(installed − firm) ÷ firm</td></tr>
+    </tbody>`;
+
+  // CapEx table (installed-capacity basis)
+  $("capexSub").textContent = `$${fmt(d.totalKw,0)}/kW × ${fmt(d.installedMW,0)} MW installed`;
   $("capexTable").innerHTML = `
     <thead><tr><th>Component</th><th class="num">$/kW</th><th class="num">Total (M$)</th><th class="num">Share</th></tr></thead>
     <tbody>
-      <tr><td class="lbl">ISBL — equipment &amp; erection</td><td class="num">${fmt(d.isbl,0)}</td><td class="num">${fmt(d.isbl*d.P_kW/1e6,1)}</td><td class="num pct-cell">${fmt(d.isbl/d.totalKw*100,0)}%</td></tr>
-      <tr><td class="lbl">OSBL — utilities, fuel handling, BoP, grid tie-in</td><td class="num">${fmt(d.osbl,0)}</td><td class="num">${fmt(d.osbl*d.P_kW/1e6,1)}</td><td class="num pct-cell">${fmt(d.osbl/d.totalKw*100,0)}%</td></tr>
-      <tr><td class="lbl">Indirect — engineering, contingency, owner's cost</td><td class="num">${fmt(d.indirect,0)}</td><td class="num">${fmt(d.indirect*d.P_kW/1e6,1)}</td><td class="num pct-cell">${fmt(d.indirect/d.totalKw*100,0)}%</td></tr>
+      <tr><td class="lbl">ISBL — equipment &amp; erection</td><td class="num">${fmt(d.isbl,0)}</td><td class="num">${fmt(d.isbl*d.installed_kW/1e6,1)}</td><td class="num pct-cell">${fmt(d.isbl/d.totalKw*100,0)}%</td></tr>
+      <tr><td class="lbl">OSBL — utilities, fuel handling, BoP, grid tie-in</td><td class="num">${fmt(d.osbl,0)}</td><td class="num">${fmt(d.osbl*d.installed_kW/1e6,1)}</td><td class="num pct-cell">${fmt(d.osbl/d.totalKw*100,0)}%</td></tr>
+      <tr><td class="lbl">Indirect — engineering, contingency, owner's cost</td><td class="num">${fmt(d.indirect,0)}</td><td class="num">${fmt(d.indirect*d.installed_kW/1e6,1)}</td><td class="num pct-cell">${fmt(d.indirect/d.totalKw*100,0)}%</td></tr>
       <tr class="total"><td class="lbl">Total installed CapEx</td><td class="num">${fmt(d.totalKw,0)}</td><td class="num">${fmt(d.capexTotal/1e6,1)}</td><td class="num pct-cell">100%</td></tr>
     </tbody>`;
 
-  // OpEx table
-  $("opexSub").textContent = `M$/yr`;
+  // OpEx table (fixed O&M on installed capacity; variable O&M + fuel on generation)
+  $("opexSub").textContent = `fixed on installed · variable on generation`;
   const opRows = [
     ["Fixed O&M", d.fomAnnual],
     ["Variable O&M", d.vomAnnual],
@@ -673,14 +748,17 @@ function refreshNotes(){
   $("omNote").innerHTML = `<b>O&M defaults</b> from EIA AEO2025 / NREL ATB 2024 for the matching technology; engines carry higher maintenance (top-end overhauls) than turbines.`;
   $("priceNote").innerHTML = `<b>Defaults:</b> NG $4.00/MMBtu (EIA STEO Dec-2025, 2026 Henry Hub ≈$4.01). H₂ $4.00/kg (clean-H₂ 2025 band $1.5–6/kg; US Gulf Coast Jan-2025 $2.3–3.2/kg). Ammonia $800/t (green NH₃ US Q1-2025 ≈$815/t, Q2 ≈$782/t; grey ≈$400–600/t).`;
   $("blendNote").innerHTML = `H₂ has ~3.4× lower volumetric energy than natural gas, so e.g. <span class="pill">20 vol% H₂ ≈ 7% of energy</span>. Energy share drives fuel cost and CO₂ reduction.`;
+  $("redundancyNote").innerHTML = `<b>${TECH[primeMover].label}.</b> ${TECH[primeMover].unit_note} N+1 ≠ 2×: installed = firm × (N+spares)/N, so the oversize shrinks as units get smaller. CapEx &amp; fixed O&M scale with installed capacity; generation stays on firm output.`;
 }
 
 const METHOD = `
-<b>Generation.</b> Annual MWh = Net&nbsp;Power(MW) × 8,760 h × Capacity&nbsp;Factor.<br>
-<b>CapEx.</b> OSBL = OSBL% × ISBL; Indirect = Indirect% × (ISBL+OSBL); Total installed = ISBL + OSBL + Indirect ($/kW × kW).
+<b>Generation.</b> Annual MWh = Firm&nbsp;Output(MW) × 8,760 h × Capacity&nbsp;Factor. Redundancy does <i>not</i> change generation — the capacity factor already represents dispatched energy; spare units raise firm-capacity <i>availability</i>, not output.<br>
+<b>Redundancy / maintenance philosophy.</b> Duty units N = ⌈Firm&nbsp;Output ÷ Unit&nbsp;rating⌉. Spares = 0 (N), 1 (N+1), 2 (N+2), or N (2N). Installed&nbsp;capacity = (N + spares) × Unit&nbsp;rating (or a manual override). Reserve&nbsp;margin = (Installed − Firm) ÷ Firm. N+1 is <i>not</i> 2× — a plant of many small units carries little spare capacity, while few large units carry a lot.<br>
+<b>CapEx &amp; fixed O&amp;M are charged on installed capacity; fuel &amp; variable O&amp;M on generation.</b><br>
+<b>CapEx.</b> OSBL = OSBL% × ISBL; Indirect = Indirect% × (ISBL+OSBL); Total installed = ISBL + OSBL + Indirect ($/kW × installed&nbsp;kW).
 ISBL = inside battery limits (prime-mover gensets/turbines, generators, local controls); OSBL = outside battery limits (fuel storage &amp; handling,
 balance-of-plant, cooling, electrical export, grid interconnection, civils); Indirect = engineering, contingency, owner's cost. Split convention per Towler &amp; Sinnott / Northwestern processdesign.<br>
-<b>Capital recovery factor</b> CRF = r(1+r)<sup>n</sup> / [(1+r)<sup>n</sup>−1], with r = discount rate, n = project life. Annualised capital = CRF × Total CapEx.<br>
+<b>Capital recovery factor</b> CRF = r(1+r)<sup>n</sup> / [(1+r)<sup>n</sup>−1], with r = discount rate, n = project life. Annualised capital = CRF × Total installed CapEx.<br>
 <b>Heat input (LHV).</b> Thermal&nbsp;input = Annual&nbsp;MWh × 3.6&nbsp;GJ/MWh ÷ η<sub>elec</sub>. Fuel mass = Heat ÷ LHV. (H₂ 120, NH₃ 18.6, NG 47.1 MJ/kg.)<br>
 <b>Fuel cost.</b> NG billed on its HHV MMBtu (Henry-Hub convention) at $/MMBtu; H₂ at $/kg; NH₃ at $/tonne. Blend cost splits by energy share.<br>
 <b>CO₂.</b> Combustion CO₂ = NG HHV heat × 53.06 kg/MMBtu (EPA). H₂ &amp; NH₃ = 0 at point of combustion (upstream not included; NH₃ N₂O/NOx not costed).<br>
@@ -697,7 +775,9 @@ const REFERENCES = [
   ["tech","Gas engine efficiency","Wärtsilä Energy — medium-speed gas engines up to 46% simple-cycle (LHV); engines vs aeroderivative comparison.", "https://www.wartsila.com/energy/learn-more/technology-comparison-engines-vs-aeros"],
   ["tech","H₂-ready engines","INNIO Jenbacher — Type-4 engines for 100% H₂; 'Ready for H₂' to 25 vol% on other types, convertible to 100%.", "https://www.innio.com/en/news-media/press-releases/innio-jenbacher-gas-engines-ready-for-hydrogen/"],
   ["tech","Ammonia engine","Wärtsilä — 4-stroke ammonia engine (Wärtsilä 25), up to 90% GHG cut; commercial deliveries from 2026/2028.", "https://www.wartsila.com/media/news/27-05-2025-extensive-testing-of-wartsila-s-4-stroke-ammonia-engine-demonstrates-ghg-emission-reductions-by-up-to-90-percent-3590235"],
-  ["tech","Aeroderivative turbine","GE Aerospace / Baker Hughes — LM6000 PF+ 53.8 MW, ≈40.8% simple-cycle, 8,357 Btu/kWh (LHV).", "https://www.bakerhughes.com/gas-turbines/aeroderivative-technology/lm6000pf"],
+  ["tech","Aeroderivative turbine","GE Aerospace / Baker Hughes — LM6000 PF+ 53.8 MW, ≈40.8% simple-cycle, 8,357 Btu/kWh (LHV). Used as the default 50 MW/unit turbine rating.", "https://www.bakerhughes.com/gas-turbines/aeroderivative-technology/lm6000pf"],
+  ["tech","Engine unit rating","Wärtsilä 50SG gas engine generating set — ~18–19 MWe per unit; modular multi-engine plants. Used as the default 18.5 MW/unit engine rating.", "https://www.wartsila.com/energy/solutions/engine-power-plants/wartsila-50sg-gas-engine"],
+  ["meth","N+1 redundancy","Reserve/redundancy design basis (N+1 firm-capacity philosophy) — standard power-plant reliability practice; installed capacity sized so duty output is met with the largest unit out of service (IEEE-style planning).", "https://en.wikipedia.org/wiki/N%2B1_redundancy"],
   ["fuel","Fuel heating values","ISO 6976 / ISO 13443 / IEA — LHV: H₂ 120 MJ/kg, NH₃ 18.6 MJ/kg, NG 47.1 MJ/kg.", "https://en.wikipedia.org/wiki/Heat_of_combustion"],
   ["fuel","Natural gas price","U.S. EIA, <i>Short-Term Energy Outlook</i> (Dec 2025) — Henry Hub 2026 average ≈$4.01/MMBtu.", "https://www.eia.gov/outlooks/steo/report/natgas.php"],
   ["fuel","Hydrogen price","2025 market: clean H₂ $3.5–6/kg; US Gulf Coast Jan-2025 $2.30/kg (alkaline)–$3.19/kg (PEM); grey H₂ $1.5–2.5/kg (IEA / BloombergNEF / market reports).", "https://www.iea.org/reports/global-hydrogen-review-2024"],
@@ -719,6 +799,7 @@ function buildReferences(){
 function applyTechDefaults(){
   const T = TECH[primeMover];
   $("effPct").value = T.eff_pct;
+  $("unitRatingMW").value = T.unit_rating_mw;
   $("isblPerKw").value = T.isbl_per_kw;
   $("osblPct").value = T.osbl_pct;
   $("indirectPct").value = T.indirect_pct;
@@ -760,19 +841,27 @@ $("rgPrime").querySelectorAll("label").forEach(l=>{
   });
 });
 $("fuel").addEventListener("change", ()=>{ syncFuelUI(); calculate(); });
+$("redundancy").addEventListener("change", calculate);
+$("useInstalledOverride").addEventListener("change", ()=>{ syncRedundancyUI(); calculate(); });
 $("calcBtn").addEventListener("click", calculate);
-[ "blendVolPct","powerMW","capFactor","effPct","isblPerKw","osblPct","indirectPct",
-  "fomPerKwYr","vomPerMwh","priceNG","priceH2","priceNH3","discountPct","lifeYr","co2Price"
+[ "blendVolPct","powerMW","capFactor","effPct","unitRatingMW","installedMWOverride",
+  "isblPerKw","osblPct","indirectPct","fomPerKwYr","vomPerMwh",
+  "priceNG","priceH2","priceNH3","discountPct","lifeYr","co2Price"
 ].forEach(id=> $(id).addEventListener("input", calculate));
+
+function syncRedundancyUI(){
+  $("installedOverrideField").style.display = $("useInstalledOverride").checked ? "block" : "none";
+}
 
 $("resetBtn").addEventListener("click", ()=>{
   primeMover="ENGINE";
   $("rgPrime").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="ENGINE"));
   $("fuel").value="NG";
   $("powerMW").value=50; $("capFactor").value=85;
+  $("redundancy").value="N1"; $("useInstalledOverride").checked=false;
   $("discountPct").value=8; $("lifeYr").value=25; $("co2Price").value=0;
   $("blendVolPct").value=20;
-  applyTechDefaults(); applyPriceDefaults(); refreshNotes(); syncFuelUI(); calculate();
+  applyTechDefaults(); applyPriceDefaults(); refreshNotes(); syncFuelUI(); syncRedundancyUI(); calculate();
 });
 
 // init
@@ -781,6 +870,7 @@ applyPriceDefaults();
 refreshNotes();
 buildReferences();
 syncFuelUI();
+syncRedundancyUI();
 calculate();
 </script>
 </body>
