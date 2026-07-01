@@ -284,7 +284,11 @@ function UsersTable({
   );
 }
 
-export const UserManagement = {
-  CreateButton,
-  Table: UsersTable,
-};
+// Exported directly (not grouped into an object) because Next's React Server
+// Components client-reference compiler only tracks direct named/default
+// exports of a "use client" module. Accessing e.g. `UserManagement.Table`
+// from a Server Component fails to resolve in the production client manifest
+// ("Could not find the module ... in the React Client Manifest") even though
+// it works in `next dev`, which skips that manifest check.
+export { CreateButton as UserManagementCreateButton };
+export { UsersTable as UserManagementTable };

@@ -5,7 +5,10 @@ import { Card } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/states";
-import { UserManagement } from "@/components/admin/user-management";
+import {
+  UserManagementCreateButton,
+  UserManagementTable,
+} from "@/components/admin/user-management";
 import type { Profile } from "@/types";
 
 const PAGE_SIZE = 10;
@@ -45,7 +48,7 @@ export default async function AdminUsersPage({
       <Card>
         <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <SearchInput placeholder="Search by name or email…" />
-          <UserManagement.CreateButton />
+          <UserManagementCreateButton />
         </div>
 
         {users.length === 0 ? (
@@ -58,7 +61,7 @@ export default async function AdminUsersPage({
             }
           />
         ) : (
-          <UserManagement.Table users={users} currentAdminId={admin.id} />
+          <UserManagementTable users={users} currentAdminId={admin.id} />
         )}
 
         <Pagination page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
