@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { LoginForm } from "./login-form";
@@ -15,12 +16,16 @@ export default async function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M13 2 3 14h7v8l10-12h-7z" strokeLinejoin="round" />
-            </svg>
+          <div className="relative mx-auto mb-4 h-16 w-28">
+            <Image
+              src="/branding/gentari-logo.png"
+              alt="Gentari"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
-          <h1 className="text-xl font-semibold">Engineering Dashboard</h1>
+          <h1 className="text-xl font-semibold">Front End Engineering Tool Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to access your engineering tools
           </p>

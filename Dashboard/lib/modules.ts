@@ -37,29 +37,11 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     slug: "pipeline-sizing",
-    title: "Pipeline Sizing Calculator",
+    title: "H2 & NH3 Pipeline Sizing Calculator",
     description:
-      "General-purpose pipeline hydraulic sizing — pressure drop, velocity, and diameter selection.",
+      "General-purpose pipeline hydraulic sizing — pressure drop, velocity, and diameter selection for hydrogen and ammonia.",
     category: "Pipeline Sizing",
     htmlPath: "/modules/pipeline-sizing.html",
-    icon: "pipe",
-  },
-  {
-    slug: "hydrogen-pipeline-sizing",
-    title: "Hydrogen Pipeline Sizing",
-    description:
-      "Hydrogen-specific pipeline sizing accounting for H₂ density, compressibility, and flow behavior.",
-    category: "Pipeline Sizing",
-    htmlPath: "/modules/hydrogen-pipeline-sizing.html",
-    icon: "pipe",
-  },
-  {
-    slug: "ammonia-pipeline-sizing",
-    title: "Ammonia Pipeline Sizing",
-    description:
-      "Ammonia pipeline sizing model with NH₃-specific fluid properties and hydraulic calculations.",
-    category: "Pipeline Sizing",
-    htmlPath: "/modules/ammonia-pipeline-sizing.html",
     icon: "pipe",
   },
 ];
