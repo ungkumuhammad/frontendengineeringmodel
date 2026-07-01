@@ -94,6 +94,21 @@
   .hero-stat-value { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--text); margin-top:2px; }
   .hero-stat-value .u { font-size: 11px; color: var(--text2); margin-left: 3px; }
 
+  /* Compare headline */
+  .cmp-headline { display:flex; flex-wrap:wrap; align-items:stretch; gap:14px; }
+  .cmp-card { flex:1; min-width:180px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:14px 16px; position:relative; }
+  .cmp-card.win { border-color:var(--success); box-shadow:0 0 0 1px var(--success) inset; }
+  .cmp-card-tech { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text2); margin-bottom:6px; }
+  .cmp-card-lcoe { font-size:34px; font-weight:800; font-family:var(--mono); color:var(--accent2); line-height:1; letter-spacing:-0.02em; }
+  .cmp-card-lcoe .u { font-size:14px; color:var(--text2); font-weight:500; margin-left:5px; font-family:var(--sans); }
+  .cmp-card-sub { font-size:11px; color:var(--text3); margin-top:6px; }
+  .cmp-win-badge { position:absolute; top:12px; right:12px; background:var(--success-bg); color:var(--success); font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px; text-transform:uppercase; letter-spacing:0.05em; }
+  .cmp-delta { display:flex; flex-direction:column; justify-content:center; align-items:center; min-width:120px; padding:10px; text-align:center; }
+  .cmp-delta-label { font-size:10px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text3); }
+  .cmp-delta-val { font-size:22px; font-weight:800; font-family:var(--mono); color:var(--text); margin-top:3px; }
+  .cmp-delta-val .u { font-size:12px; color:var(--text2); font-weight:500; }
+  .data-table td.win-cell { color:var(--success); font-weight:700; }
+
   /* Grid of result cards */
   .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
   .result-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 11px 12px; }
@@ -176,9 +191,17 @@
     <!-- ============ SIDEBAR (INPUTS) ============ -->
     <div class="sidebar">
 
+      <div class="field" style="margin-bottom:16px;">
+        <label>View</label>
+        <div class="radio-group" id="rgView">
+          <label class="active" data-val="single">Single analysis</label>
+          <label data-val="compare">Engine vs Turbine</label>
+        </div>
+      </div>
+
       <div class="section-label accent">Plant configuration</div>
 
-      <div class="field">
+      <div class="field" id="primeField">
         <label>Prime mover</label>
         <div class="radio-group" id="rgPrime">
           <label class="active" data-val="ENGINE">Gas Engine</label>
@@ -186,6 +209,7 @@
         </div>
         <div class="src-note" id="primeNote"></div>
       </div>
+      <div class="src-note" id="compareModeNote" style="display:none; color:var(--info);"></div>
 
       <div class="field">
         <label>Fuel</label>
@@ -214,7 +238,7 @@
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" id="effField">
         <label>Electrical efficiency <span class="hint">% (net, LHV)</span></label>
         <input type="number" id="effPct" value="45" min="10" max="65" step="0.5"/>
         <div class="src-note" id="effNote"></div>
@@ -224,7 +248,7 @@
       <div class="section-label accent">Maintenance &amp; redundancy</div>
 
       <div class="row2">
-        <div class="field">
+        <div class="field" id="unitRatingField">
           <label>Unit rating <span class="hint">MW / unit</span></label>
           <input type="number" id="unitRatingMW" value="18.5" min="0.1" step="0.5"/>
         </div>
@@ -238,7 +262,7 @@
           </select>
         </div>
       </div>
-      <div class="field" style="margin-bottom:6px;">
+      <div class="field" id="overrideToggleField" style="margin-bottom:6px;">
         <label style="display:flex; align-items:center; gap:7px; text-transform:none; letter-spacing:0; font-size:11px; cursor:pointer;">
           <input type="checkbox" id="useInstalledOverride" style="width:auto; margin:0; accent-color:var(--accent);"/>
           Override installed capacity manually
@@ -253,12 +277,12 @@
       <hr class="hdiv"/>
       <div class="section-label accent">Capital cost (CapEx)</div>
 
-      <div class="field">
+      <div class="field" id="isblField">
         <label>ISBL specific cost <span class="hint">$/kW — equipment + erection</span></label>
         <input type="number" id="isblPerKw" value="1100" min="0" step="10"/>
         <div class="src-note" id="capexNote"></div>
       </div>
-      <div class="row2">
+      <div class="row2" id="osblIndRow">
         <div class="field">
           <label>OSBL <span class="hint">% of ISBL</span></label>
           <input type="number" id="osblPct" value="30" min="0" max="200" step="1"/>
@@ -272,7 +296,7 @@
       <hr class="hdiv"/>
       <div class="section-label accent">Operating cost (OpEx)</div>
 
-      <div class="row2">
+      <div class="row2" id="omRow">
         <div class="field">
           <label>Fixed O&amp;M <span class="hint">$/kW-yr</span></label>
           <input type="number" id="fomPerKwYr" value="35" min="0" step="0.5"/>
@@ -327,6 +351,9 @@
     <div class="content">
 
       <div class="msg msg-info" id="configMsg"></div>
+
+      <!-- ============ SINGLE VIEW ============ -->
+      <div id="singleView">
 
       <!-- HERO -->
       <div class="result-panel hero">
@@ -384,6 +411,39 @@
         <div class="result-header"><span class="result-header-label">Energy &amp; fuel balance</span><span class="result-header-sub" id="fuelSub"></span></div>
         <table class="data-table" id="fuelTable"></table>
       </div>
+
+      </div><!-- /singleView -->
+
+      <!-- ============ COMPARE VIEW ============ -->
+      <div id="compareView" style="display:none;">
+
+        <!-- Headline LCOE compare -->
+        <div class="result-panel hero">
+          <div class="result-header">
+            <span class="result-header-label">Engine vs Turbine — Levelized Cost of Electricity</span>
+            <span class="result-header-sub" id="cmpHeroSub"></span>
+          </div>
+          <div class="result-body">
+            <div class="cmp-headline" id="cmpHeadline"></div>
+          </div>
+        </div>
+
+        <!-- Component bars -->
+        <div class="result-panel">
+          <div class="result-header"><span class="result-header-label">LCOE component makeup</span><span class="result-header-sub">$/MWh, same scale</span></div>
+          <div class="result-body">
+            <div class="bars" id="cmpBars"></div>
+            <div class="legend" id="cmpLegend" style="margin-top:14px;"></div>
+          </div>
+        </div>
+
+        <!-- Full comparison table -->
+        <div class="result-panel">
+          <div class="result-header"><span class="result-header-label">Side-by-side comparison</span><span class="result-header-sub">shared project basis</span></div>
+          <table class="data-table" id="cmpTable"></table>
+        </div>
+
+      </div><!-- /compareView -->
 
       <!-- ASSUMPTIONS -->
       <details class="assump">
@@ -494,6 +554,7 @@ const TECH = {
 const PRICE_DEFAULTS = { NG: 4.00, H2: 4.00, NH3: 800 };
 
 let primeMover = "ENGINE";
+let viewMode = "single";      // "single" | "compare"
 
 // ---------------------------------------------------------------
 //  Helpers
@@ -515,23 +576,13 @@ function blendEnergyFracH2(volPctH2){
 // ---------------------------------------------------------------
 //  Core calculation
 // ---------------------------------------------------------------
-function calculate(){
-  const fuel = $("fuel").value;
-  const P_MW = num("powerMW");                 // required firm (net) output
-  const cf = num("capFactor")/100;
-  const eff = num("effPct")/100;
-  const unitRating = num("unitRatingMW");
-  const scheme = $("redundancy").value;
-  const useOverride = $("useInstalledOverride").checked;
-  const overrideMW = num("installedMWOverride");
-  const isbl = num("isblPerKw");
-  const osblPct = num("osblPct")/100;
-  const indPct = num("indirectPct")/100;
-  const fom = num("fomPerKwYr");
-  const vom = num("vomPerMwh");
-  const r = num("discountPct")/100;
-  const n = Math.round(num("lifeYr"));
-  const co2Price = num("co2Price");
+// Pure compute: takes a prime-mover key + explicit params, returns a result object
+// (or {error:[...]}). No DOM reads — callers assemble params. Used by both the
+// single-analysis view and the engine-vs-turbine comparison view.
+function computeCase(pm, p){
+  const { fuel, P_MW, cf, eff, unitRating, scheme, useOverride, overrideMW,
+          isbl, osblPct, indPct, fom, vom, r, co2Price, blendVolPct } = p;
+  const n = Math.round(p.n);
 
   // ---- validation ----
   const errs = [];
@@ -541,7 +592,7 @@ function calculate(){
   if(!(unitRating>0)) errs.push("Unit rating must be &gt; 0.");
   if(!(n>=1)) errs.push("Project life must be ≥ 1 year.");
   if(useOverride && !(overrideMW>0)) errs.push("Installed-capacity override must be &gt; 0.");
-  if(errs.length){ $("configMsg").className="msg msg-err"; $("configMsg").innerHTML = "⚠ "+errs.join("  "); return; }
+  if(errs.length) return { error: errs };
 
   // ---- plant sizing / maintenance redundancy ----
   // N duty units cover firm output; spares are the redundancy margin.
@@ -570,7 +621,7 @@ function calculate(){
   // ---- Fuel split / cost / emissions ----
   let energyFracH2 = 0;
   if(fuel === "H2") energyFracH2 = 1;
-  else if(fuel === "BLEND") energyFracH2 = blendEnergyFracH2(num("blendVolPct"));
+  else if(fuel === "BLEND") energyFracH2 = blendEnergyFracH2(blendVolPct);
 
   const heatNG_GJ  = (fuel==="NH3") ? 0 : heatLHV_GJ_yr * (fuel==="H2" ? 0 : (1 - energyFracH2));
   const heatH2_GJ  = (fuel==="NG"||fuel==="NH3") ? 0 : heatLHV_GJ_yr * energyFracH2;
@@ -607,8 +658,8 @@ function calculate(){
   const c_co2  = carbonCost   / annualMWh;
   const lcoe   = c_cap + c_fom + c_vomMWh + c_fuel + c_co2;
 
-  render({
-    fuel, P_MW, cf, eff, n, r, energyFracH2,
+  return {
+    pm, fuel, P_MW, cf, eff, n, r, energyFracH2, blendVolPct,
     annualMWh, capexTotal, annualCapital, opexAnnual, lcoe,
     isbl, osbl, indirect, directKw, totalKw, installed_kW, installedMW,
     unitRating, scheme, N, spares, instUnits, dutyCapMW, reservePct, useOverride,
@@ -617,7 +668,80 @@ function calculate(){
     massNG, massH2, massNH3, heatLHV_GJ_yr,
     co2_tonnes, co2_kg_per_MWh, ngHHV_MMBtu,
     costNG, costH2, costNH3
-  });
+  };
+}
+
+// ---------------------------------------------------------------
+//  Input readers + dispatch
+// ---------------------------------------------------------------
+// Project-level inputs shared by both technologies in compare mode.
+function readShared(){
+  return {
+    fuel: $("fuel").value,
+    P_MW: num("powerMW"),
+    cf: num("capFactor")/100,
+    scheme: $("redundancy").value,
+    blendVolPct: num("blendVolPct"),
+    priceNG: num("priceNG"), priceH2: num("priceH2"), priceNH3: num("priceNH3"),
+    r: num("discountPct")/100,
+    n: num("lifeYr"),
+    co2Price: num("co2Price"),
+    useOverride: false, overrideMW: 0
+  };
+}
+// Full single-mode params (all fields editable) for the selected prime mover.
+function readParamsSingle(){
+  return {
+    ...readShared(),
+    eff: num("effPct")/100,
+    unitRating: num("unitRatingMW"),
+    isbl: num("isblPerKw"),
+    osblPct: num("osblPct")/100,
+    indPct: num("indirectPct")/100,
+    fom: num("fomPerKwYr"),
+    vom: num("vomPerMwh"),
+    useOverride: $("useInstalledOverride").checked,
+    overrideMW: num("installedMWOverride")
+  };
+}
+// Technology-specific params from referenced defaults (compare mode).
+function techParams(pm){
+  const T = TECH[pm];
+  return {
+    ...readShared(),
+    eff: T.eff_pct/100,
+    unitRating: T.unit_rating_mw,
+    isbl: T.isbl_per_kw,
+    osblPct: T.osbl_pct/100,
+    indPct: T.indirect_pct/100,
+    fom: T.fom_per_kw_yr,
+    vom: T.vom_per_mwh,
+    useOverride: false, overrideMW: 0
+  };
+}
+
+function showError(errs){
+  $("configMsg").className="msg msg-err";
+  $("configMsg").innerHTML = "⚠ "+errs.join("  ");
+}
+
+// Dispatch: single analysis or engine-vs-turbine comparison.
+function run(){
+  if(viewMode === "compare") return calculateCompare();
+  return calculate();
+}
+
+function calculate(){
+  const d = computeCase(primeMover, readParamsSingle());
+  if(d.error) return showError(d.error);
+  render(d);
+}
+
+function calculateCompare(){
+  const dE = computeCase("ENGINE",  techParams("ENGINE"));
+  const dT = computeCase("TURBINE", techParams("TURBINE"));
+  if(dE.error || dT.error) return showError((dE.error||dT.error));
+  renderCompare(dE, dT);
 }
 
 function crf(r, n){ if(r===0) return 1/n; const f=Math.pow(1+r,n); return r*f/(f-1); }
@@ -625,17 +749,19 @@ function crf(r, n){ if(r===0) return 1/n; const f=Math.pow(1+r,n); return r*f/(f
 // ---------------------------------------------------------------
 //  Rendering
 // ---------------------------------------------------------------
-function render(d){
-  const T = TECH[primeMover];
-  const fuelName = d.fuel==="BLEND" ? "NG–H₂ blend" : FUELS[d.fuel].name;
+const SCHEME_LABEL = {N:"no redundancy (N)", N1:"N+1", N2:"N+2", "2N":"2N standby"};
+function fuelName(f){ return f==="BLEND" ? "NG–H₂ blend" : FUELS[f].name; }
 
-  const schemeLabel = {N:"no redundancy (N)", N1:"N+1", N2:"N+2", "2N":"2N standby"}[d.scheme];
+function render(d){
+  const T = TECH[d.pm];
+  const fN = fuelName(d.fuel);
+  const schemeLabel = SCHEME_LABEL[d.scheme];
 
   // config message
-  let cfg = `<strong>${T.label}</strong> on <strong>${fuelName}</strong> · ${fmt(d.P_MW,0)} MW firm · ${fmt(d.cf*100,0)}% capacity factor · `
+  let cfg = `<strong>${T.label}</strong> on <strong>${fN}</strong> · ${fmt(d.P_MW,0)} MW firm · ${fmt(d.cf*100,0)}% capacity factor · `
           + `${fmt(d.eff*100,1)}% efficiency (LHV) · ${fmt(d.r*100,1)}% discount over ${d.n} yr.`;
   cfg += ` Sizing: ${d.useOverride ? "manual installed override" : schemeLabel} ⇒ ${d.useOverride ? "" : fmt(d.N,0)+" duty + "+fmt(d.spares,0)+" spare = "+fmt(d.instUnits,0)+" × "+fmt(d.unitRating,1)+" MW = "}<strong>${fmt(d.installedMW,1)} MW installed</strong> (reserve +${fmt(d.reservePct,0)}% over firm output).`;
-  if(d.fuel==="BLEND") cfg += ` Blend = ${fmt(num('blendVolPct'),0)} vol% H₂ ⇒ ${fmt(d.energyFracH2*100,1)}% of energy (and of fuel cost) from H₂; CO₂ falls by the same energy share.`;
+  if(d.fuel==="BLEND") cfg += ` Blend = ${fmt(d.blendVolPct,0)} vol% H₂ ⇒ ${fmt(d.energyFracH2*100,1)}% of energy (and of fuel cost) from H₂; CO₂ falls by the same energy share.`;
   if(d.fuel==="H2"||d.fuel==="NH3") cfg += ` Zero combustion CO₂ (upstream/production emissions excluded).`;
   $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
 
@@ -738,6 +864,94 @@ function render(d){
 }
 
 // ---------------------------------------------------------------
+//  Engine-vs-Turbine comparison rendering
+// ---------------------------------------------------------------
+function renderCompare(dE, dT){
+  const fN = fuelName(dE.fuel);
+  const schemeLabel = SCHEME_LABEL[dE.scheme];
+
+  // config / shared-assumptions banner
+  let cfg = `<strong>Engine vs Turbine</strong> on <strong>${fN}</strong> at a shared basis: ${fmt(dE.P_MW,0)} MW firm · ${fmt(dE.cf*100,0)}% CF · ${schemeLabel} redundancy · ${fmt(dE.r*100,1)}% discount over ${dE.n} yr.`;
+  if(dE.fuel==="BLEND") cfg += ` Blend ${fmt(dE.blendVolPct,0)} vol% H₂ (${fmt(dE.energyFracH2*100,1)}% energy).`;
+  cfg += ` Each technology uses its own referenced efficiency, CapEx and O&M defaults.`;
+  $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
+
+  const eWins = dE.lcoe <= dT.lcoe;
+  const cheaper = eWins ? dE : dT;
+  const dearer  = eWins ? dT : dE;
+  const deltaAbs = Math.abs(dE.lcoe - dT.lcoe);
+  const deltaPct = deltaAbs / cheaper.lcoe * 100;
+
+  $("cmpHeroSub").textContent = `${fN} · ${fmt(dE.P_MW,0)} MW · ${schemeLabel}`;
+
+  // headline cards + delta
+  const card = (d, win) => `
+    <div class="cmp-card ${win?'win':''}">
+      ${win?'<span class="cmp-win-badge">lower LCOE</span>':''}
+      <div class="cmp-card-tech">${TECH[d.pm].label}</div>
+      <div class="cmp-card-lcoe">${fmt(d.lcoe,1)}<span class="u">$/MWh</span></div>
+      <div class="cmp-card-sub">${fmt(d.eff*100,1)}% eff · ${fmt(d.installedMW,0)} MW installed (${fmt(d.instUnits,0)}×${fmt(d.unitRating,1)} MW) · $${fmt(d.capexTotal/1e6,0)}M CapEx</div>
+    </div>`;
+  $("cmpHeadline").innerHTML =
+    card(dE, eWins) +
+    `<div class="cmp-delta"><div class="cmp-delta-label">${eWins?'Engine':'Turbine'} cheaper by</div>`
+    + `<div class="cmp-delta-val">${fmt(deltaAbs,1)}<span class="u"> $/MWh</span></div>`
+    + `<div class="cmp-delta-label" style="margin-top:4px;">${fmt(deltaPct,1)}%</div></div>`
+    + card(dT, !eWins);
+
+  // component stacked bars (shared max scale)
+  const segDefs = [
+    ["Capital recovery","c_cap","seg-cap"], ["Fixed O&M","c_fom","seg-fom"],
+    ["Variable O&M","c_vomMWh","seg-vom"], ["Fuel","c_fuel","seg-fuel"], ["Carbon","c_co2","seg-co2"]
+  ];
+  const maxL = Math.max(dE.lcoe, dT.lcoe);
+  const barFor = (d) => {
+    const segs = segDefs.map(([nm,k,cls])=>({nm,v:d[k],cls})).filter(s=>s.v>0)
+      .map(s=>`<span class="${s.cls}" style="width:${s.v/maxL*100}%" title="${s.nm}: ${fmt(s.v,2)} $/MWh"></span>`).join("");
+    return `<div class="bar-block">
+      <div class="bar-top"><span class="bar-name">${TECH[d.pm].label}</span><span class="bar-val">${fmt(d.lcoe,1)} $/MWh</span></div>
+      <div class="stacked">${segs}</div></div>`;
+  };
+  $("cmpBars").innerHTML = barFor(dE) + barFor(dT);
+  $("cmpLegend").innerHTML = segDefs.map(([nm,,cls])=>
+    `<div class="legend-item"><span class="legend-swatch ${cls}"></span>${nm}</div>`).join("");
+
+  // comparison table: metric | Engine | Turbine | Δ
+  const rows = [];
+  const R = (label, e, t, opts={}) => rows.push({label, e, t, ...opts});
+  R("Electrical efficiency (LHV)", `${fmt(dE.eff*100,1)}%`, `${fmt(dT.eff*100,1)}%`);
+  R("Unit rating", `${fmt(dE.unitRating,1)} MW`, `${fmt(dT.unitRating,1)} MW`);
+  R("Duty units (N)", fmt(dE.N,0), fmt(dT.N,0));
+  R("Installed units", fmt(dE.instUnits,0), fmt(dT.instUnits,0));
+  R("Installed capacity", `${fmt(dE.installedMW,0)} MW`, `${fmt(dT.installedMW,0)} MW`);
+  R("Reserve margin", `+${fmt(dE.reservePct,0)}%`, `+${fmt(dT.reservePct,0)}%`);
+  R("CapEx (installed)", `$${fmt(dE.totalKw,0)}/kW`, `$${fmt(dT.totalKw,0)}/kW`);
+  R("Total CapEx", `$${fmt(dE.capexTotal/1e6,0)}M`, `$${fmt(dT.capexTotal/1e6,0)}M`);
+  R("Annual OpEx", `$${fmt(dE.opexAnnual/1e6,1)}M`, `$${fmt(dT.opexAnnual/1e6,1)}M`);
+  R("CO₂ intensity", `${fmt(dE.co2_kg_per_MWh,0)} kg/MWh`, `${fmt(dT.co2_kg_per_MWh,0)} kg/MWh`);
+  rows.push({sep:true, label:"LCOE build-up ($/MWh)"});
+  const L = (label,ke) => {
+    const e=dE[ke], t=dT[ke]; const d=t-e;
+    rows.push({label, e:fmt(e,2), t:fmt(t,2), delta:(Math.abs(d)<0.005?"—":(d>0?"+":"")+fmt(d,2))});
+  };
+  L("Capital recovery","c_cap"); L("Fixed O&M","c_fom"); L("Variable O&M","c_vomMWh");
+  L("Fuel","c_fuel"); L("Carbon","c_co2");
+  rows.push({label:"LCOE total", e:fmt(dE.lcoe,2), t:fmt(dT.lcoe,2),
+             delta:(dT.lcoe>dE.lcoe?"+":"")+fmt(dT.lcoe-dE.lcoe,2), total:true,
+             eWin:eWins, tWin:!eWins});
+
+  $("cmpTable").innerHTML = `
+    <thead><tr><th>Metric</th><th class="num">Engine</th><th class="num">Turbine</th><th class="num">Δ (T−E)</th></tr></thead>
+    <tbody>${rows.map(r=>{
+      if(r.sep) return `<tr class="total"><td class="lbl" colspan="4">${r.label}</td></tr>`;
+      const eCls = "num" + (r.eWin?" win-cell":"");
+      const tCls = "num" + (r.tWin?" win-cell":"");
+      const delta = r.delta!==undefined ? r.delta : "";
+      return `<tr class="${r.total?'total':''}"><td class="lbl">${r.label}</td><td class="${eCls}">${r.e}</td><td class="${tCls}">${r.t}</td><td class="num pct-cell">${delta}</td></tr>`;
+    }).join("")}</tbody>`;
+}
+
+// ---------------------------------------------------------------
 //  Notes, references, method text
 // ---------------------------------------------------------------
 function refreshNotes(){
@@ -762,7 +976,8 @@ balance-of-plant, cooling, electrical export, grid interconnection, civils); Ind
 <b>Heat input (LHV).</b> Thermal&nbsp;input = Annual&nbsp;MWh × 3.6&nbsp;GJ/MWh ÷ η<sub>elec</sub>. Fuel mass = Heat ÷ LHV. (H₂ 120, NH₃ 18.6, NG 47.1 MJ/kg.)<br>
 <b>Fuel cost.</b> NG billed on its HHV MMBtu (Henry-Hub convention) at $/MMBtu; H₂ at $/kg; NH₃ at $/tonne. Blend cost splits by energy share.<br>
 <b>CO₂.</b> Combustion CO₂ = NG HHV heat × 53.06 kg/MMBtu (EPA). H₂ &amp; NH₃ = 0 at point of combustion (upstream not included; NH₃ N₂O/NOx not costed).<br>
-<b>LCOE</b> ($/MWh) = [CRF×CapEx + Fixed&nbsp;O&amp;M + (Variable&nbsp;O&amp;M + Fuel + Carbon)×generation] ÷ Annual&nbsp;MWh — i.e. the constant price that makes discounted revenue equal lifetime cost (levelized, real terms).
+<b>LCOE</b> ($/MWh) = [CRF×CapEx + Fixed&nbsp;O&amp;M + (Variable&nbsp;O&amp;M + Fuel + Carbon)×generation] ÷ Annual&nbsp;MWh — i.e. the constant price that makes discounted revenue equal lifetime cost (levelized, real terms).<br>
+<b>Compare mode</b> holds the project inputs (firm output, capacity factor, fuel, prices, finance, redundancy) identical for both technologies and takes each one's efficiency, CapEx and O&amp;M from its referenced defaults — so the two LCOEs differ only by the technology, not the assumptions.
 `;
 
 const REFERENCES = [
@@ -830,6 +1045,15 @@ function syncFuelUI(){
 // ---------------------------------------------------------------
 //  Wiring
 // ---------------------------------------------------------------
+$("rgView").querySelectorAll("label").forEach(l=>{
+  l.addEventListener("click", ()=>{
+    $("rgView").querySelectorAll("label").forEach(x=>x.classList.remove("active"));
+    l.classList.add("active");
+    viewMode = l.getAttribute("data-val");
+    syncViewUI();
+    run();
+  });
+});
 $("rgPrime").querySelectorAll("label").forEach(l=>{
   l.addEventListener("click", ()=>{
     $("rgPrime").querySelectorAll("label").forEach(x=>x.classList.remove("active"));
@@ -837,31 +1061,48 @@ $("rgPrime").querySelectorAll("label").forEach(l=>{
     primeMover = l.getAttribute("data-val");
     applyTechDefaults();
     refreshNotes();
-    calculate();
+    run();
   });
 });
-$("fuel").addEventListener("change", ()=>{ syncFuelUI(); calculate(); });
-$("redundancy").addEventListener("change", calculate);
-$("useInstalledOverride").addEventListener("change", ()=>{ syncRedundancyUI(); calculate(); });
-$("calcBtn").addEventListener("click", calculate);
+$("fuel").addEventListener("change", ()=>{ syncFuelUI(); run(); });
+$("redundancy").addEventListener("change", run);
+$("useInstalledOverride").addEventListener("change", ()=>{ syncRedundancyUI(); run(); });
+$("calcBtn").addEventListener("click", run);
 [ "blendVolPct","powerMW","capFactor","effPct","unitRatingMW","installedMWOverride",
   "isblPerKw","osblPct","indirectPct","fomPerKwYr","vomPerMwh",
   "priceNG","priceH2","priceNH3","discountPct","lifeYr","co2Price"
-].forEach(id=> $(id).addEventListener("input", calculate));
+].forEach(id=> $(id).addEventListener("input", run));
 
 function syncRedundancyUI(){
   $("installedOverrideField").style.display = $("useInstalledOverride").checked ? "block" : "none";
 }
 
+// Toggle single vs compare view; dim technology-specific inputs in compare mode.
+function syncViewUI(){
+  const compare = viewMode === "compare";
+  $("singleView").style.display = compare ? "none" : "block";
+  $("compareView").style.display = compare ? "block" : "none";
+  $("primeField").style.display = compare ? "none" : "block";
+  $("compareModeNote").style.display = compare ? "block" : "none";
+  $("compareModeNote").innerHTML = "Compare mode uses each technology's <b>referenced defaults</b> for efficiency, CapEx and O&M. The project inputs below (output, capacity factor, fuel, prices, finance, redundancy) are shared across both.";
+  // dim the technology-specific fields (values come from defaults in compare mode)
+  ["effField","unitRatingField","isblField","osblIndRow","omRow","overrideToggleField","installedOverrideField"].forEach(id=>{
+    const el = $(id); if(!el) return;
+    el.style.opacity = compare ? "0.4" : "1";
+    el.style.pointerEvents = compare ? "none" : "auto";
+  });
+}
+
 $("resetBtn").addEventListener("click", ()=>{
-  primeMover="ENGINE";
+  primeMover="ENGINE"; viewMode="single";
+  $("rgView").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="single"));
   $("rgPrime").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="ENGINE"));
   $("fuel").value="NG";
   $("powerMW").value=50; $("capFactor").value=85;
   $("redundancy").value="N1"; $("useInstalledOverride").checked=false;
   $("discountPct").value=8; $("lifeYr").value=25; $("co2Price").value=0;
   $("blendVolPct").value=20;
-  applyTechDefaults(); applyPriceDefaults(); refreshNotes(); syncFuelUI(); syncRedundancyUI(); calculate();
+  applyTechDefaults(); applyPriceDefaults(); refreshNotes(); syncFuelUI(); syncRedundancyUI(); syncViewUI(); run();
 });
 
 // init
@@ -871,7 +1112,8 @@ refreshNotes();
 buildReferences();
 syncFuelUI();
 syncRedundancyUI();
-calculate();
+syncViewUI();
+run();
 </script>
 </body>
 </html>
