@@ -10,7 +10,7 @@ export interface ModuleDefinition {
   slug: string;
   title: string;
   description: string;
-  category: "Techno-Economics" | "Pipeline Sizing";
+  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment";
   // Path (under /public) to the self-contained legacy HTML calculator.
   htmlPath: string;
   icon: string;
@@ -43,6 +43,15 @@ export const MODULES: ModuleDefinition[] = [
     category: "Pipeline Sizing",
     htmlPath: "/modules/pipeline-sizing.html",
     icon: "pipe",
+  },
+  {
+    slug: "hydrogen-blend-calculator",
+    title: "H₂/NH₃ Blend Calculator",
+    description:
+      "Blends Grey, Blue, and Green hydrogen (or ammonia) by carbon intensity target or price target — resultant blended price/CI, sensitivity analysis, and Excel export.",
+    category: "Commercial Assessment",
+    htmlPath: "/modules/hydrogen-blend-calculator.html",
+    icon: "coin",
   },
 ];
 
