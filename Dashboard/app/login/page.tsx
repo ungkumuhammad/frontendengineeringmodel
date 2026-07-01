@@ -1,7 +1,16 @@
+import { redirect } from "next/navigation";
+import { getCurrentProfile } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 
 // Public login page. No public sign-up — accounts are provisioned by an admin.
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Already signed in? Bounce to the role-appropriate home. (This replaces the
+  // equivalent redirect that used to live in middleware.)
+  const profile = await getCurrentProfile();
+  if (profile && !profile.disabled) {
+    redirect(profile.role === "admin" ? "/admin" : "/dashboard");
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
