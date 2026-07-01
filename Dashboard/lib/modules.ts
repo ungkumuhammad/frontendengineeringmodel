@@ -19,9 +19,9 @@ export interface ModuleDefinition {
 export const MODULES: ModuleDefinition[] = [
   {
     slug: "gas-power-lcoe",
-    title: "Gas Power LCOE Calculator",
+    title: "G2P Modeling Tool",
     description:
-      "Levelized cost of electricity for gas engines and turbines on H₂, NH₃, natural gas, and blends — CapEx/OpEx breakdown, N+1 redundancy, Excel export.",
+      "Gas-to-power LCOE modeling for reciprocating engines and CCGT on H₂/NH₃-natural gas blends — required fuel KTPA, CapEx/OpEx breakdown, N+1 redundancy, Excel export.",
     category: "Techno-Economics",
     htmlPath: "/modules/gas-power-lcoe.html",
     icon: "bolt",
