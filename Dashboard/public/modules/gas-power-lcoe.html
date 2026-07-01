@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Gas Power LCOE Calculator — Engine / Turbine on H₂, NH₃, NG &amp; Blends</title>
+<title>G2P Modeling Tool — Engine / Turbine on H₂, NH₃, NG &amp; Blends</title>
 <style>
   :root {
     --bg:        #0d1117;
@@ -112,6 +112,10 @@
   .result-header { background: var(--bg3); padding: 9px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
   .result-header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
   .result-header-sub { font-size: 11px; color: var(--text3); margin-left: auto; font-family: var(--mono); }
+  summary.result-header { list-style: none; }
+  summary.result-header::-webkit-details-marker { display: none; }
+  summary.result-header::before { content: "▸"; color: var(--text3); font-size: 11px; transition: transform 0.15s; }
+  details[open] > summary.result-header::before { transform: rotate(90deg); }
   .result-body { padding: 16px; }
 
   /* Hero LCOE */
@@ -239,9 +243,9 @@
 </head>
 <body>
   <div class="header">
-    <span class="header-badge">LCOE</span>
-    <h1>Gas Power LCOE Calculator</h1>
-    <span class="header-sub">Reciprocating Engine / Gas Turbine · H₂ · NH₃ · Natural Gas · NG–H₂ Blend</span>
+    <span class="header-badge">G2P</span>
+    <h1>G2P Modeling Tool</h1>
+    <span class="header-sub">Reciprocating Engine / CCGT · H₂ · NH₃ · Natural Gas · Fuel Blending</span>
     <button class="icon-btn" id="themeToggle" title="Toggle light / dark theme">🌙 <span id="themeLabel">Dark</span></button>
   </div>
 
@@ -272,16 +276,14 @@
       <div class="field">
         <label>Fuel</label>
         <select id="fuel">
-          <option value="NG">Natural Gas</option>
           <option value="H2">Hydrogen (H₂)</option>
           <option value="NH3">Ammonia (NH₃)</option>
-          <option value="BLEND">Natural Gas + Hydrogen blend</option>
         </select>
       </div>
 
-      <div class="field" id="blendField" style="display:none;">
-        <label>H₂ fraction in blend <span class="hint">(% by volume)</span></label>
-        <input type="number" id="blendVolPct" value="20" min="0" max="100" step="1"/>
+      <div class="field" id="blendField">
+        <label><span id="blendFuelLabel">H₂</span> blending <span class="hint">(% by volume — balance is Natural Gas)</span></label>
+        <input type="number" id="blendPct" value="20" min="0" max="100" step="1"/>
         <div class="src-note" id="blendNote"></div>
       </div>
 
@@ -296,11 +298,31 @@
         </div>
       </div>
 
+      <div class="field" id="effModeField" style="display:none;">
+        <label>Efficiency input <span class="hint">CCGT = gas turbine + steam turbine</span></label>
+        <div class="radio-group" id="rgEffMode">
+          <label class="active" data-val="overall">Overall (combined)</label>
+          <label data-val="separate">GT + ST separate</label>
+        </div>
+      </div>
+
       <div class="field" id="effField">
         <label>Electrical efficiency <span class="hint">% (net, LHV)</span></label>
         <input type="number" id="effPct" value="45" min="10" max="65" step="0.5"/>
         <div class="src-note" id="effNote"></div>
       </div>
+
+      <div class="row2" id="gtStField" style="display:none;">
+        <div class="field">
+          <label>Gas turbine eff. <span class="hint">% LHV, topping</span></label>
+          <input type="number" id="gtEffPct" value="39" min="20" max="48" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>Steam turbine eff. <span class="hint">% LHV, bottoming</span></label>
+          <input type="number" id="stEffPct" value="30" min="10" max="45" step="0.5"/>
+        </div>
+      </div>
+      <div class="src-note" id="gtStNote" style="margin-bottom:12px;"></div>
 
       <hr class="hdiv"/>
       <div class="section-label accent">Maintenance &amp; redundancy</div>
@@ -447,6 +469,8 @@
             <div><div class="hero-stat-label">Installed capacity</div><div class="hero-stat-value"><span id="installedCap">—</span><span class="u">MW</span></div></div>
             <div><div class="hero-stat-label">Total CapEx</div><div class="hero-stat-value"><span id="totalCapex">—</span><span class="u">M$</span></div></div>
             <div><div class="hero-stat-label">Annual OpEx</div><div class="hero-stat-value"><span id="annualOpex">—</span><span class="u">M$/yr</span></div></div>
+            <div><div class="hero-stat-label" id="reqFuelLabel">Required H₂</div><div class="hero-stat-value"><span id="reqFuelKtpa">—</span><span class="u">ktpa</span></div></div>
+            <div><div class="hero-stat-label">Natural gas</div><div class="hero-stat-value"><span id="reqNgMmbtu">—</span><span class="u">MMBtu/yr</span></div></div>
             <div><div class="hero-stat-label">CO₂ intensity</div><div class="hero-stat-value"><span id="co2Intensity">—</span><span class="u">kg/MWh</span></div></div>
           </div>
         </div>
@@ -529,9 +553,9 @@
         </div>
       </details>
 
-      <!-- REFERENCES -->
-      <div class="result-panel">
-        <div class="result-header"><span class="result-header-label">Data sources &amp; references</span><span class="result-header-sub">accessed Jun 2026</span></div>
+      <!-- REFERENCES (collapsible) -->
+      <details class="result-panel">
+        <summary class="result-header" style="cursor:pointer;"><span class="result-header-label">Data sources &amp; references</span><span class="result-header-sub">accessed Jun 2026</span></summary>
         <div class="result-body">
           <div class="msg msg-warn" style="margin-bottom:14px;">
             All default values below are drawn from the public sources listed and are <strong>editable</strong>. Cost figures for power plant
@@ -540,7 +564,7 @@
           </div>
           <ul class="ref-list" id="refList"></ul>
         </div>
-      </div>
+      </details>
 
       <div class="footer-note">
         <strong>Disclaimer.</strong> This is an engineering screening tool. It computes a levelized cost from user inputs and documented benchmark
@@ -626,32 +650,33 @@ const TECH = {
     prime_note: "Modular gensets; high part-load efficiency, fast start, H₂-ready (INNIO Type-4 to 100% H₂) and ammonia engines emerging (Wärtsilä 25)."
   },
   TURBINE: {
-    label: "Simple-cycle gas turbine",
-    eff_pct: 40,                      // NG fallback (see fuels map)
-    unit_rating_mw: 50,               // GE/Baker Hughes LM6000-class aeroderivative (~50-54 MWe)
-    unit_note: "Default 50 MW/unit (LM6000-class aeroderivative). Fewer, larger units ⇒ N+1 adds a big % of capacity. Frame F/H-class machines (~230-450 MW) make N+1 costliest.",
-    isbl_per_kw: 800,
+    label: "Combined-cycle gas turbine (CCGT)",
+    eff_pct: 57.3,                     // NG fallback (see fuels map) — GT 39% + ST 30% bottoming
+    unit_rating_mw: 50,                // GT block within a 1×1 CCGT train (GE/Baker Hughes LM6000-class + HRSG/ST)
+    unit_note: "Default 50 MW/unit (LM6000-class GT within a CCGT train, incl. HRSG + steam turbine). Fewer, larger units ⇒ N+1 adds a big % of capacity. Frame F/H-class CCGT blocks (~300-650 MW) make N+1 costliest.",
+    isbl_per_kw: 1100,
     osbl_pct: 30,
     indirect_pct: 20,
-    fom_per_kw_yr: 16,
-    vom_per_mwh: 4.5,
+    fom_per_kw_yr: 14,
+    vom_per_mwh: 3.0,
+    // Fuel-specific overall efficiency (LHV %), and its GT (topping) / ST (bottoming) split, and ISBL ($/kW).
     fuels: {
-      NG:  { eff: 40, isbl: 800 },
-      H2:  { eff: 39, isbl: 950 },
-      NH3: { eff: 38, isbl: 1050 }
+      NG:  { eff: 57.3, gtEff: 39, stEff: 30, isbl: 1100 },
+      H2:  { eff: 56.6, gtEff: 38, stEff: 30, isbl: 1300 },
+      NH3: { eff: 54.6, gtEff: 36, stEff: 29, isbl: 1450 }
     },
     eff_src: {
-      NG:  "Aeroderivative (LM6000-class) 36–42% simple-cycle LHV; LM6000 PF+ ≈40.8% / 8,357 Btu/kWh. Source: GE Aerospace / Baker Hughes.",
-      H2:  "H₂ combustion retains cycle efficiency; small tuning effect (high flame speed, DLE re-rating). Siemens/Mitsubishi H₂-capable frames. ~39% (estimate).",
-      NH3: "Direct-ammonia turbines are nascent (Mitsubishi ~40 MW class); slower combustion + aftertreatment ⇒ small penalty. ~38% (estimate; cracking energy handled via CapEx/OSBL)."
+      NG:  "Combined cycle = GT (topping, Brayton) + ST (bottoming, HRSG/Rankine): η_CC ≈ η_GT + η_ST×(1−η_GT). NREL ATB 2024 NG combined-cycle ≈57% LHV net; GT topping ≈39% (LM6000/F-class), ST bottoming ≈30%.",
+      H2:  "H₂ combustion retains topping-cycle efficiency; small tuning effect (high flame speed, DLE re-rating) trims GT ~1pt; bottoming cycle unaffected. ~38% GT / 30% ST ⇒ ~56.6% overall (estimate).",
+      NH3: "Direct-ammonia turbines are nascent; slower combustion + aftertreatment trims GT ~3pt vs NG; bottoming cycle slightly derated by lower exhaust energy. ~36% GT / 29% ST ⇒ ~54.6% overall (estimate; cracking energy handled via CapEx/OSBL)."
     },
     isbl_src: {
-      NG:  "Total ≈ $1,250/kW. Installed twin-aero genset ≈$1,175/kW (2024); range $800–1,800/kW. Source: Gas Turbine World.",
-      H2:  "+~19% vs NG for H₂ combustor/DLE modifications, fuel skid, purge & safety systems. Indicative estimate (Wood Mackenzie H₂ 2024; OEM H₂ roadmaps).",
-      NH3: "+~31% vs NG for ammonia handling, likely cracking interface, and aftertreatment. Indicative estimate (Ammonia Energy Assoc.)."
+      NG:  "Total ≈ $1,650/kW. NREL ATB 2024 NG combined-cycle overnight capital ≈$1,080–1,200/kW (ISBL basis ≈$1,100/kW); range $900–1,800/kW by class. Source: NREL ATB; EIA AEO2025.",
+      H2:  "+~18% vs NG for H₂-capable combustor/DLE modifications, fuel skid, purge & safety systems on the GT train. Indicative estimate (Wood Mackenzie H₂ 2024; OEM H₂ roadmaps).",
+      NH3: "+~32% vs NG for ammonia handling, likely cracking interface, and aftertreatment. Indicative estimate (Ammonia Energy Assoc.)."
     },
-    capex_note: "Total ≈ $1,250/kW. Installed twin-aero genset ≈$1,175/kW (2024); range $800–1,800/kW. Source: Gas Turbine World.",
-    prime_note: "Compact, low fixed O&M; raise efficiency to ~55–60% to model combined cycle. H₂ co-firing up to 30–100% on newer machines; ammonia typically via cracking."
+    capex_note: "Total ≈ $1,650/kW. NREL ATB 2024 NG combined-cycle overnight capital ≈$1,080–1,200/kW (ISBL basis); range $900–1,800/kW by class.",
+    prime_note: "CCGT default — gas turbine (topping) exhaust heat recovered via HRSG to a steam turbine (bottoming). Model either an overall efficiency or GT+ST split. H₂ co-firing up to 30–100% on newer machines; ammonia typically via cracking."
   }
 };
 
@@ -687,7 +712,7 @@ const CAPEX_EQUIP = {
     "Insurance during construction"
   ]
 };
-// Fuel-specific additions (H₂ / NH₃ handling & safety). BLEND uses the H₂ set.
+// Fuel-specific additions (H₂ / NH₃ handling & safety) shown when that fuel is blended in.
 const CAPEX_EQUIP_FUEL = {
   H2: {
     ISBL: ["Hydrogen-rated fuel train, double-wall piping, flame arrestors & flashback-safe combustion kit",
@@ -704,14 +729,14 @@ const CAPEX_EQUIP_FUEL = {
 };
 function capexEquip(cat, fuel){
   const base = CAPEX_EQUIP[cat].map(s=>({t:s, extra:false}));
-  const fk = (fuel==="BLEND") ? "H2" : fuel;
-  const add = (CAPEX_EQUIP_FUEL[fk] && CAPEX_EQUIP_FUEL[fk][cat]) || [];
-  const tag = fk==="H2" ? "H₂" : (fk==="NH3" ? "NH₃" : "");
+  const add = (CAPEX_EQUIP_FUEL[fuel] && CAPEX_EQUIP_FUEL[fuel][cat]) || [];
+  const tag = fuel==="H2" ? "H₂" : (fuel==="NH3" ? "NH₃" : "");
   return base.concat(add.map(s=>({t:s, extra:true, tag})));
 }
 
 let primeMover = "ENGINE";
 let viewMode = "single";      // "single" | "compare"
+let effMode = "overall";      // "overall" | "separate" — CCGT (TURBINE) efficiency input mode
 let lastResult = null;        // last computed result (for "Save this analysis")
 let savedAnalyses = [];       // session tray of saved analyses
 
@@ -722,34 +747,61 @@ const $ = id => document.getElementById(id);
 const num = id => parseFloat($(id).value);
 function fmt(x, d=0){ if(!isFinite(x)) return "—"; return x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
-// volume% H2 -> energy fraction H2 in NG/H2 blend (LHV, volumetric)
-function blendEnergyFracH2(volPctH2){
-  const x = Math.max(0, Math.min(1, volPctH2/100));
-  const volLHV_H2 = FUELS.H2.density_gas_kg_Nm3 * FUELS.H2.LHV_MJ_kg;  // MJ/Nm3
-  const volLHV_NG = FUELS.NG.density_gas_kg_Nm3 * FUELS.NG.LHV_MJ_kg;  // MJ/Nm3
-  const eH2 = x * volLHV_H2;
+// Blend % (by volume) of `fuel` (H2 or NH3) in a NG/fuel blend -> energy fraction of `fuel` (LHV, volumetric).
+// pct=0 => pure natural gas; pct=100 => pure H2/NH3.
+function blendEnergyFrac(fuel, pct){
+  const x = Math.max(0, Math.min(1, pct/100));
+  const volLHV_F  = FUELS[fuel].density_gas_kg_Nm3 * FUELS[fuel].LHV_MJ_kg;  // MJ/Nm3
+  const volLHV_NG = FUELS.NG.density_gas_kg_Nm3 * FUELS.NG.LHV_MJ_kg;        // MJ/Nm3
+  const eF  = x * volLHV_F;
   const eNG = (1-x) * volLHV_NG;
-  return eH2 / (eH2 + eNG);
+  return eF / (eF + eNG);
 }
 
-// Referenced efficiency (LHV %) + ISBL ($/kW) default for a given prime mover & fuel.
-// BLEND interpolates NG↔H2 by energy fraction.
-function fuelDefaults(pm, fuel, blendVolPct){
+// Combined-cycle overall LHV efficiency from GT (topping) + ST (bottoming) efficiencies (%).
+// eta_CC = eta_GT + eta_ST x (1 - eta_GT)  — ST recovers a share of the GT's rejected exhaust heat.
+function ccOverallPct(gtPct, stPct){
+  const gt = gtPct/100, st = stPct/100;
+  return (gt + st*(1-gt)) * 100;
+}
+
+// Referenced overall efficiency (LHV %) + ISBL ($/kW) default for a given prime mover & blend fuel,
+// interpolated NG <-> H2/NH3 by the blend's energy fraction.
+function fuelDefaults(pm, fuel, blendPct){
   const f = TECH[pm].fuels;
-  if(fuel==="BLEND"){
-    const x = blendEnergyFracH2(blendVolPct==null?20:blendVolPct);
-    return { eff: f.NG.eff + x*(f.H2.eff - f.NG.eff),
-             isbl: Math.round(f.NG.isbl + x*(f.H2.isbl - f.NG.isbl)) };
-  }
-  return { eff: f[fuel].eff, isbl: f[fuel].isbl };
+  const x = blendEnergyFrac(fuel, blendPct==null?20:blendPct);
+  return { eff: f.NG.eff + x*(f[fuel].eff - f.NG.eff),
+           isbl: Math.round(f.NG.isbl + x*(f[fuel].isbl - f.NG.isbl)) };
+}
+// Referenced GT (topping) / ST (bottoming) efficiency split for CCGT, same interpolation.
+function fuelDefaultsGtSt(pm, fuel, blendPct){
+  const f = TECH[pm].fuels;
+  const x = blendEnergyFrac(fuel, blendPct==null?20:blendPct);
+  return { gtEff: f.NG.gtEff + x*(f[fuel].gtEff - f.NG.gtEff),
+           stEff: f.NG.stEff + x*(f[fuel].stEff - f.NG.stEff) };
 }
 // Push the fuel-specific efficiency + ISBL defaults into the editable inputs (single mode).
 function applyFuelDefaults(){
   const fuel = $("fuel").value;
-  const d = fuelDefaults(primeMover, fuel, num("blendVolPct"));
-  $("effPct").value = (Math.round(d.eff*10)/10);
+  const blendPct = num("blendPct");
+  const d = fuelDefaults(primeMover, fuel, blendPct);
   $("isblPerKw").value = d.isbl;
+  if(primeMover==="TURBINE" && effMode==="separate"){
+    const g = fuelDefaultsGtSt(primeMover, fuel, blendPct);
+    $("gtEffPct").value = Math.round(g.gtEff*10)/10;
+    $("stEffPct").value = Math.round(g.stEff*10)/10;
+    updateOverallFromGtSt();
+  } else {
+    $("effPct").value = (Math.round(d.eff*10)/10);
+  }
   refreshNotes();
+}
+// Recompute overall efficiency from the GT+ST inputs and push it into effPct.
+function updateOverallFromGtSt(){
+  const gt = num("gtEffPct"), st = num("stEffPct");
+  const overall = ccOverallPct(gt, st);
+  $("effPct").value = Math.round(overall*10)/10;
+  $("gtStNote").innerHTML = `Overall (LHV) = η<sub>GT</sub> + η<sub>ST</sub>×(1−η<sub>GT</sub>) = ${fmt(gt,1)}% + ${fmt(st,1)}%×(1−${fmt(gt,1)}%) = <b>${fmt(overall,1)}%</b>.`;
 }
 
 // ---------------------------------------------------------------
@@ -760,7 +812,7 @@ function applyFuelDefaults(){
 // single-analysis view and the engine-vs-turbine comparison view.
 function computeCase(pm, p){
   const { fuel, P_MW, cf, eff, unitRating, scheme, useOverride, overrideMW,
-          isbl, osblPct, indPct, fom, vom, r, co2Price, blendVolPct } = p;
+          isbl, osblPct, indPct, fom, vom, r, co2Price, blendPct } = p;
   const n = Math.round(p.n);
 
   // ---- validation ----
@@ -798,13 +850,12 @@ function computeCase(pm, p){
   const heatLHV_GJ_yr = annualMWh * GJ_PER_MWH / eff;   // GJ/yr thermal (LHV)
 
   // ---- Fuel split / cost / emissions ----
-  let energyFracH2 = 0;
-  if(fuel === "H2") energyFracH2 = 1;
-  else if(fuel === "BLEND") energyFracH2 = blendEnergyFracH2(blendVolPct);
+  // `fuel` is the blend component (H2 or NH3); `blendPct` (0-100 vol%) sets the mix with the NG balance.
+  const energyFracFuel = blendEnergyFrac(fuel, blendPct);
 
-  const heatNG_GJ  = (fuel==="NH3") ? 0 : heatLHV_GJ_yr * (fuel==="H2" ? 0 : (1 - energyFracH2));
-  const heatH2_GJ  = (fuel==="NG"||fuel==="NH3") ? 0 : heatLHV_GJ_yr * energyFracH2;
-  const heatNH3_GJ = (fuel==="NH3") ? heatLHV_GJ_yr : 0;
+  const heatNG_GJ   = heatLHV_GJ_yr * (1 - energyFracFuel);
+  const heatH2_GJ   = (fuel==="H2")  ? heatLHV_GJ_yr * energyFracFuel : 0;
+  const heatNH3_GJ  = (fuel==="NH3") ? heatLHV_GJ_yr * energyFracFuel : 0;
 
   // masses (kg/yr) via LHV
   const massNG  = heatNG_GJ  ? heatNG_GJ  * 1000 / FUELS.NG.LHV_MJ_kg  : 0;
@@ -838,7 +889,7 @@ function computeCase(pm, p){
   const lcoe   = c_cap + c_fom + c_vomMWh + c_fuel + c_co2;
 
   return {
-    pm, fuel, P_MW, cf, eff, n, r, energyFracH2, blendVolPct,
+    pm, fuel, P_MW, cf, eff, n, r, energyFracFuel, blendPct,
     annualMWh, capexTotal, annualCapital, opexAnnual, lcoe,
     isbl, osbl, indirect, directKw, totalKw, installed_kW, installedMW,
     unitRating, scheme, N, spares, instUnits, dutyCapMW, reservePct, useOverride,
@@ -860,7 +911,7 @@ function readShared(){
     P_MW: num("powerMW"),
     cf: num("capFactor")/100,
     scheme: $("redundancy").value,
-    blendVolPct: num("blendVolPct"),
+    blendPct: num("blendPct"),
     priceNG: num("priceNG"), priceH2: num("priceH2"), priceNH3: num("priceNH3"),
     r: num("discountPct")/100,
     n: num("lifeYr"),
@@ -887,7 +938,7 @@ function readParamsSingle(){
 function techParams(pm){
   const T = TECH[pm];
   const shared = readShared();
-  const fd = fuelDefaults(pm, shared.fuel, shared.blendVolPct);   // fuel-specific eff + ISBL
+  const fd = fuelDefaults(pm, shared.fuel, shared.blendPct);   // fuel-specific eff + ISBL
   return {
     ...shared,
     eff: fd.eff/100,
@@ -931,19 +982,25 @@ function crf(r, n){ if(r===0) return 1/n; const f=Math.pow(1+r,n); return r*f/(f
 //  Rendering
 // ---------------------------------------------------------------
 const SCHEME_LABEL = {N:"no redundancy (N)", N1:"N+1", N2:"N+2", "2N":"2N standby"};
-function fuelName(f){ return f==="BLEND" ? "NG–H₂ blend" : FUELS[f].name; }
+function fuelName(f, pct){
+  if(pct===0) return "Natural Gas";
+  if(pct===100) return FUELS[f].name;
+  const sym = f==="H2" ? "H₂" : "NH₃";
+  return (pct==null ? "" : `${fmt(pct,0)}% `) + `NG–${sym} blend`;
+}
 
 function render(d){
   const T = TECH[d.pm];
-  const fN = fuelName(d.fuel);
+  const fN = fuelName(d.fuel, d.blendPct);
+  const fSym = d.fuel==="H2" ? "H₂" : "NH₃";
   const schemeLabel = SCHEME_LABEL[d.scheme];
 
   // config message
   let cfg = `<strong>${T.label}</strong> on <strong>${fN}</strong> · ${fmt(d.P_MW,0)} MW firm · ${fmt(d.cf*100,0)}% capacity factor · `
           + `${fmt(d.eff*100,1)}% efficiency (LHV) · ${fmt(d.r*100,1)}% discount over ${d.n} yr.`;
   cfg += ` Sizing: ${d.useOverride ? "manual installed override" : schemeLabel} ⇒ ${d.useOverride ? "" : fmt(d.N,0)+" duty + "+fmt(d.spares,0)+" spare = "+fmt(d.instUnits,0)+" × "+fmt(d.unitRating,1)+" MW = "}<strong>${fmt(d.installedMW,1)} MW installed</strong> (reserve +${fmt(d.reservePct,0)}% over firm output).`;
-  if(d.fuel==="BLEND") cfg += ` Blend = ${fmt(d.blendVolPct,0)} vol% H₂ ⇒ ${fmt(d.energyFracH2*100,1)}% of energy (and of fuel cost) from H₂; CO₂ falls by the same energy share.`;
-  if(d.fuel==="H2"||d.fuel==="NH3") cfg += ` Zero combustion CO₂ (upstream/production emissions excluded).`;
+  if(d.blendPct>0 && d.blendPct<100) cfg += ` Blend = ${fmt(d.blendPct,0)} vol% ${fSym} (balance Natural Gas) ⇒ ${fmt(d.energyFracFuel*100,1)}% of energy (and of fuel cost) from ${fSym}; CO₂ falls by the same energy share.`;
+  if(d.blendPct===100) cfg += ` 100% ${fSym} — zero combustion CO₂ (upstream/production emissions excluded).`;
   $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
 
   // hero
@@ -954,6 +1011,9 @@ function render(d){
   $("installedCap").textContent = fmt(d.installedMW,0);
   $("totalCapex").textContent = fmt(d.capexTotal/1e6,1);
   $("annualOpex").textContent = fmt(d.opexAnnual/1e6,2);
+  $("reqFuelLabel").textContent = `Required ${FUELS[d.fuel].name}`;
+  $("reqFuelKtpa").textContent = d.fuel==="H2" ? fmt(d.massH2/1e6,3) : fmt(d.massNH3/1e6,2);
+  $("reqNgMmbtu").textContent = fmt(d.ngHHV_MMBtu,0);
   $("co2Intensity").textContent = fmt(d.co2_kg_per_MWh,0);
 
   // stacked bar
@@ -1043,9 +1103,9 @@ function render(d){
   $("fuelSub").textContent = `${fmt(d.eff*100,1)}% eff (LHV)`;
   const fuelRows = [];
   fuelRows.push(["Thermal energy input (LHV)", `${fmt(d.heatLHV_GJ_yr,0)} GJ/yr`, `${fmt(d.heatLHV_GJ_yr*MMBTU_PER_GJ,0)} MMBtu/yr`]);
-  if(d.massNG>0)  fuelRows.push(["Natural gas consumed", `${fmt(d.massNG/1e6,2)} kt/yr`, `$${fmt(d.costNG/1e6,2)} M/yr`]);
-  if(d.massH2>0)  fuelRows.push(["Hydrogen consumed", `${fmt(d.massH2/1e6,3)} kt/yr`, `$${fmt(d.costH2/1e6,2)} M/yr`]);
-  if(d.massNH3>0) fuelRows.push(["Ammonia consumed", `${fmt(d.massNH3/1e6,2)} kt/yr`, `$${fmt(d.costNH3/1e6,2)} M/yr`]);
+  if(d.massNG>0)  fuelRows.push(["Natural gas consumed", `${fmt(d.ngHHV_MMBtu,0)} MMBtu/yr`, `$${fmt(d.costNG/1e6,2)} M/yr`]);
+  if(d.massH2>0)  fuelRows.push(["Hydrogen required", `${fmt(d.massH2/1e6,3)} ktpa`, `$${fmt(d.costH2/1e6,2)} M/yr`]);
+  if(d.massNH3>0) fuelRows.push(["Ammonia required", `${fmt(d.massNH3/1e6,2)} ktpa`, `$${fmt(d.costNH3/1e6,2)} M/yr`]);
   fuelRows.push(["Combustion CO₂", `${fmt(d.co2_tonnes,0)} t/yr`, `${fmt(d.co2_kg_per_MWh,0)} kg/MWh`]);
   $("fuelTable").innerHTML = `
     <thead><tr><th>Stream</th><th class="num">Quantity</th><th class="num">Value / intensity</th></tr></thead>
@@ -1058,12 +1118,13 @@ function render(d){
 //  Engine-vs-Turbine comparison rendering
 // ---------------------------------------------------------------
 function renderCompare(dE, dT){
-  const fN = fuelName(dE.fuel);
+  const fN = fuelName(dE.fuel, dE.blendPct);
+  const fSym = dE.fuel==="H2" ? "H₂" : "NH₃";
   const schemeLabel = SCHEME_LABEL[dE.scheme];
 
   // config / shared-assumptions banner
   let cfg = `<strong>Engine vs Turbine</strong> on <strong>${fN}</strong> at a shared basis: ${fmt(dE.P_MW,0)} MW firm · ${fmt(dE.cf*100,0)}% CF · ${schemeLabel} redundancy · ${fmt(dE.r*100,1)}% discount over ${dE.n} yr.`;
-  if(dE.fuel==="BLEND") cfg += ` Blend ${fmt(dE.blendVolPct,0)} vol% H₂ (${fmt(dE.energyFracH2*100,1)}% energy).`;
+  if(dE.blendPct>0 && dE.blendPct<100) cfg += ` Blend ${fmt(dE.blendPct,0)} vol% ${fSym} (${fmt(dE.energyFracFuel*100,1)}% energy).`;
   cfg += ` Each technology uses its own referenced efficiency, CapEx and O&M defaults.`;
   $("configMsg").className="msg msg-info"; $("configMsg").innerHTML = cfg;
 
@@ -1150,14 +1211,16 @@ function renderCompare(dE, dT){
 function refreshNotes(){
   const T = TECH[primeMover];
   const fuel = $("fuel").value;
-  const fkey = (fuel==="BLEND") ? "NG" : fuel;   // blend documented against NG↔H2 interpolation
-  const fLabel = fuel==="BLEND" ? "NG–H₂ blend (interpolated NG↔H₂)" : FUELS[fuel].name;
+  const blendPct = num("blendPct");
+  const fLabel = `${fmt(blendPct,0)}% ${FUELS[fuel].name} / ${fmt(100-blendPct,0)}% NG blend (interpolated NG↔${fuel==="H2"?"H₂":"NH₃"})`;
   $("primeNote").innerHTML = `<b>${T.label}.</b> ${T.prime_note}`;
-  $("effNote").innerHTML = `<b>${fLabel}:</b> ${T.eff_src[fkey]}${fuel==="BLEND"?" Blend efficiency interpolated by H₂ energy fraction.":""}`;
-  $("capexNote").innerHTML = `<b>${fLabel}:</b> ${T.isbl_src[fkey]}${fuel==="BLEND"?" Blend ISBL interpolated by H₂ energy fraction.":""}`;
+  $("effNote").innerHTML = `<b>${fLabel}:</b> ${T.eff_src[fuel]} Blend efficiency interpolated by ${fuel==="H2"?"H₂":"NH₃"} energy fraction.`;
+  $("capexNote").innerHTML = `<b>${fLabel}:</b> ${T.isbl_src[fuel]} Blend ISBL interpolated by ${fuel==="H2"?"H₂":"NH₃"} energy fraction.`;
   $("omNote").innerHTML = `<b>O&M defaults</b> from EIA AEO2025 / NREL ATB 2024 for the matching technology; engines carry higher maintenance (top-end overhauls) than turbines.`;
   $("priceNote").innerHTML = `<b>Defaults:</b> NG $4.00/MMBtu (EIA STEO Dec-2025, 2026 Henry Hub ≈$4.01). H₂ $4.00/kg (clean-H₂ 2025 band $1.5–6/kg; US Gulf Coast Jan-2025 $2.3–3.2/kg). Ammonia $800/t (green NH₃ US Q1-2025 ≈$815/t, Q2 ≈$782/t; grey ≈$400–600/t).`;
-  $("blendNote").innerHTML = `H₂ has ~3.4× lower volumetric energy than natural gas, so e.g. <span class="pill">20 vol% H₂ ≈ 7% of energy</span>. Energy share drives fuel cost and CO₂ reduction.`;
+  const fSym = fuel==="H2" ? "H₂" : "NH₃";
+  const energyFrac = blendEnergyFrac(fuel, blendPct)*100;
+  $("blendNote").innerHTML = `${fSym} has ~${fuel==="H2"?"3.4":"2.4"}× lower volumetric energy than natural gas, so <span class="pill">${fmt(blendPct,0)}% ${fSym} by volume ≈ ${fmt(energyFrac,1)}% of energy</span> (balance ${fmt(100-blendPct,0)}% NG by volume). Energy share drives the required ${fSym} KTPA, fuel cost split, and CO₂ reduction.${fuel==="NH3"?" NH₃ blending assumes vapour-phase co-firing; liquid-NH₃ handling is priced via the CapEx premium.":""}`;
   $("redundancyNote").innerHTML = `<b>${TECH[primeMover].label}.</b> ${TECH[primeMover].unit_note} N+1 ≠ 2×: installed = firm × (N+spares)/N, so the oversize shrinks as units get smaller. CapEx &amp; fixed O&M scale with installed capacity; generation stays on firm output.`;
 }
 
@@ -1182,7 +1245,8 @@ const REFERENCES = [
   ["cost","Engine & turbine CapEx / O&M","U.S. EIA, <i>Capital Cost and Performance Characteristics for Utility-Scale Generation</i> (AEO2025, Sargent & Lundy) — Internal Combustion Engine & Combustion Turbine cases.", "https://www.eia.gov/analysis/studies/powerplants/capitalcost/"],
   ["cost","Technology cost baseline","NREL, <i>2024 Electricity Annual Technology Baseline</i> — natural-gas CT/CC CAPEX, fixed/variable O&M, heat rate.", "https://atb.nrel.gov/electricity/2024/fossil_energy_technologies"],
   ["cost","Levelized cost benchmark","Lazard, <i>Levelized Cost of Energy+ (June 2024)</i> — gas peaking $110–228/MWh, gas combined-cycle ≈$76/MWh; $3.45/MMBtu gas assumption.", "https://www.lazard.com/research-insights/levelized-cost-of-energyplus/"],
-  ["cost","Gas turbine $/kW","Gas Turbine World, <i>Capital Costs / Gas Turbine costs $/kW</i> — simple-cycle aeroderivative installed cost band $800–1,800/kW; twin-aero genset ≈$1,175/kW (2024).", "https://gasturbineworld.com/capital-costs/"],
+  ["cost","Gas turbine / CCGT $/kW","Gas Turbine World, <i>Capital Costs / Gas Turbine costs $/kW</i> — installed cost band $800–1,800/kW for the GT train; NREL ATB 2024 combined-cycle overnight capital ≈$1,080–1,200/kW used as the CCGT total-installed default.", "https://gasturbineworld.com/capital-costs/"],
+  ["meth","Combined-cycle efficiency","η_CC ≈ η_GT + η_ST×(1−η_GT) — standard topping/bottoming-cycle waste-heat-recovery approximation used to derive overall CCGT efficiency from separate GT and ST inputs.", "https://en.wikipedia.org/wiki/Combined_cycle_power_plant"],
   ["tech","Gas engine efficiency","Wärtsilä Energy — medium-speed gas engines up to 46% simple-cycle (LHV); engines vs aeroderivative comparison.", "https://www.wartsila.com/energy/learn-more/technology-comparison-engines-vs-aeros"],
   ["tech","Engine efficiency by fuel","INNIO Jenbacher datasheets — Type 4 up to 44%, Type 6 up to 47.1%, Type 3F 43.2% electrical (LHV, natural gas). Basis for fuel-specific efficiency defaults.", "https://www.jenbacher.com/en/gas-engines/type-4/"],
   ["tech","100% H₂ engine (grid)","Wärtsilä 31H2 — world's first large-scale 100% hydrogen engine tested feeding a national grid (Bermeo, 2026); platform efficiency retained on hydrogen.", "https://www.wartsila.com/media/news/11-06-2026-world-s-first-large-scale-100-hydrogen-engine-tested-at-wartsila-s-bermeo-laboratory-to-support-the-spanish-grid-3760292"],
@@ -1228,17 +1292,26 @@ function applyPriceDefaults(){
 
 function syncFuelUI(){
   const fuel = $("fuel").value;
-  $("blendField").style.display = (fuel==="BLEND") ? "block" : "none";
-  // dim fuel-price fields that don't apply
+  $("blendFuelLabel").textContent = fuel==="H2" ? "H₂" : "NH₃";
+  // NG price is always relevant (it's always the balance); show only the selected fuel's price otherwise.
   document.querySelectorAll('[data-fuelprice]').forEach(el=>{
     const f = el.getAttribute('data-fuelprice');
-    let show = true;
-    if(fuel==="NG") show = (f==="NG");
-    else if(fuel==="H2") show = (f==="H2");
-    else if(fuel==="NH3") show = (f==="NH3");
-    else if(fuel==="BLEND") show = (f==="NG"||f==="H2");
-    el.style.opacity = show ? "1" : "0.4";
+    el.style.display = (f==="NG" || f===fuel) ? "" : "none";
   });
+}
+
+// ---------------------------------------------------------------
+//  CCGT efficiency-input mode (overall vs GT+ST separate)
+// ---------------------------------------------------------------
+function syncEffModeUI(){
+  const showToggle = primeMover === "TURBINE";
+  $("effModeField").style.display = showToggle ? "block" : "none";
+  const separate = showToggle && effMode === "separate";
+  $("gtStField").style.display = separate ? "grid" : "none";
+  $("gtStNote").style.display = separate ? "block" : "none";
+  $("effPct").disabled = separate;
+  $("effPct").style.opacity = separate ? "0.5" : "1";
+  if(separate) updateOverallFromGtSt();
 }
 
 // ---------------------------------------------------------------
@@ -1258,18 +1331,32 @@ $("rgPrime").querySelectorAll("label").forEach(l=>{
     $("rgPrime").querySelectorAll("label").forEach(x=>x.classList.remove("active"));
     l.classList.add("active");
     primeMover = l.getAttribute("data-val");
+    effMode = "overall";
+    $("rgEffMode").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="overall"));
     applyTechDefaults();
+    syncEffModeUI();
     applyFuelDefaults();   // efficiency + ISBL for the current fuel
+    run();
+  });
+});
+$("rgEffMode").querySelectorAll("label").forEach(l=>{
+  l.addEventListener("click", ()=>{
+    $("rgEffMode").querySelectorAll("label").forEach(x=>x.classList.remove("active"));
+    l.classList.add("active");
+    effMode = l.getAttribute("data-val");
+    syncEffModeUI();
+    applyFuelDefaults();
     run();
   });
 });
 $("fuel").addEventListener("change", ()=>{ applyFuelDefaults(); syncFuelUI(); run(); });
 // blend composition change also refreshes the interpolated efficiency + ISBL defaults
-$("blendVolPct").addEventListener("input", ()=>{ if($("fuel").value==="BLEND") applyFuelDefaults(); });
+$("blendPct").addEventListener("input", ()=>{ applyFuelDefaults(); run(); });
+["gtEffPct","stEffPct"].forEach(id=> $(id).addEventListener("input", ()=>{ if(effMode==="separate"){ updateOverallFromGtSt(); run(); } }));
 $("redundancy").addEventListener("change", run);
 $("useInstalledOverride").addEventListener("change", ()=>{ syncRedundancyUI(); run(); });
 $("calcBtn").addEventListener("click", run);
-[ "blendVolPct","powerMW","capFactor","effPct","unitRatingMW","installedMWOverride",
+[ "powerMW","capFactor","effPct","unitRatingMW","installedMWOverride",
   "isblPerKw","osblPct","indirectPct","fomPerKwYr","vomPerMwh",
   "priceNG","priceH2","priceNH3","discountPct","lifeYr","co2Price"
 ].forEach(id=> $(id).addEventListener("input", run));
@@ -1298,7 +1385,7 @@ function syncViewUI(){
   $("compareModeNote").style.display = compare ? "block" : "none";
   $("compareModeNote").innerHTML = "Compare mode uses each technology's <b>referenced defaults</b> for efficiency, CapEx and O&M. The project inputs below (output, capacity factor, fuel, prices, finance, redundancy) are shared across both.";
   // dim the technology-specific fields (values come from defaults in compare mode)
-  ["effField","unitRatingField","isblField","osblIndRow","omRow","overrideToggleField","installedOverrideField"].forEach(id=>{
+  ["effModeField","effField","gtStField","unitRatingField","isblField","osblIndRow","omRow","overrideToggleField","installedOverrideField"].forEach(id=>{
     const el = $(id); if(!el) return;
     el.style.opacity = compare ? "0.4" : "1";
     el.style.pointerEvents = compare ? "none" : "auto";
@@ -1306,15 +1393,16 @@ function syncViewUI(){
 }
 
 $("resetBtn").addEventListener("click", ()=>{
-  primeMover="ENGINE"; viewMode="single";
+  primeMover="ENGINE"; viewMode="single"; effMode="overall";
   $("rgView").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="single"));
   $("rgPrime").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="ENGINE"));
-  $("fuel").value="NG";
+  $("rgEffMode").querySelectorAll("label").forEach(x=>x.classList.toggle("active", x.getAttribute("data-val")==="overall"));
+  $("fuel").value="H2";
   $("powerMW").value=50; $("capFactor").value=85;
   $("redundancy").value="N1"; $("useInstalledOverride").checked=false;
   $("discountPct").value=8; $("lifeYr").value=25; $("co2Price").value=0;
-  $("blendVolPct").value=20;
-  applyTechDefaults(); applyFuelDefaults(); applyPriceDefaults(); refreshNotes(); syncFuelUI(); syncRedundancyUI(); syncViewUI(); run();
+  $("blendPct").value=20; $("gtEffPct").value=39; $("stEffPct").value=30;
+  applyTechDefaults(); applyFuelDefaults(); applyPriceDefaults(); refreshNotes(); syncFuelUI(); syncRedundancyUI(); syncEffModeUI(); syncViewUI(); run();
 });
 
 // ---------------------------------------------------------------
@@ -1352,10 +1440,10 @@ function saveCurrentAnalysis(){
   if(lastResult.mode==="single"){
     const d=lastResult.d; fuel=d.fuel;
     const techShort = d.pm==="ENGINE" ? "Engine" : "Turbine";
-    name = `${techShort} · ${fuelName(d.fuel)} · ${fmt(d.P_MW,0)} MW · $${fmt(d.lcoe,0)}/MWh`;
+    name = `${techShort} · ${fuelName(d.fuel, d.blendPct)} · ${fmt(d.P_MW,0)} MW · $${fmt(d.lcoe,0)}/MWh`;
   } else {
     const dE=lastResult.dE; fuel=dE.fuel;
-    name = `Compare · ${fuelName(dE.fuel)} · ${fmt(dE.P_MW,0)} MW`;
+    name = `Compare · ${fuelName(dE.fuel, dE.blendPct)} · ${fmt(dE.P_MW,0)} MW`;
   }
   savedAnalyses.push({
     id: "a"+Date.now()+Math.floor(Math.random()*1e4),
@@ -1469,10 +1557,10 @@ function analysisToRows(a){
   const H = t => rows.push([B(t)]);
   if(a.mode==="single"){
     const d=a.single;
-    rows.push([B("Gas Power LCOE — "+(d.pm==="ENGINE"?"Reciprocating gas engine":"Simple-cycle gas turbine"))]);
+    rows.push([B("G2P Modeling Tool — "+(d.pm==="ENGINE"?"Reciprocating gas engine":TECH.TURBINE.label))]);
     rows.push(["Saved", a.ts]); rows.push([]);
     H("Configuration");
-    rows.push(["Fuel", fuelName(d.fuel)]);
+    rows.push(["Fuel", fuelName(d.fuel, d.blendPct)]);
     rows.push(["Firm output (MW)", rnd(d.P_MW,1)]);
     rows.push(["Capacity factor (%)", rnd(d.cf*100,1)]);
     rows.push(["Electrical efficiency (%, LHV)", rnd(d.eff*100,1)]);
@@ -1529,10 +1617,10 @@ function analysisToRows(a){
     rows.push(["CO2 intensity (kg/MWh)", rnd(d.co2_kg_per_MWh,0)]);
   } else {
     const dE=a.compare.dE, dT=a.compare.dT;
-    rows.push([B("Gas Power LCOE — Engine vs Turbine")]);
+    rows.push([B("G2P Modeling Tool — Engine vs Turbine")]);
     rows.push(["Saved", a.ts]); rows.push([]);
     H("Shared basis");
-    rows.push(["Fuel", fuelName(dE.fuel)]);
+    rows.push(["Fuel", fuelName(dE.fuel, dE.blendPct)]);
     rows.push(["Firm output (MW)", rnd(dE.P_MW,1)]);
     rows.push(["Capacity factor (%)", rnd(dE.cf*100,1)]);
     rows.push(["Redundancy scheme", SCHEME_LABEL[dE.scheme]]);
@@ -1576,7 +1664,7 @@ function downloadSelectedXlsx(){
   if(!sel.length){ alert("Tick at least one saved analysis to include in the Excel file."); return; }
   const sheets=sel.map((a,i)=>{
     const tag = a.mode==="compare" ? "Cmp" : (a.single.pm==="ENGINE"?"Eng":"Turb");
-    const fk = a.fuel==="BLEND"?"Blend":a.fuel;
+    const fk = a.fuel;
     return { name:`${i+1}-${tag}-${fk}`, rows:analysisToRows(a) };
   });
   downloadBlob(buildXlsx(sheets), "gas-lcoe-analyses.xlsx");
@@ -1603,6 +1691,7 @@ $("trayList").addEventListener("input", (e)=>{
 // init
 restoreSaved();
 applyTechDefaults();
+syncEffModeUI();
 applyFuelDefaults();
 applyPriceDefaults();
 refreshNotes();
