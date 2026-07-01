@@ -33,7 +33,9 @@ export default async function DashboardPage() {
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Available modules" value={MODULES.length} hint="Techno-economics & pipeline sizing" />
-        <StatCard label="Your role" value={profile.role} hint={profile.email} />
+        {profile.role === "admin" ? (
+          <StatCard label="Your role" value={profile.role} hint={profile.email} />
+        ) : null}
         <StatCard
           label="Module categories"
           value={Object.keys(byCategory).length}

@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/layout/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
-  title: "Engineering Dashboard",
+  title: "Front End Engineering Tool Dashboard",
   description:
     "Centralized platform for techno-economic and pipeline sizing engineering tools.",
 };
