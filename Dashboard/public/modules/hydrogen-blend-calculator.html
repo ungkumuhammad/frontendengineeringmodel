@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H₂/NH₃ Blend Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+  :root {
+    --bg-deep:    #070c14;
+    --bg-panel:   #0d1624;
+    --bg-card:    #111d30;
+    --bg-card2:   #0f1a2a;
+    --border:     rgba(255,255,255,0.07);
+    --border-lit: rgba(255,255,255,0.13);
+
+    --grey-hue:  #8b9ab0;
+    --grey-dim:  rgba(139,154,176,0.12);
+    --grey-glow: rgba(139,154,176,0.25);
+
+    --blue-hue:  #38b2f0;
+    --blue-dim:  rgba(56,178,240,0.10);
+    --blue-glow: rgba(56,178,240,0.28);
+
+    --green-hue:  #22d48a;
+    --green-dim:  rgba(34,212,138,0.10);
+    --green-glow: rgba(34,212,138,0.28);
+
+    --gold:  #f0c040;
+    --danger:#f05060;
+    --text:  #d8e4f0;
+    --muted: #5a7090;
+    --mono:  'DM Mono', monospace;
+    --sans:  'DM Sans', sans-serif;
+    --display: 'Bebas Neue', cursive;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background atmosphere ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34,212,138,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 110%, rgba(56,178,240,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 30% at 50% 50%, rgba(15,26,42,0.8) 0%, transparent 70%);
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, black, transparent);
+  }
+
+  /* ── Layout ── */
+  .page { max-width: 1160px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── Header ── */
+  header {
+    padding: 48px 0 36px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .header-left {}
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.2em;
+    color: var(--green-hue); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(38px, 6vw, 68px);
+    letter-spacing: 0.04em;
+    line-height: 0.95;
+    color: #fff;
+  }
+  h1 sub {
+    font-size: 0.55em; vertical-align: sub;
+    color: var(--blue-hue);
+  }
+  .header-sub {
+    color: var(--muted); font-size: 13px; margin-top: 8px;
+    font-family: var(--mono);
+  }
+
+  /* ── Molecule Toggle ── */
+  .mol-toggle {
+    display: flex; gap: 0; border-radius: 10px;
+    border: 1px solid var(--border-lit); overflow: hidden;
+    background: var(--bg-card2);
+  }
+  .mol-btn {
+    padding: 10px 28px;
+    font-family: var(--display); font-size: 20px; letter-spacing: 0.06em;
+    cursor: pointer; border: none; background: transparent;
+    color: var(--muted); transition: all 0.25s;
+    position: relative;
+  }
+  .mol-btn sub { font-size: 0.55em; vertical-align: sub; }
+  .mol-btn.active {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(34,212,138,0.18), rgba(56,178,240,0.14));
+  }
+  .mol-btn.active::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--green-hue), var(--blue-hue));
+  }
+  .mol-btn:hover:not(.active) { color: var(--text); background: var(--bg-card); }
+
+  /* ── Load example btn ── */
+  .example-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    color: var(--gold); background: transparent;
+    border: 1px solid rgba(240,192,64,0.3); border-radius: 6px;
+    padding: 6px 14px; cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .example-btn:hover {
+    background: rgba(240,192,64,0.1); border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(240,192,64,0.2);
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── Shade Cards ── */
+  .shades-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 700px) { .shades-grid { grid-template-columns: 1fr; } }
+
+  .shade-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .shade-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .shade-card.grey::before { background: linear-gradient(90deg, var(--grey-hue), #6a7a90); }
+  .shade-card.grey { border-top-color: rgba(139,154,176,0.4); }
+  .shade-card.grey:hover { border-color: var(--grey-glow); box-shadow: 0 0 20px var(--grey-dim); }
+
+  .shade-card.blue::before { background: linear-gradient(90deg, var(--blue-hue), #5cc8ff); }
+  .shade-card.blue { border-top-color: rgba(56,178,240,0.4); }
+  .shade-card.blue:hover { border-color: var(--blue-glow); box-shadow: 0 0 20px var(--blue-dim); }
+
+  .shade-card.green::before { background: linear-gradient(90deg, var(--green-hue), #40f0a0); }
+  .shade-card.green { border-top-color: rgba(34,212,138,0.4); }
+  .shade-card.green:hover { border-color: var(--green-glow); box-shadow: 0 0 20px var(--green-dim); }
+
+  .shade-title {
+    font-family: var(--display); font-size: 22px; letter-spacing: 0.06em;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .shade-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .shade-card.grey .shade-dot { background: var(--grey-hue); }
+  .shade-card.blue .shade-dot { background: var(--blue-hue); }
+  .shade-card.green .shade-dot { background: var(--green-hue); }
+  .shade-card.grey .shade-title { color: var(--grey-hue); }
+  .shade-card.blue .shade-title { color: var(--blue-hue); }
+  .shade-card.green .shade-title { color: var(--green-hue); }
+
+  /* ── Field ── */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block; font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 5px;
+  }
+  .input-wrap { position: relative; display: flex; align-items: center; }
+  .input-wrap input {
+    width: 100%; background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; padding-right: 80px;
+    font-family: var(--mono); font-size: 15px; font-weight: 500;
+    color: #fff; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-wrap input:focus {
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.06);
+  }
+  .input-wrap input::placeholder { color: var(--muted); font-size: 12px; }
+  .unit-badge {
+    position: absolute; right: 10px;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--muted); pointer-events: none; white-space: nowrap;
+  }
+  .unit-badge sub { font-size: 0.75em; vertical-align: sub; }
+
+  /* ── Target Row ── */
+  .target-row {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+  .target-grid {
+    display: grid; grid-template-columns: auto 1fr 1fr; gap: 20px; align-items: end;
+  }
+  @media (max-width: 700px) { .target-grid { grid-template-columns: 1fr 1fr; } }
+
+  .ci-unit-toggle {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ci-unit-toggle label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .toggle-pills { display: flex; gap: 4px; }
+  .pill {
+    padding: 6px 12px; border-radius: 6px;
+    font-family: var(--mono); font-size: 11px;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    transition: all 0.2s;
+  }
+  .pill.active {
+    background: rgba(56,178,240,0.15);
+    border-color: rgba(56,178,240,0.5);
+    color: var(--blue-hue);
+  }
+  .pill:hover:not(.active) { color: var(--text); border-color: var(--border-lit); }
+
+  /* ── Calculate Button ── */
+  .calc-row { display: flex; gap: 14px; align-items: center; margin-bottom: 36px; flex-wrap: wrap; }
+  .calc-btn {
+    font-family: var(--display); font-size: 22px; letter-spacing: 0.1em;
+    padding: 12px 40px; cursor: pointer;
+    border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #1a8a5a, #0e6e78);
+    color: #fff;
+    position: relative; overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(34,212,138,0.25);
+  }
+  .calc-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .calc-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(34,212,138,0.4); }
+  .calc-btn:hover::before { opacity: 1; }
+  .calc-btn:active { transform: translateY(0); }
+
+  /* ── Math Explanation ── */
+  .math-panel {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 22px;
+    margin-bottom: 32px;
+  }
+  .math-toggle {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+    background: transparent; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: color 0.2s; width: 100%;
+  }
+  .math-toggle:hover { color: var(--text); }
+  .math-toggle .arrow { transition: transform 0.3s; display: inline-block; }
+  .math-toggle.open .arrow { transform: rotate(90deg); }
+  .math-body { display: none; margin-top: 16px; }
+  .math-body.visible { display: block; }
+  .eq-block {
+    background: rgba(0,0,0,0.3);
+    border-left: 3px solid var(--blue-hue);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px; margin-bottom: 10px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.9;
+    color: #b0c8e0;
+  }
+  .eq-block .comment { color: var(--muted); font-size: 11px; }
+  .eq-var-grey { color: var(--grey-hue); }
+  .eq-var-blue { color: var(--blue-hue); }
+  .eq-var-green { color: var(--green-hue); }
+
+  /* ── Error Banner ── */
+  .error-banner {
+    background: rgba(240,80,96,0.12);
+    border: 1px solid rgba(240,80,96,0.35);
+    border-radius: 10px; padding: 16px 20px;
+    margin-bottom: 24px; display: none;
+  }
+  .error-banner.show { display: block; }
+  .error-banner strong {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--danger); letter-spacing: 0.08em;
+    display: block; margin-bottom: 6px;
+  }
+  .error-banner p { color: #c08090; font-size: 13px; line-height: 1.5; }
+  .error-banner .range-info {
+    margin-top: 10px; font-family: var(--mono); font-size: 11px;
+    color: #a06070; display: flex; gap: 20px; flex-wrap: wrap;
+  }
+  .range-chip {
+    background: rgba(240,80,96,0.1); border: 1px solid rgba(240,80,96,0.2);
+    border-radius: 4px; padding: 3px 9px;
+  }
+
+  /* ── Results Panel ── */
+  .results-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-lit);
+    border-radius: 16px; padding: 28px;
+    margin-bottom: 28px;
+    display: none; opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .results-panel.show { display: block; }
+  .results-panel.animate { opacity: 1; transform: translateY(0); }
+
+  .results-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .results-title { font-family: var(--display); font-size: 28px; letter-spacing: 0.06em; color: #fff; }
+  .verified-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; padding: 5px 12px; border-radius: 20px;
+    background: rgba(34,212,138,0.12); border: 1px solid rgba(34,212,138,0.3);
+    color: var(--green-hue);
+  }
+
+  /* Blend Bars */
+  .blend-bars { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
+  .blend-row { display: flex; flex-direction: column; gap: 6px; }
+  .blend-meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .blend-name {
+    font-family: var(--display); font-size: 17px; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .blend-pct {
+    font-family: var(--mono); font-size: 22px; font-weight: 500; color: #fff;
+  }
+  .bar-track {
+    height: 8px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 99px; width: 0;
+    transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .bar-fill.grey { background: linear-gradient(90deg, #6a7a90, var(--grey-hue)); }
+  .bar-fill.blue { background: linear-gradient(90deg, #1890c8, var(--blue-hue)); }
+  .bar-fill.green { background: linear-gradient(90deg, #12a860, var(--green-hue)); }
+
+  /* Confirmed metrics */
+  .confirmed-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .metric-card {
+    background: rgba(0,0,0,0.25); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px;
+  }
+  .metric-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  }
+  .metric-val {
+    font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--green-hue);
+  }
+  .metric-unit {
+    font-size: 11px; color: var(--muted); margin-left: 4px;
+  }
+
+  /* ── Sensitivity Table ── */
+  .sens-toggle-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--blue-hue);
+    background: rgba(56,178,240,0.08); border: 1px solid rgba(56,178,240,0.25);
+    border-radius: 8px; padding: 9px 20px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sens-toggle-btn:hover { background: rgba(56,178,240,0.15); border-color: rgba(56,178,240,0.5); }
+
+  .sens-panel {
+    display: none; opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .sens-panel.show { display: block; }
+  .sens-panel.animate { opacity: 1; }
+
+  .sens-header-block {
+    margin-bottom: 16px;
+  }
+  .sens-title {
+    font-family: var(--display); font-size: 24px; letter-spacing: 0.06em; color: #fff;
+    margin-bottom: 4px;
+  }
+  .sens-subtitle { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    font-family: var(--mono); font-size: 12px;
+  }
+  th {
+    padding: 10px 14px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    text-align: center; white-space: nowrap;
+  }
+  th.row-axis {
+    text-align: left; background: var(--bg-card2);
+    border-right: 1px solid var(--border);
+    position: sticky; left: 0; z-index: 2;
+  }
+  th.col-header { background: var(--bg-card2); }
+  td {
+    padding: 9px 14px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.15s;
+  }
+  td.row-label {
+    text-align: left; color: var(--muted);
+    background: var(--bg-card2);
+    border-right: 1px solid var(--border);
+    position: sticky; left: 0; z-index: 1;
+    white-space: nowrap;
+  }
+  td.row-label.base-row { color: var(--text); }
+  td.base-row { outline: 1px solid rgba(240,192,64,0.3); outline-offset: -1px; }
+  td.infeasible { color: var(--muted); font-size: 11px; }
+
+  tr:hover td:not(.row-label) { background: rgba(255,255,255,0.03); }
+
+  .col-label-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .col-delta {
+    font-size: 10px; color: var(--muted);
+  }
+  .col-delta.pos { color: rgba(34,212,138,0.7); }
+  .col-delta.neg { color: rgba(240,80,96,0.6); }
+
+  .axis-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .axis-rotate {
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    display: inline-block; padding: 8px 0;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+  }
+  .legend-swatch {
+    width: 12px; height: 12px; border-radius: 3px;
+  }
+
+  /* Base tag */
+  .base-tag {
+    font-size: 9px; padding: 1px 5px; border-radius: 3px;
+    background: rgba(240,192,64,0.15); border: 1px solid rgba(240,192,64,0.3);
+    color: var(--gold); vertical-align: middle; margin-left: 4px;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .confirmed-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 38px; }
+  }
+
+  /* Scroll indicator fade-in for whole page */
+  .page { animation: fadeIn 0.5s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Input number arrow hide */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* ── Shade Toggle Switch ── */
+  .shade-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .toggle-switch {
+    position: relative; width: 36px; height: 20px; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute; inset: 0; border-radius: 20px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.25s, background 0.25s;
+  }
+  .toggle-switch input:checked ~ .toggle-track {
+    background: rgba(34,212,138,0.25); border-color: rgba(34,212,138,0.5);
+  }
+  .toggle-switch input:checked ~ .toggle-thumb {
+    transform: translateX(16px); background: var(--green-hue);
+  }
+  .shade-card.blue .toggle-switch input:checked ~ .toggle-track {
+    background: rgba(56,178,240,0.2); border-color: rgba(56,178,240,0.5);
+  }
+  .shade-card.blue .toggle-switch input:checked ~ .toggle-thumb { background: var(--blue-hue); }
+  .shade-card.grey .toggle-switch input:checked ~ .toggle-track {
+    background: rgba(139,154,176,0.2); border-color: rgba(139,154,176,0.5);
+  }
+  .shade-card.grey .toggle-switch input:checked ~ .toggle-thumb { background: var(--grey-hue); }
+
+  /* ── Disabled Shade Card ── */
+  .shade-card.disabled {
+    opacity: 0.38;
+    filter: saturate(0.2);
+    pointer-events: none;
+  }
+  .shade-card.disabled .toggle-switch { pointer-events: all; }
+  .shade-card.disabled .shade-title { color: var(--muted) !important; }
+  .shade-card.disabled .input-wrap input { color: var(--muted); }
+
+  /* ── 2-shade note ── */
+  .mode-note {
+    font-family: var(--mono); font-size: 11px; color: var(--gold);
+    background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.2);
+    border-radius: 8px; padding: 8px 14px; margin-bottom: 20px;
+    display: none;
+  }
+  .mode-note.show { display: block; }
+
+  /* ── Warning badge (partial match) ── */
+  .warn-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 5px 12px; border-radius: 20px;
+    background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.35);
+    color: var(--gold);
+  }
+
+  /* ── Theme Toggle Button ── */
+  .theme-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 7px 16px; border-radius: 8px;
+    cursor: pointer; transition: all 0.25s; white-space: nowrap;
+    border: 1px solid var(--border-lit); background: var(--bg-card2);
+    color: var(--muted); display: flex; align-items: center; gap: 7px;
+  }
+  .theme-btn:hover { color: var(--text); border-color: var(--border-lit); }
+  .theme-btn .theme-icon { font-size: 14px; }
+
+  /* ══════════════════════════════════════════════
+     LIGHT MODE OVERRIDES  (body.light is default)
+  ══════════════════════════════════════════════ */
+  body.light {
+    --bg-deep:    #f0f5fb;
+    --bg-panel:   #e6edf7;
+    --bg-card:    #ffffff;
+    --bg-card2:   #f4f7fc;
+    --border:     rgba(30,60,100,0.09);
+    --border-lit: rgba(30,60,100,0.17);
+    --grey-hue:   #6278a0;
+    --grey-dim:   rgba(98,120,160,0.10);
+    --grey-glow:  rgba(98,120,160,0.22);
+    --blue-hue:   #1a8cdc;
+    --blue-dim:   rgba(26,140,220,0.10);
+    --blue-glow:  rgba(26,140,220,0.25);
+    --green-hue:  #0fa86a;
+    --green-dim:  rgba(15,168,106,0.10);
+    --green-glow: rgba(15,168,106,0.25);
+    --gold:       #c8900a;
+    --danger:     #d03040;
+    --text:       #1a2e46;
+    --muted:      #7090b0;
+  }
+  body.light::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(15,168,106,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 110%, rgba(26,140,220,0.08) 0%, transparent 55%);
+  }
+  body.light::after {
+    background-image:
+      linear-gradient(rgba(30,60,100,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,60,100,0.04) 1px, transparent 1px);
+    mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, black, transparent);
+  }
+  body.light h1 { color: #0d1e32; }
+  body.light .results-title { color: #0d1e32; }
+  body.light .blend-pct { color: #0d1e32; }
+  body.light .mol-btn.active { color: #0d1e32; }
+  body.light .input-wrap input {
+    background: rgba(255,255,255,0.85);
+    color: #0d1e32;
+    border-color: var(--border);
+  }
+  body.light .input-wrap input:focus {
+    border-color: rgba(26,140,220,0.4);
+    box-shadow: 0 0 0 2px rgba(26,140,220,0.08);
+  }
+  body.light .input-wrap input::placeholder { color: #a0b8d0; }
+  body.light .eq-block {
+    background: rgba(240,248,255,0.8);
+    color: #2a4a6a;
+  }
+  body.light .eq-block .comment { color: #8090b0; }
+  body.light .metric-card { background: rgba(240,248,255,0.7); }
+  body.light td { border-bottom: 1px solid rgba(30,60,100,0.05); }
+  body.light tr:hover td:not(.row-label) { background: rgba(30,60,100,0.03); }
+  body.light .toggle-track {
+    background: rgba(0,0,0,0.08);
+    border-color: rgba(0,0,0,0.15);
+  }
+  body.light .shade-card { box-shadow: 0 2px 12px rgba(30,60,100,0.06); }
+  body.light .shade-card.grey:hover { box-shadow: 0 4px 20px rgba(98,120,160,0.15); }
+  body.light .shade-card.blue:hover { box-shadow: 0 4px 20px rgba(26,140,220,0.15); }
+  body.light .shade-card.green:hover { box-shadow: 0 4px 20px rgba(15,168,106,0.15); }
+  body.light .sens-title { color: #0d1e32; }
+  body.light .calc-btn { box-shadow: 0 4px 20px rgba(15,168,106,0.2); }
+  body.light .base-tag {
+    background: rgba(200,144,10,0.12);
+    border-color: rgba(200,144,10,0.3);
+  }
+  body.light .error-banner { background: rgba(208,48,64,0.08); border-color: rgba(208,48,64,0.28); }
+  body.light .error-banner p { color: #904050; }
+  body.light .error-banner .range-info { color: #805060; }
+  body.light .range-chip { background: rgba(208,48,64,0.07); border-color: rgba(208,48,64,0.2); }
+  body.light .mode-note {
+    background: rgba(200,144,10,0.07);
+    border-color: rgba(200,144,10,0.2);
+  }
+
+  /* ── Dark mode (toggled on) ── */
+  body.dark-mode {
+    --bg-deep:    #070c14;
+    --bg-panel:   #0d1624;
+    --bg-card:    #111d30;
+    --bg-card2:   #0f1a2a;
+    --border:     rgba(255,255,255,0.07);
+    --border-lit: rgba(255,255,255,0.13);
+    --grey-hue:   #8b9ab0;
+    --blue-hue:   #38b2f0;
+    --green-hue:  #22d48a;
+    --gold:       #f0c040;
+    --danger:     #f05060;
+    --text:       #d8e4f0;
+    --muted:      #5a7090;
+  }
+  body.dark-mode::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34,212,138,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 110%, rgba(56,178,240,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 30% at 50% 50%, rgba(15,26,42,0.8) 0%, transparent 70%);
+  }
+  body.dark-mode::after {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, black, transparent);
+  }
+  body.dark-mode h1 { color: #fff; }
+  body.dark-mode .results-title { color: #fff; }
+  body.dark-mode .blend-pct { color: #fff; }
+  body.dark-mode .mol-btn.active { color: #fff; }
+  body.dark-mode .input-wrap input { background: rgba(0,0,0,0.3); color: #fff; }
+  body.dark-mode .input-wrap input:focus { border-color: rgba(255,255,255,0.25); box-shadow: 0 0 0 2px rgba(255,255,255,0.06); }
+  body.dark-mode .input-wrap input::placeholder { color: #5a7090; }
+  body.dark-mode .eq-block { background: rgba(0,0,0,0.3); color: #b0c8e0; }
+  body.dark-mode .metric-card { background: rgba(0,0,0,0.25); }
+  body.dark-mode td { border-bottom: 1px solid rgba(255,255,255,0.03); }
+  body.dark-mode tr:hover td:not(.row-label) { background: rgba(255,255,255,0.03); }
+  body.dark-mode .toggle-track { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
+  body.dark-mode .sens-title { color: #fff; }
+
+  /* ── Download Button ── */
+  .download-section {
+    display: none; margin-top: 28px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .download-section.show { display: block; }
+  .download-btn {
+    font-family: var(--display); font-size: 20px; letter-spacing: 0.08em;
+    padding: 12px 36px; cursor: pointer; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #1060a0, #1480cc);
+    color: #fff; display: inline-flex; align-items: center; gap: 10px;
+    position: relative; overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(26,140,220,0.28);
+  }
+  .download-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .download-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(26,140,220,0.42); }
+  .download-btn:hover::before { opacity: 1; }
+  .download-btn:active { transform: translateY(0); }
+  .download-btn .dl-icon { font-size: 18px; }
+  .download-hint {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    margin-top: 10px; line-height: 1.6;
+  }
+  .dl-sheets {
+    display: inline-flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .dl-sheet-chip {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    padding: 3px 10px; border-radius: 4px;
+    background: rgba(26,140,220,0.10); border: 1px solid rgba(26,140,220,0.25);
+    color: var(--blue-hue);
+  }
+  body.light .download-btn { box-shadow: 0 4px 20px rgba(26,140,220,0.22); }
+
+  /* ── Reference Mode Badges ── */
+  .ref-active-badge {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+    background: rgba(34,212,138,0.12); border: 1px solid rgba(34,212,138,0.35);
+    color: var(--green-hue); display: inline-flex; align-items: center; gap: 3px;
+  }
+  .computed-ref-badge {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+    background: rgba(90,112,144,0.10); border: 1px solid rgba(90,112,144,0.25);
+    color: var(--muted); display: inline-flex; align-items: center; gap: 3px;
+  }
+  /* Computed read-only input */
+  .input-wrap.computed-input input {
+    background: rgba(0,0,0,0.10) !important;
+    color: var(--muted) !important;
+    border-style: dashed !important;
+    cursor: default !important;
+  }
+  .input-wrap.computed-input input:focus {
+    box-shadow: none !important;
+    border-color: var(--border) !important;
+  }
+  body.light .input-wrap.computed-input input {
+    background: rgba(180,195,215,0.25) !important;
+    color: var(--muted) !important;
+  }
+  /* Active reference input highlight */
+  .input-wrap.reference-input input {
+    border-color: rgba(34,212,138,0.40) !important;
+  }
+  body.light .input-wrap.reference-input input {
+    border-color: rgba(15,168,106,0.38) !important;
+  }
+  /* Ref selector row */
+  .ref-selector-row {
+    margin-bottom: 18px; padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ref-selector-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ref-selector-label::before {
+    content: '⚑'; font-size: 11px; color: var(--gold);
+  }
+  .ref-hint {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    margin-left: 4px;
+  }
+  /* Override target-grid to 2 columns */
+  .target-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ── CI Sensitivity Table ── */
+  .ci-sens-section { display: none; }
+  .ci-sens-section.show { display: block; }
+
+  .ci-sens-toggle-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--green-hue);
+    background: rgba(34,212,138,0.08); border: 1px solid rgba(34,212,138,0.25);
+    border-radius: 8px; padding: 9px 20px; cursor: pointer; transition: all 0.2s;
+  }
+  .ci-sens-toggle-btn:hover { background: rgba(34,212,138,0.15); border-color: rgba(34,212,138,0.5); }
+
+  .ci-sens-panel { display: none; opacity: 0; transition: opacity 0.3s; }
+  .ci-sens-panel.show  { display: block; }
+  .ci-sens-panel.animate { opacity: 1; }
+
+  /* CI table specific overrides */
+  .ci-table td.row-label { min-width: 130px; }
+  .ci-table th { font-size: 10px; padding: 8px 10px; }
+  .ci-table td { padding: 8px 12px; }
+  .ci-pct-bar {
+    display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle;
+    margin-left: 4px; opacity: 0.6;
+  }
+</style>
+</head>
+<body class="light">
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <header>
+    <div class="header-left">
+      <div class="eyebrow">// Clean Energy Optimization Tool</div>
+      <h1>BLEND<br>CALC<sub>ulator</sub></h1>
+      <div class="header-sub">H₂ · NH₃ · CI · COST · SENSITIVITY</div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:12px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+          <span class="theme-icon">☀</span><span id="themeBtnLabel">Light</span>
+        </button>
+        <div class="mol-toggle" id="molToggle">
+          <button class="mol-btn active" data-mol="H2" onclick="setMolecule('H2')">H<sub>2</sub></button>
+          <button class="mol-btn" data-mol="NH3" onclick="setMolecule('NH3')">NH<sub>3</sub></button>
+        </div>
+      </div>
+      <button class="example-btn" onclick="loadExample()">⬡ Load H₂ Example</button>
+    </div>
+  </header>
+
+  <!-- ══ CI UNIT SELECTOR ══ -->
+  <div class="target-row" style="margin-bottom:20px; padding:16px 20px;">
+    <div class="section-label">Carbon Intensity Unit</div>
+    <div class="toggle-pills" id="ciUnitPills">
+      <button class="pill active" data-unit="kgco2" onclick="setCIUnit('kgco2')">
+        kgCO₂e / kg<span class="mol-label-unit">H₂</span>
+      </button>
+      <button class="pill" data-unit="gco2mj" onclick="setCIUnit('gco2mj')">
+        gCO₂e / MJ
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ SHADE CARDS ══ -->
+  <div class="section-label">Source Feedstock Data</div>
+  <div class="shades-grid">
+
+    <!-- GREY -->
+    <div class="shade-card grey" id="card_grey">
+      <div class="shade-header">
+        <div class="shade-title"><span class="shade-dot"></span>GREY</div>
+        <label class="toggle-switch" title="Include Grey in blend">
+          <input type="checkbox" id="toggle_grey" checked onchange="onShadeToggle()">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+      <div class="field">
+        <label>Price</label>
+        <div class="input-wrap">
+          <input type="number" id="grey_price" step="0.01" placeholder="e.g. 2.00">
+          <span class="unit-badge" id="grey_price_unit">USD/kg<sub>H₂</sub></span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Carbon Intensity (CI)</label>
+        <div class="input-wrap">
+          <input type="number" id="grey_ci" step="0.01" placeholder="e.g. 12.0">
+          <span class="unit-badge" id="grey_ci_unit">kgCO₂e/kg</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLUE -->
+    <div class="shade-card blue" id="card_blue">
+      <div class="shade-header">
+        <div class="shade-title"><span class="shade-dot"></span>BLUE</div>
+        <label class="toggle-switch" title="Include Blue in blend">
+          <input type="checkbox" id="toggle_blue" checked onchange="onShadeToggle()">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+      <div class="field">
+        <label>Price</label>
+        <div class="input-wrap">
+          <input type="number" id="blue_price" step="0.01" placeholder="e.g. 3.50">
+          <span class="unit-badge" id="blue_price_unit">USD/kg<sub>H₂</sub></span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Carbon Intensity (CI)</label>
+        <div class="input-wrap">
+          <input type="number" id="blue_ci" step="0.01" placeholder="e.g. 5.0">
+          <span class="unit-badge" id="blue_ci_unit">kgCO₂e/kg</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GREEN -->
+    <div class="shade-card green" id="card_green">
+      <div class="shade-header">
+        <div class="shade-title"><span class="shade-dot"></span>GREEN</div>
+        <label class="toggle-switch" title="Include Green in blend">
+          <input type="checkbox" id="toggle_green" checked onchange="onShadeToggle()">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+      <div class="field">
+        <label>Price</label>
+        <div class="input-wrap">
+          <input type="number" id="green_price" step="0.01" placeholder="e.g. 6.00">
+          <span class="unit-badge" id="green_price_unit">USD/kg<sub>H₂</sub></span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Carbon Intensity (CI)</label>
+        <div class="input-wrap">
+          <input type="number" id="green_ci" step="0.01" placeholder="e.g. 0.0">
+          <span class="unit-badge" id="green_ci_unit">kgCO₂e/kg</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TARGET ══ -->
+  <div class="section-label">Target Reference</div>
+  <div class="target-row">
+    <!-- Reference selector -->
+    <div class="ref-selector-row">
+      <div class="ref-selector-label">Choose One Reference to Anchor Your Blend</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div class="toggle-pills" id="refModePills">
+          <button class="pill active" data-ref="ci" onclick="setReferenceMode('ci')">↳ CI Target</button>
+          <button class="pill" data-ref="price" onclick="setReferenceMode('price')">↳ Price Target</button>
+        </div>
+        <span class="ref-hint" id="refHint">Enter your CI target — blended price will be computed as a result</span>
+      </div>
+    </div>
+    <!-- The two target fields -->
+    <div class="target-grid">
+      <div class="field" style="margin:0">
+        <label style="display:flex;align-items:center;gap:7px;">
+          Target CI
+          <span id="ciRefBadge" class="ref-active-badge">● REFERENCE</span>
+        </label>
+        <div class="input-wrap reference-input" id="ciInputWrap">
+          <input type="number" id="target_ci" step="0.01" placeholder="e.g. 4.0">
+          <span class="unit-badge" id="target_ci_unit">kgCO₂e/kg</span>
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label style="display:flex;align-items:center;gap:7px;">
+          Target Levelized Cost
+          <span id="priceRefBadge" class="computed-ref-badge">◌ COMPUTED</span>
+        </label>
+        <div class="input-wrap computed-input" id="priceInputWrap">
+          <input type="number" id="target_price" step="0.01" placeholder="— computed after calculation —" readonly>
+          <span class="unit-badge" id="target_price_unit">USD/kg<sub>H₂</sub></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MATH EXPLANATION ══ -->
+  <div class="math-panel">
+    <button class="math-toggle" id="mathToggleBtn" onclick="toggleMath()">
+      <span class="arrow">▶</span>
+      <span>System of Equations — How the Blending is Solved</span>
+    </button>
+    <div class="math-body" id="mathBody">
+      <div class="eq-block">
+        <span class="comment">// Three unknowns: x₁ (Grey%), x₂ (Blue%), x₃ (Green%)</span><br><br>
+        <span class="eq-var-grey">CI_grey</span> · x₁ + <span class="eq-var-blue">CI_blue</span> · x₂ + <span class="eq-var-green">CI_green</span> · x₃ = <b>CI_target</b>
+        <span class="comment">  ← match carbon intensity</span><br>
+        <span class="eq-var-grey">P_grey</span> · x₁ &nbsp;+ <span class="eq-var-blue">P_blue</span> · x₂ &nbsp;+ <span class="eq-var-green">P_green</span> · x₃ &nbsp;= <b>P_target</b>
+        <span class="comment">  ← match levelized cost</span><br>
+        x₁ + x₂ + x₃ = <b>1.0</b>
+        <span class="comment">  ← fractions must sum to 100%</span>
+      </div>
+      <div style="font-size:12px; color:var(--muted); font-family:var(--mono); line-height:1.8">
+        Solved via <b style="color:var(--text)">Gaussian elimination</b> (3×3 linear system).<br>
+        Valid only when all xᵢ ∈ [0, 1]. If target CI/price lies outside the convex hull of source values, no valid blend exists.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODE NOTE ══ -->
+  <div class="mode-note" id="modeNote"></div>
+
+  <!-- ══ ACTION ROW ══ -->
+  <div class="calc-row">
+    <button class="calc-btn" onclick="calculate()">CALCULATE BLEND</button>
+    <div style="font-family:var(--mono); font-size:11px; color:var(--muted)" id="calcHint">
+      Solves 3-equation linear system · Validates feasibility
+    </div>
+  </div>
+
+  <!-- ══ ERROR BANNER ══ -->
+  <div class="error-banner" id="errorBanner">
+    <strong>⚠ NO FEASIBLE BLEND EXISTS</strong>
+    <p id="errorMsg"></p>
+    <div class="range-info" id="errorRanges"></div>
+  </div>
+
+  <!-- ══ RESULTS ══ -->
+  <div class="results-panel" id="resultsPanel">
+    <div class="results-header">
+      <div class="results-title">BLEND SOLUTION</div>
+      <div class="verified-badge" id="verifiedBadge">✓ Targets Satisfied</div>
+    </div>
+
+    <div class="blend-bars">
+      <!-- Grey -->
+      <div class="blend-row" id="blendrow_grey" style="display:flex">
+        <div class="blend-meta">
+          <div class="blend-name">
+            <span class="shade-dot" style="background:var(--grey-hue)"></span>
+            <span style="color:var(--grey-hue)">GREY</span>
+          </div>
+          <div class="blend-pct" id="grey_pct">—</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill grey" id="grey_bar"></div></div>
+      </div>
+      <!-- Blue -->
+      <div class="blend-row" id="blendrow_blue" style="display:flex">
+        <div class="blend-meta">
+          <div class="blend-name">
+            <span class="shade-dot" style="background:var(--blue-hue)"></span>
+            <span style="color:var(--blue-hue)">BLUE</span>
+          </div>
+          <div class="blend-pct" id="blue_pct">—</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill blue" id="blue_bar"></div></div>
+      </div>
+      <!-- Green -->
+      <div class="blend-row" id="blendrow_green" style="display:flex">
+        <div class="blend-meta">
+          <div class="blend-name">
+            <span class="shade-dot" style="background:var(--green-hue)"></span>
+            <span style="color:var(--green-hue)">GREEN</span>
+          </div>
+          <div class="blend-pct" id="green_pct">—</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill green" id="green_bar"></div></div>
+      </div>
+    </div>
+
+    <div class="confirmed-grid">
+      <div class="metric-card">
+        <div class="metric-label" for-metric="ci">Confirmed Blended CI</div>
+        <div class="metric-val" id="conf_ci">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label" for-metric="price">Confirmed Blended Price</div>
+        <div class="metric-val" id="conf_price">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SENSITIVITY TABLE ══ -->
+  <div id="sensSection" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="sens-toggle-btn" id="sensToggleBtn" onclick="toggleSens()">
+        ▼ &nbsp;SHOW SENSITIVITY TABLE
+      </button>
+    </div>
+    <div class="sens-panel" id="sensPanel">
+      <div class="sens-header-block">
+        <div class="sens-title" id="sensTitle">GREEN% SENSITIVITY</div>
+        <div class="sens-subtitle" id="sensSubtitle">How Green blending % changes with price variations</div>
+      </div>
+      <div class="table-wrap" id="tableWrap"></div>
+      <div class="legend" id="sensLegend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(34,212,138,0.5)"></div>≥15% below target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(34,212,138,0.22)"></div>Below target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,192,64,0.3); border:1px solid rgba(240,192,64,0.4)"></div>At target (±2%)
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,80,96,0.22)"></div>Above target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,80,96,0.45)"></div>≥15% above target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,192,64,0.3); border:2px solid rgba(240,192,64,0.6)"></div>Base case cell
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CI SENSITIVITY ══ -->
+  <div class="ci-sens-section" id="ciSensSection">
+    <div style="margin-bottom:16px; margin-top:8px;">
+      <button class="ci-sens-toggle-btn" id="ciSensToggleBtn" onclick="toggleCISens()">
+        ▼ &nbsp;SHOW CI SENSITIVITY TABLE
+      </button>
+    </div>
+    <div class="ci-sens-panel" id="ciSensPanel">
+      <div class="sens-header-block">
+        <div class="sens-title" id="ciSensTitle">CI SENSITIVITY</div>
+        <div class="sens-subtitle" id="ciSensSubtitle">Blend fractions and resulting price as target CI varies ±0.1 steps</div>
+      </div>
+      <div class="table-wrap" id="ciTableWrap"></div>
+      <div class="legend" style="margin-top:14px;">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(34,212,138,0.45)"></div>Price ≥15% below target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(34,212,138,0.18)"></div>Price below target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,192,64,0.25); border:1px solid rgba(240,192,64,0.4)"></div>Price at target (±2%)
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,80,96,0.18)"></div>Price above target
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(240,192,64,0.25); border:2px solid rgba(240,192,64,0.6)"></div>Base CI
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOWNLOAD ══ -->
+  <div class="download-section" id="downloadSection">
+    <button class="download-btn" onclick="downloadExcel()">
+      <span class="dl-icon">⬇</span> DOWNLOAD EXCEL
+    </button>
+    <div class="download-hint">
+      Exports full report as <strong>.xlsx</strong> — open in Excel, Google Sheets, or Numbers
+      <div class="dl-sheets">
+        <span class="dl-sheet-chip">Sheet 1 · Blend Summary</span>
+        <span class="dl-sheet-chip">Sheet 2 · Price Sensitivity</span>
+        <span class="dl-sheet-chip">Sheet 3 · CI Sensitivity</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .page -->
+
+<script>
+// ══════════════════════════════════════════════
+//   STATE
+// ══════════════════════════════════════════════
+let molecule      = 'H2';    // 'H2' | 'NH3'
+let ciUnit        = 'kgco2'; // 'kgco2' | 'gco2mj'
+let referenceMode = 'ci';    // 'ci' | 'price'
+let sensOpen      = false;
+let mathOpen      = false;
+let lastSolution  = null;
+
+// ══════════════════════════════════════════════
+//   REFERENCE MODE TOGGLE
+// ══════════════════════════════════════════════
+function setReferenceMode(mode) {
+  referenceMode = mode;
+  document.querySelectorAll('#refModePills .pill').forEach(p =>
+    p.classList.toggle('active', p.dataset.ref === mode));
+
+  const ciWrap      = document.getElementById('ciInputWrap');
+  const priceWrap   = document.getElementById('priceInputWrap');
+  const ciInput     = document.getElementById('target_ci');
+  const priceInput  = document.getElementById('target_price');
+  const ciRefBadge  = document.getElementById('ciRefBadge');
+  const prBadge     = document.getElementById('priceRefBadge');
+  const hint        = document.getElementById('refHint');
+  const dec         = molecule === 'H2' ? 2 : 0;
+
+  if (mode === 'ci') {
+    ciWrap.classList.add('reference-input');    ciWrap.classList.remove('computed-input');
+    priceWrap.classList.add('computed-input');  priceWrap.classList.remove('reference-input');
+    ciInput.removeAttribute('readonly');
+    ciInput.placeholder = 'e.g. 4.0';
+    priceInput.setAttribute('readonly', true);
+    priceInput.placeholder = '— computed after calculation —';
+    priceInput.value = '';
+    ciRefBadge.textContent = '● REFERENCE'; ciRefBadge.className = 'ref-active-badge';
+    prBadge.textContent    = '◌ COMPUTED';  prBadge.className    = 'computed-ref-badge';
+    hint.textContent = 'Enter your CI target — blended price will be computed as a result';
+  } else {
+    priceWrap.classList.add('reference-input'); priceWrap.classList.remove('computed-input');
+    ciWrap.classList.add('computed-input');     ciWrap.classList.remove('reference-input');
+    priceInput.removeAttribute('readonly');
+    priceInput.placeholder = 'e.g. 4.00';
+    ciInput.setAttribute('readonly', true);
+    ciInput.placeholder = '— computed after calculation —';
+    ciInput.value = '';
+    prBadge.textContent    = '● REFERENCE'; prBadge.className    = 'ref-active-badge';
+    ciRefBadge.textContent = '◌ COMPUTED';  ciRefBadge.className = 'computed-ref-badge';
+    hint.textContent = 'Enter your price target — blended CI will be computed as a result';
+  }
+  resetResults();
+}
+
+// ── Active shade helpers ──
+function activeShades() {
+  return ['grey','blue','green'].filter(s => document.getElementById('toggle_' + s).checked);
+}
+
+function onShadeToggle() {
+  const active = activeShades();
+  ['grey','blue','green'].forEach(s => {
+    const card = document.getElementById('card_' + s);
+    const on   = document.getElementById('toggle_' + s).checked;
+    card.classList.toggle('disabled', !on);
+    // Re-enable the toggle label so it's always clickable
+    card.querySelector('.toggle-switch').style.pointerEvents = 'all';
+  });
+
+  // Enforce minimum 1 active shade — prevent unchecking the last one
+  if (active.length === 0) {
+    // Re-check the one that was just unchecked (the event target)
+    event.target.checked = true;
+    document.getElementById('card_' + event.target.id.replace('toggle_','')).classList.remove('disabled');
+    return;
+  }
+
+  updateModeNote(active);
+  resetResults();
+}
+
+function updateModeNote(active) {
+  const note = document.getElementById('modeNote');
+  const hint = document.getElementById('calcHint');
+  if (active.length === 3) {
+    note.classList.remove('show');
+    hint.textContent = 'Solves 3-equation linear system · Validates feasibility';
+  } else if (active.length === 2) {
+    note.textContent = `2-shade mode: using ${active.map(s=>s.toUpperCase()).join(' + ')} only. CI target is matched; blended price is computed as a result.`;
+    note.classList.add('show');
+    hint.textContent = 'Solves 2-equation system (CI + sum=1) · Price shown as result';
+  } else {
+    note.textContent = `1-shade mode: 100% ${active[0].toUpperCase()}. Showing its CI and price directly.`;
+    note.classList.add('show');
+    hint.textContent = '100% single shade — no blending required';
+  }
+}
+
+// ══════════════════════════════════════════════
+//   UNIT LABELS
+// ══════════════════════════════════════════════
+function priceUnit(mol) {
+  return mol === 'H2' ? 'USD/kgH₂' : 'USD/tNH₃';
+}
+function ciUnitLabel(mol, unit) {
+  if (unit === 'gco2mj') return 'gCO₂e/MJ';
+  return mol === 'H2' ? 'kgCO₂e/kgH₂' : 'kgCO₂e/kgNH₃';
+}
+function priceStep() { return molecule === 'H2' ? 1 : 50; }
+
+// ══════════════════════════════════════════════
+//   SET MOLECULE
+// ══════════════════════════════════════════════
+function setMolecule(mol) {
+  molecule = mol;
+  document.querySelectorAll('.mol-btn').forEach(b => b.classList.toggle('active', b.dataset.mol === mol));
+  document.querySelector('.example-btn').textContent = mol === 'H2' ? '⬡ Load H₂ Example' : '⬡ Load NH₃ Example';
+  updateUnits();
+  resetResults();
+}
+
+function setCIUnit(unit) {
+  ciUnit = unit;
+  document.querySelectorAll('#ciUnitPills .pill').forEach(p => p.classList.toggle('active', p.dataset.unit === unit));
+  updateUnits();
+  resetResults();
+}
+
+function updateUnits() {
+  const pu = priceUnit(molecule);
+  const cu = ciUnitLabel(molecule, ciUnit);
+  const molSub = molecule === 'H2' ? 'H₂' : 'NH₃';
+
+  // Price unit badges (simple innerHTML with sub)
+  const puHtml = molecule === 'H2' ? 'USD/kg<sub>H₂</sub>' : 'USD/tNH₃';
+  ['grey','blue','green'].forEach(s => {
+    document.getElementById(`${s}_price_unit`).innerHTML = puHtml;
+    document.getElementById(`${s}_ci_unit`).textContent = cu.replace(/[₂₃]/g, m => m);
+  });
+  document.getElementById('target_price_unit').innerHTML = puHtml;
+  document.getElementById('target_ci_unit').textContent = cu;
+
+  // CI unit pill labels
+  const molLabel = document.querySelectorAll('.mol-label-unit');
+  molLabel.forEach(el => el.textContent = molSub);
+}
+
+// ══════════════════════════════════════════════
+//   GAUSSIAN ELIMINATION (3×3)
+// ══════════════════════════════════════════════
+function solve3x3(A, b) {
+  // Augmented matrix
+  const M = A.map((row, i) => [...row, b[i]]);
+  const n = 3;
+
+  for (let col = 0; col < n; col++) {
+    // Find pivot
+    let maxRow = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(M[r][col]) > Math.abs(M[maxRow][col])) maxRow = r;
+    }
+    [M[col], M[maxRow]] = [M[maxRow], M[col]];
+
+    if (Math.abs(M[col][col]) < 1e-12) return null; // singular
+
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = M[r][col] / M[col][col];
+      for (let c = col; c <= n; c++) {
+        M[r][c] -= factor * M[col][c];
+      }
+    }
+  }
+
+  return M.map((row, i) => row[n] / row[i]);
+}
+
+function blendSolve(gp, bp, ep, gci, bci, eci, tci, tp) {
+  const A = [
+    [gci, bci, eci],
+    [gp,  bp,  ep],
+    [1,   1,   1]
+  ];
+  const b = [tci, tp, 1];
+  return solve3x3(A, b);
+}
+
+// ══════════════════════════════════════════════
+//   CALCULATE
+// ══════════════════════════════════════════════
+function getVal(id) { return parseFloat(document.getElementById(id).value); }
+
+// Solve 2-shade blend by a single constraint (CI or Price)
+// Returns { xA, xB, blendedCI, blendedPrice } or null if infeasible
+function solve2ShadeByCI(sA, sB, data, t_ci) {
+  const dCI = data[sA].ci - data[sB].ci;
+  if (Math.abs(dCI) < 1e-10) return null;
+  const xA = (t_ci - data[sB].ci) / dCI;
+  const xB = 1 - xA;
+  if (xA < -0.0001 || xA > 1.0001) return null;
+  return { xA: Math.max(0,Math.min(1,xA)), xB: Math.max(0,Math.min(1,xB)),
+           blendedCI: xA*data[sA].ci + xB*data[sB].ci,
+           blendedPrice: xA*data[sA].price + xB*data[sB].price };
+}
+function solve2ShadeByPrice(sA, sB, data, t_p) {
+  const dP = data[sA].price - data[sB].price;
+  if (Math.abs(dP) < 1e-10) return null;
+  const xA = (t_p - data[sB].price) / dP;
+  const xB = 1 - xA;
+  if (xA < -0.0001 || xA > 1.0001) return null;
+  return { xA: Math.max(0,Math.min(1,xA)), xB: Math.max(0,Math.min(1,xB)),
+           blendedCI: xA*data[sA].ci + xB*data[sB].ci,
+           blendedPrice: xA*data[sA].price + xB*data[sB].price };
+}
+
+function calculate() {
+  const active = activeShades();
+  const dec    = molecule === 'H2' ? 2 : 0;
+  const ciLabel = ciUnitLabel(molecule, ciUnit);
+  const pu      = priceUnit(molecule);
+
+  // Read only the reference value
+  let t_ci = NaN, t_p = NaN;
+  if (referenceMode === 'ci') {
+    t_ci = getVal('target_ci');
+    if (isNaN(t_ci)) { showError('Please enter a CI target value.', '', ''); return; }
+  } else {
+    t_p = getVal('target_price');
+    if (isNaN(t_p)) { showError('Please enter a Price target value.', '', ''); return; }
+  }
+
+  // Gather data for active shades
+  const data = {};
+  for (const s of active) {
+    const p = getVal(s + '_price');
+    const c = getVal(s + '_ci');
+    if (isNaN(p) || isNaN(c)) {
+      showError(`Please fill in all fields for the active shade: ${s.toUpperCase()}.`, '', ''); return;
+    }
+    if (p < 0) { showError('Prices cannot be negative.', '', ''); return; }
+    data[s] = { price: p, ci: c };
+  }
+
+  let fracs, blendedCI, blendedPrice;
+
+  // ── 1 shade ──
+  if (active.length === 1) {
+    const s = active[0];
+    fracs = { grey: 0, blue: 0, green: 0 }; fracs[s] = 1;
+    blendedCI    = data[s].ci;
+    blendedPrice = data[s].price;
+    if (referenceMode === 'ci') {
+      t_p = blendedPrice;
+      document.getElementById('target_price').value = blendedPrice.toFixed(dec);
+    } else {
+      t_ci = blendedCI;
+      document.getElementById('target_ci').value = blendedCI.toFixed(2);
+    }
+    hideError();
+    lastSolution = { active, data, fracs, blendedCI, blendedPrice, t_ci, t_p, referenceMode };
+    showResults(fracs, blendedCI, blendedPrice, active, false);
+    document.getElementById('sensSection').style.display = 'none';
+    return;
+  }
+
+  // ── Helper: all ordered pairs among active shades (in canonical order) ──
+  const orderedPairs = [['grey','blue'],['grey','green'],['blue','green']]
+    .filter(([a,b]) => active.includes(a) && active.includes(b));
+
+  // ── 2 shades ──
+  if (active.length === 2) {
+    const [sA, sB] = active;
+    let sol;
+    if (referenceMode === 'ci') {
+      sol = solve2ShadeByCI(sA, sB, data, t_ci);
+      if (!sol) {
+        const ciLo = Math.min(data[sA].ci, data[sB].ci), ciHi = Math.max(data[sA].ci, data[sB].ci);
+        showError(
+          `Target CI (${t_ci}) is outside the achievable range for the selected shades.`,
+          `Achievable CI: [${ciLo.toFixed(2)}, ${ciHi.toFixed(2)}] ${ciLabel}`, ''
+        ); return;
+      }
+      t_p = sol.blendedPrice;
+      document.getElementById('target_price').value = sol.blendedPrice.toFixed(dec);
+    } else {
+      sol = solve2ShadeByPrice(sA, sB, data, t_p);
+      if (!sol) {
+        const pLo = Math.min(data[sA].price, data[sB].price), pHi = Math.max(data[sA].price, data[sB].price);
+        showError(
+          `Target Price (${t_p}) is outside the achievable range for the selected shades.`,
+          `Achievable Price: [${pLo.toFixed(2)}, ${pHi.toFixed(2)}] ${pu}`, ''
+        ); return;
+      }
+      t_ci = sol.blendedCI;
+      document.getElementById('target_ci').value = sol.blendedCI.toFixed(2);
+    }
+    fracs = { grey: 0, blue: 0, green: 0 };
+    fracs[sA] = sol.xA; fracs[sB] = sol.xB;
+    blendedCI = sol.blendedCI; blendedPrice = sol.blendedPrice;
+    hideError();
+    lastSolution = { active, data, fracs, blendedCI, blendedPrice, t_ci, t_p, referenceMode };
+    // Badge: "CI Anchored · Price Computed" or "Price Anchored · CI Computed"
+    showResults(fracs, blendedCI, blendedPrice, active, referenceMode === 'ci' ? 'ci-only' : 'price-only');
+    buildSensitivityTable();
+    document.getElementById('sensSection').style.display = 'block';
+    return;
+  }
+
+  // ── 3 shades — optimise: CI ref → min price; Price ref → min CI ──
+  let best = null, bestVal = Infinity;
+  for (const [sA, sB] of orderedPairs) {
+    let sol;
+    if (referenceMode === 'ci') {
+      sol = solve2ShadeByCI(sA, sB, data, t_ci);
+      if (sol && sol.blendedPrice < bestVal) { bestVal = sol.blendedPrice; best = { sA, sB, sol }; }
+    } else {
+      sol = solve2ShadeByPrice(sA, sB, data, t_p);
+      if (sol && sol.blendedCI < bestVal) { bestVal = sol.blendedCI; best = { sA, sB, sol }; }
+    }
+  }
+
+  if (!best) {
+    if (referenceMode === 'ci') {
+      const ciMin = Math.min(...active.map(s=>data[s].ci)), ciMax = Math.max(...active.map(s=>data[s].ci));
+      showError(`Target CI (${t_ci}) cannot be achieved with the selected feedstocks.`,
+        `Achievable CI: [${ciMin.toFixed(2)}, ${ciMax.toFixed(2)}] ${ciLabel}`, '');
+    } else {
+      const pMin = Math.min(...active.map(s=>data[s].price)), pMax = Math.max(...active.map(s=>data[s].price));
+      showError(`Target Price (${t_p}) cannot be achieved with the selected feedstocks.`,
+        `Achievable Price: [${pMin.toFixed(2)}, ${pMax.toFixed(2)}] ${pu}`, '');
+    }
+    return;
+  }
+
+  const { sA, sB, sol: bs } = best;
+  fracs = { grey: 0, blue: 0, green: 0 };
+  fracs[sA] = bs.xA; fracs[sB] = bs.xB;
+  blendedCI    = bs.blendedCI;
+  blendedPrice = bs.blendedPrice;
+
+  if (referenceMode === 'ci') {
+    t_p = blendedPrice;
+    document.getElementById('target_price').value = blendedPrice.toFixed(dec);
+  } else {
+    t_ci = blendedCI;
+    document.getElementById('target_ci').value = blendedCI.toFixed(2);
+  }
+
+  hideError();
+  lastSolution = { active, data, fracs, blendedCI, blendedPrice, t_ci, t_p, referenceMode };
+  showResults(fracs, blendedCI, blendedPrice, active, referenceMode === 'ci' ? 'ci-only' : 'price-only');
+  buildSensitivityTable();
+  document.getElementById('sensSection').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════
+//   SHOW/HIDE RESULTS
+// ══════════════════════════════════════════════
+// mode: false = both matched, 'ci-only' = CI anchored price computed, 'price-only' = price anchored CI computed
+function showResults(fracs, blendedCI, blendedPrice, active, mode) {
+  const twoShadeMode = (mode === 'ci-only' || mode === 'price-only');
+  const panel = document.getElementById('resultsPanel');
+  panel.style.display = 'block';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { panel.classList.add('animate'); });
+  });
+  panel.classList.add('show');
+
+  // Show/hide blend rows based on active shades
+  ['grey','blue','green'].forEach(s => {
+    const row = document.getElementById('blendrow_' + s);
+    if (active.includes(s)) {
+      row.style.display = 'flex';
+      document.getElementById(s + '_pct').textContent = (fracs[s] * 100).toFixed(2) + '%';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+
+  setTimeout(() => {
+    ['grey','blue','green'].forEach(s => {
+      document.getElementById(s + '_bar').style.width = active.includes(s) ? (fracs[s] * 100) + '%' : '0';
+    });
+  }, 80);
+
+  const cu = ciUnitLabel(molecule, ciUnit);
+  const pu = priceUnit(molecule);
+
+  // For reference mode: computed values shown in blue; reference-matched shown in green
+  const priceColor = (mode === 'ci-only')    ? 'var(--blue-hue)' : 'var(--green-hue)';
+  const ciColor    = (mode === 'price-only') ? 'var(--blue-hue)' : 'var(--green-hue)';
+  const priceNote  = (mode === 'ci-only')    ? ' <span style="font-size:10px;color:var(--muted)">(computed)</span>' : '';
+  const ciNote     = (mode === 'price-only') ? ' <span style="font-size:10px;color:var(--muted)">(computed)</span>' : '';
+  const priceDec   = molecule === 'H2' ? 2 : 0;
+
+  document.getElementById('conf_ci').innerHTML =
+    `<span style="font-family:var(--mono);font-size:20px;color:${ciColor}">${blendedCI.toFixed(2)}</span><span class="metric-unit"> ${cu}</span>${ciNote}`;
+
+  document.getElementById('conf_price').innerHTML =
+    `<span style="font-family:var(--mono);font-size:20px;color:${priceColor}">${blendedPrice.toFixed(priceDec)}</span><span class="metric-unit"> ${pu}</span>${priceNote}`;
+
+  // Badge
+  const badge = document.getElementById('verifiedBadge');
+  if (mode === 'ci-only') {
+    badge.textContent = '✓ CI Anchored · Price Computed';
+    badge.className = 'warn-badge';
+  } else if (mode === 'price-only') {
+    badge.textContent = '✓ Price Anchored · CI Computed';
+    badge.className = 'warn-badge';
+  } else {
+    badge.textContent = '✓ Targets Satisfied';
+    badge.className = 'verified-badge';
+  }
+
+  // Labels for confirmed metrics
+  document.querySelector('[for-metric="ci"]').textContent = mode === 'price-only' ? 'Resulting Blended CI' : 'Confirmed Blended CI';
+  document.querySelector('[for-metric="price"]').textContent = mode === 'ci-only' ? 'Resulting Blended Price' : 'Confirmed Blended Price';
+
+  // Show CI sensitivity + download button
+  document.getElementById('ciSensSection').classList.add('show');
+  buildCISensitivityTable();
+  document.getElementById('downloadSection').classList.add('show');
+}
+
+function resetResults() {
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.remove('show', 'animate');
+  panel.style.display = 'none';
+  document.getElementById('grey_bar').style.width  = '0';
+  document.getElementById('blue_bar').style.width  = '0';
+  document.getElementById('green_bar').style.width = '0';
+  document.getElementById('sensSection').style.display = 'none';
+  document.getElementById('ciSensSection').classList.remove('show');
+  document.getElementById('downloadSection').classList.remove('show');
+  hideError();
+}
+
+// ══════════════════════════════════════════════
+//   ERROR HANDLING
+// ══════════════════════════════════════════════
+function showError(msg, range1, range2) {
+  const b = document.getElementById('errorBanner');
+  document.getElementById('errorMsg').textContent = msg;
+  let rangesHtml = '';
+  if (range1) rangesHtml += `<span class="range-chip">${range1}</span>`;
+  if (range2) rangesHtml += `<span class="range-chip">${range2}</span>`;
+  document.getElementById('errorRanges').innerHTML = rangesHtml;
+  b.classList.add('show');
+  document.getElementById('resultsPanel').classList.remove('show', 'animate');
+  document.getElementById('resultsPanel').style.display = 'none';
+}
+function hideError() {
+  document.getElementById('errorBanner').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+//   SENSITIVITY TABLE
+//   Grey price = Y axis (rows), Green price = X axis (columns)
+//   CI ref → cells show blended price (CI anchored)
+//   Price ref → cells show blended CI (Price anchored)
+// ══════════════════════════════════════════════
+function cellColorStyle(val, refVal) {
+  // Works for both price comparisons and CI comparisons
+  if (val === null) return { bg: 'transparent', color: 'var(--muted)' };
+  const diff = val - refVal;
+  const rel  = refVal !== 0 ? diff / Math.abs(refVal) : 0;
+  if (Math.abs(rel) <= 0.02) return { bg: 'rgba(240,192,64,0.22)', color: 'var(--gold)' };
+  if (rel < -0.15) return { bg: 'rgba(34,212,138,0.28)', color: 'var(--green-hue)' };
+  if (rel <  0)    return { bg: 'rgba(34,212,138,0.13)', color: 'var(--green-hue)' };
+  if (rel <  0.15) return { bg: 'rgba(240,80,96,0.14)',  color: 'var(--danger)' };
+                   return { bg: 'rgba(240,80,96,0.30)',  color: 'var(--danger)' };
+}
+// Keep alias for old callers
+function priceCellStyle(v, r) { return cellColorStyle(v, r); }
+
+function buildSensitivityTable() {
+  if (!lastSolution) return;
+  const { active, data, fracs, t_ci, t_p } = lastSolution;
+  if (active.length < 2) return;
+
+  const isCIRef = referenceMode === 'ci';
+  const step    = priceStep();
+  const dec     = molecule === 'H2' ? 2 : 0;
+  const pu      = molecule === 'H2' ? 'USD/kgH₂' : 'USD/tNH₃';
+  const molSym  = molecule === 'H2' ? 'H₂' : 'NH₃';
+  const ciLbl   = ciUnitLabel(molecule, ciUnit);
+  const deltas  = [-5,-4,-3,-2,-1,0,1,2,3,4,5].map(d => d * step);
+
+  // ── Axis assignment: Grey = Y (rows), Green = X (columns) ──
+  const rowShade   = active.includes('grey')  ? 'grey'  : active[0];
+  const colShade   = active.includes('green') ? 'green' : active[active.length - 1];
+  const fixedShade = active.find(s => s !== rowShade && s !== colShade) || null;
+  const fixedFrac  = fixedShade ? fracs[fixedShade] : 0;
+
+  const shadeColor = s => s==='green'?'var(--green-hue)':s==='blue'?'var(--blue-hue)':'var(--grey-hue)';
+  const rowColor   = shadeColor(rowShade); // grey → grey color
+  const colColor   = shadeColor(colShade); // green → green color
+
+  const baseRowP = data[rowShade].price;
+  const baseColP = data[colShade].price;
+
+  // Cell label
+  const cellUnit = isCIRef ? pu : ciLbl;
+  const anchorStr = isCIRef
+    ? `CI target = ${t_ci} ${ciLbl}`
+    : `Price target = ${t_p} ${pu}`;
+
+  document.getElementById('sensTitle').textContent =
+    isCIRef ? `BLENDED PRICE SENSITIVITY — ${molSym}` : `BLENDED CI SENSITIVITY — ${molSym}`;
+  document.getElementById('sensSubtitle').innerHTML =
+    `Resulting blended <b>${isCIRef ? 'price' : 'CI'}</b> anchored to <b>${anchorStr}</b>`
+    + ` &nbsp;·&nbsp; <span style="color:${colColor}">${colShade.toUpperCase()} price</span> → X axis (columns)`
+    + ` &nbsp;·&nbsp; <span style="color:${rowColor}">${rowShade.toUpperCase()} price</span> → Y axis (rows)`
+    + ` &nbsp;·&nbsp; step = ${step} ${pu}`
+    + (fixedShade ? ` &nbsp;·&nbsp; <span style="color:${shadeColor(fixedShade)}">${fixedShade.toUpperCase()}</span> fixed at ${(fixedFrac*100).toFixed(1)}%` : '');
+
+  // Compute cell value: blended price (CI ref) or blended CI (price ref)
+  function getCellVal(colPrice, rowPrice) {
+    if (active.length >= 3 && fixedShade) {
+      const rem = 1 - fixedFrac;
+      if (isCIRef) {
+        // Anchor CI → solve col+row fracs, return blended price
+        const remCI = t_ci - fixedFrac * data[fixedShade].ci;
+        const dCI   = data[colShade].ci - data[rowShade].ci;
+        if (Math.abs(dCI) < 1e-10) return null;
+        const xC = (remCI - data[rowShade].ci * rem) / dCI;
+        const xR = rem - xC;
+        if (xC < -0.0001 || xR < -0.0001) return null;
+        return xC * colPrice + xR * rowPrice + fixedFrac * data[fixedShade].price;
+      } else {
+        // Anchor Price → solve col+row fracs from price constraint, return blended CI
+        const remP = t_p - fixedFrac * data[fixedShade].price;
+        const dP   = colPrice - rowPrice;
+        if (Math.abs(dP) < 1e-10) return null;
+        const xC = (remP - rem * rowPrice) / dP;
+        const xR = rem - xC;
+        if (xC < -0.0001 || xR < -0.0001) return null;
+        return xC * data[colShade].ci + xR * data[rowShade].ci + fixedFrac * data[fixedShade].ci;
+      }
+    } else {
+      // 2-shade
+      if (isCIRef) {
+        const dCI = data[colShade].ci - data[rowShade].ci;
+        if (Math.abs(dCI) < 1e-10) return null;
+        const xC = (t_ci - data[rowShade].ci) / dCI;
+        const xR = 1 - xC;
+        if (xC < -0.0001 || xR < -0.0001) return null;
+        return xC * colPrice + xR * rowPrice;
+      } else {
+        const dP = colPrice - rowPrice;
+        if (Math.abs(dP) < 1e-10) return null;
+        const xC = (t_p - rowPrice) / dP;
+        const xR = 1 - xC;
+        if (xC < -0.0001 || xR < -0.0001) return null;
+        return xC * data[colShade].ci + xR * data[rowShade].ci;
+      }
+    }
+  }
+
+  const refVal = isCIRef ? t_p : t_ci; // what to compare cells against for coloring
+  const cellDec = isCIRef ? dec : 2;   // CI always 2 decimals
+
+  // ── Build table HTML ──
+  // Top-left corner + column headers (X = colShade = Green)
+  let html = '<table><thead><tr>';
+  html += `<th class="row-axis">
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <span class="axis-label" style="color:${rowColor}">${rowShade.toUpperCase()} PRICE</span>
+      <span style="color:var(--muted);font-size:9px;margin-top:2px;">Y axis · ${pu}</span>
+    </div>
+  </th>`;
+
+  // X-axis header band
+  deltas.forEach(d => {
+    const price = (baseColP + d).toFixed(dec);
+    const sign  = d > 0 ? '+' : '';
+    const cls   = d > 0 ? 'pos' : (d < 0 ? 'neg' : '');
+    html += `<th class="col-header" style="min-width:72px"><div class="col-label-wrap">
+      <span style="color:${colColor};font-weight:600;font-size:11px">${price}</span>
+      <span class="col-delta ${cls}">${d === 0 ? 'BASE' : sign+d}</span>
+    </div></th>`;
+  });
+
+  // Sub-header: X axis label
+  html += `</tr>
+  <tr style="background:var(--bg-card2)">
+    <td class="row-label" style="font-size:9px;color:var(--muted);border-right:1px solid var(--border);white-space:nowrap;">
+      ↑ <span style="color:${rowColor};font-weight:600">Y: ${rowShade.toUpperCase()}</span><br>
+      <span style="color:${colColor};font-size:8px">X: ${colShade.toUpperCase()} → ${pu}</span>
+    </td>
+    ${deltas.map(()=>`<td style="border-bottom:1px solid var(--border);"></td>`).join('')}
+  </tr>
+  </thead><tbody>`;
+
+  // Rows: Y-axis = rowShade (Grey) price variations
+  deltas.forEach(rd => {
+    const rowPrice   = baseRowP + rd;
+    const isBaseRow  = rd === 0;
+    const sign       = rd > 0 ? '+' : '';
+    const priceLabel = rowPrice.toFixed(dec);
+    const deltaLabel = rd === 0
+      ? ` <span class="base-tag">BASE</span>`
+      : ` <span style="color:${rd<0?'var(--danger)':'var(--green-hue)'}">${sign}${rd}</span>`;
+
+    html += `<tr><td class="row-label ${isBaseRow?'base-row':''}">${priceLabel}${deltaLabel}</td>`;
+
+    deltas.forEach(cd => {
+      const colPrice   = baseColP + cd;
+      const isBaseCell = rd === 0 && cd === 0;
+      const val        = getCellVal(colPrice, rowPrice);
+      const { bg, color } = cellColorStyle(val, refVal);
+      const outline    = isBaseCell ? 'outline:2px solid rgba(240,192,64,0.55);outline-offset:-2px;' : '';
+      const bg2        = isBaseCell ? 'rgba(240,192,64,0.16)' : bg;
+      html += `<td style="background:${bg2};color:${color};font-weight:500;${outline}" class="${isBaseCell?'base-row':''}">
+        ${val !== null
+          ? `<span style="font-size:12px">${val.toFixed(cellDec)}</span>`
+          : `<span class="infeasible">—</span>`}
+      </td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableWrap').innerHTML = html;
+  // Update legend subtitle in the sens legend
+  const legTitle = document.querySelector('#sensLegend')?.previousElementSibling;
+}
+
+// ══════════════════════════════════════════════
+//   LIGHT / DARK THEME
+// ══════════════════════════════════════════════
+let isDark = false;
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  document.body.classList.toggle('dark-mode', isDark);
+  const btn   = document.getElementById('themeBtn');
+  const label = document.getElementById('themeBtnLabel');
+  btn.querySelector('.theme-icon').textContent = isDark ? '☽' : '☀';
+  label.textContent = isDark ? 'Dark' : 'Light';
+}
+
+// ══════════════════════════════════════════════
+//   TOGGLE SENSITIVITY
+// ══════════════════════════════════════════════
+function toggleSens() {
+  sensOpen = !sensOpen;
+  const panel = document.getElementById('sensPanel');
+  const btn   = document.getElementById('sensToggleBtn');
+  if (sensOpen) {
+    panel.classList.add('show');
+    requestAnimationFrame(() => { requestAnimationFrame(() => { panel.classList.add('animate'); }); });
+    btn.textContent = '▲  HIDE SENSITIVITY TABLE';
+  } else {
+    panel.classList.remove('animate');
+    setTimeout(() => panel.classList.remove('show'), 300);
+    btn.textContent = '▼  SHOW SENSITIVITY TABLE';
+  }
+}
+
+// ══════════════════════════════════════════════
+//   TOGGLE MATH
+// ══════════════════════════════════════════════
+function toggleMath() {
+  mathOpen = !mathOpen;
+  const btn  = document.getElementById('mathToggleBtn');
+  const body = document.getElementById('mathBody');
+  btn.classList.toggle('open', mathOpen);
+  body.classList.toggle('visible', mathOpen);
+}
+
+// ══════════════════════════════════════════════
+//   LOAD EXAMPLE
+// ══════════════════════════════════════════════
+function loadExample() {
+  if (molecule !== 'H2') setMolecule('H2');
+  if (ciUnit !== 'kgco2') setCIUnit('kgco2');
+  // Ensure all shades active
+  ['grey','blue','green'].forEach(s => {
+    document.getElementById('toggle_' + s).checked = true;
+    document.getElementById('card_' + s).classList.remove('disabled');
+  });
+  updateModeNote(['grey','blue','green']);
+
+  // Ensure CI reference mode
+  setReferenceMode('ci');
+
+  document.getElementById('grey_price').value  = '2.00';
+  document.getElementById('grey_ci').value     = '12.0';
+  document.getElementById('blue_price').value  = '3.50';
+  document.getElementById('blue_ci').value     = '5.0';
+  document.getElementById('green_price').value = '6.00';
+  document.getElementById('green_ci').value    = '0.0';
+  document.getElementById('target_ci').value   = '4.0';
+  // target_price is computed — clear it
+  document.getElementById('target_price').value = '';
+
+  // Flash the calculate button
+  const btn = document.querySelector('.calc-btn');
+  btn.style.boxShadow = '0 0 30px rgba(240,192,64,0.6)';
+  setTimeout(() => { btn.style.boxShadow = ''; }, 600);
+}
+
+// ══════════════════════════════════════════════
+//   BOTTOM SENSITIVITY TABLE
+//   CI ref mode   → vary CI target ±0.1, show fractions + price
+//   Price ref mode → vary Price target ±(step/4), show fractions + CI
+// ══════════════════════════════════════════════
+let ciSensOpen = false;
+
+function toggleCISens() {
+  ciSensOpen = !ciSensOpen;
+  const panel = document.getElementById('ciSensPanel');
+  const btn   = document.getElementById('ciSensToggleBtn');
+  if (ciSensOpen) {
+    panel.classList.add('show');
+    requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('animate')));
+    btn.textContent = '▲  HIDE CI SENSITIVITY TABLE';
+  } else {
+    panel.classList.remove('animate');
+    setTimeout(() => panel.classList.remove('show'), 300);
+    btn.textContent = '▼  SHOW CI SENSITIVITY TABLE';
+  }
+}
+
+// Returns array of row objects for the bottom sensitivity table
+// CI ref mode: vary CI ±0.1 (3 steps), show fractions + blended price
+// Price ref mode: vary Price ±(step/4) (3 steps), show fractions + blended CI
+function getCISensRows() {
+  if (!lastSolution) return [];
+  const { active, data, fracs, t_ci, t_p } = lastSolution;
+  if (active.length < 2) return [];
+
+  const isCIRef  = referenceMode === 'ci';
+  const varStep  = isCIRef ? 0.1 : (priceStep() / 4);
+  const steps    = [-3,-2,-1,0,1,2,3];
+
+  // Axis: rowShade = grey (Y), colShade = green (X), fixedShade = blue
+  const rowShade   = active.includes('grey')  ? 'grey'  : active[0];
+  const colShade   = active.includes('green') ? 'green' : active[active.length - 1];
+  const fixedShade = active.find(s => s !== rowShade && s !== colShade) || null;
+  const fixedFrac  = fixedShade ? fracs[fixedShade] : 0;
+
+  return steps.map(step => {
+    const variedVal = parseFloat((isCIRef ? t_ci : t_p) + step * varStep).toFixed(isCIRef ? 1 : 2);
+    const vv = parseFloat(variedVal);
+
+    let xGrey = 0, xBlue = 0, xGreen = 0;
+    let blendedPrice = null, blendedCI = null, feasible = false;
+
+    if (active.length >= 3 && fixedShade) {
+      const rem = 1 - fixedFrac;
+      if (isCIRef) {
+        const remCI = vv - fixedFrac * data[fixedShade].ci;
+        const dCI   = data[colShade].ci - data[rowShade].ci;
+        if (Math.abs(dCI) > 1e-10) {
+          const xC = (remCI - data[rowShade].ci * rem) / dCI;
+          const xR = rem - xC;
+          if (xC >= -0.0001 && xR >= -0.0001 && xC <= 1.0001 && xR <= 1.0001) {
+            const fm = { grey: 0, blue: 0, green: 0 };
+            fm[colShade] = Math.max(0, xC); fm[rowShade] = Math.max(0, xR); fm[fixedShade] = fixedFrac;
+            xGrey = fm.grey; xBlue = fm.blue; xGreen = fm.green;
+            blendedPrice = xGrey*data.grey.price + xBlue*data.blue.price + xGreen*data.green.price;
+            blendedCI    = xGrey*data.grey.ci    + xBlue*data.blue.ci    + xGreen*data.green.ci;
+            feasible = true;
+          }
+        }
+      } else {
+        // Price ref: solve grey+green from price constraint
+        const remP = vv - fixedFrac * data[fixedShade].price;
+        const dP   = data[colShade].price - data[rowShade].price;
+        if (Math.abs(dP) > 1e-10) {
+          const xC = (remP - rem * data[rowShade].price) / dP;
+          const xR = rem - xC;
+          if (xC >= -0.0001 && xR >= -0.0001 && xC <= 1.0001 && xR <= 1.0001) {
+            const fm = { grey: 0, blue: 0, green: 0 };
+            fm[colShade] = Math.max(0, xC); fm[rowShade] = Math.max(0, xR); fm[fixedShade] = fixedFrac;
+            xGrey = fm.grey; xBlue = fm.blue; xGreen = fm.green;
+            blendedPrice = xGrey*data.grey.price + xBlue*data.blue.price + xGreen*data.green.price;
+            blendedCI    = xGrey*data.grey.ci    + xBlue*data.blue.ci    + xGreen*data.green.ci;
+            feasible = true;
+          }
+        }
+      }
+    } else {
+      // 2-shade
+      const [sA, sB] = active;
+      const sol = isCIRef ? solve2ShadeByCI(sA, sB, data, vv) : solve2ShadeByPrice(sA, sB, data, vv);
+      if (sol) {
+        const fm = { grey: 0, blue: 0, green: 0 };
+        fm[sA] = sol.xA; fm[sB] = sol.xB;
+        xGrey = fm.grey; xBlue = fm.blue; xGreen = fm.green;
+        blendedPrice = sol.blendedPrice;
+        blendedCI    = sol.blendedCI;
+        feasible = true;
+      }
+    }
+
+    return {
+      variedVal: vv, step, xGrey, xBlue, xGreen,
+      blendedPrice, blendedCI, feasible, isBase: step === 0,
+      isCIRef
+    };
+  });
+}
+
+function buildCISensitivityTable() {
+  const rows = getCISensRows();
+  if (!rows.length) return;
+
+  const { active, t_ci, t_p } = lastSolution;
+  const isCIRef  = referenceMode === 'ci';
+  const ciLabel  = ciUnitLabel(molecule, ciUnit);
+  const pu       = priceUnit(molecule);
+  const molSym   = molecule === 'H2' ? 'H₂' : 'NH₃';
+  const dec      = molecule === 'H2' ? 2 : 0;
+  const varStep  = isCIRef ? 0.1 : (priceStep() / 4);
+
+  // Dynamic section heading
+  if (isCIRef) {
+    document.getElementById('ciSensTitle').textContent = `CI SENSITIVITY — ${molSym}`;
+    document.getElementById('ciSensSubtitle').textContent =
+      `Blend fractions & blended price as target CI varies ±0.1 ${ciLabel} · 3 steps each direction · prices fixed`;
+  } else {
+    document.getElementById('ciSensTitle').textContent = `PRICE SENSITIVITY — ${molSym}`;
+    document.getElementById('ciSensSubtitle').textContent =
+      `Blend fractions & blended CI as target price varies ±${varStep.toFixed(dec)} ${pu} · 3 steps each direction · prices fixed`;
+  }
+
+  const showGrey  = active.includes('grey');
+  const showBlue  = active.includes('blue');
+  const showGreen = active.includes('green');
+
+  // Column headers depend on mode
+  const rowHdr  = isCIRef ? `Target CI<br><span style="font-size:9px;color:var(--muted)">${ciLabel}</span>`
+                           : `Target Price<br><span style="font-size:9px;color:var(--muted)">${pu}</span>`;
+  const outHdr  = isCIRef ? `BLENDED PRICE<br><span style="font-size:9px;color:var(--muted)">${pu}</span>`
+                           : `BLENDED CI<br><span style="font-size:9px;color:var(--muted)">${ciLabel}</span>`;
+  const vsHdr   = isCIRef ? `vs TARGET<br><span style="font-size:9px;color:var(--muted)">${t_p} ${pu}</span>`
+                           : `vs REF CI<br><span style="font-size:9px;color:var(--muted)">${t_ci} ${ciLabel}</span>`;
+  const refVal  = isCIRef ? t_p : t_ci;
+
+  let html = `<table class="ci-table"><thead><tr>
+    <th class="row-axis" style="min-width:160px">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        ${rowHdr}
+      </div>
+    </th>
+    ${showGrey  ? `<th style="color:var(--grey-hue)">GREY %</th>`   : ''}
+    ${showBlue  ? `<th style="color:var(--blue-hue)">BLUE %</th>`   : ''}
+    ${showGreen ? `<th style="color:var(--green-hue)">GREEN %</th>` : ''}
+    <th>${outHdr}</th>
+    <th>${vsHdr}</th>
+  </tr></thead><tbody>`;
+
+  rows.forEach(r => {
+    const stepSign  = r.step > 0 ? '+' : '';
+    const stepLabel = r.step === 0
+      ? `<span class="base-tag">BASE</span>`
+      : `<span style="color:${r.step < 0 ? 'var(--green-hue)' : 'var(--danger)'}">${stepSign}${(r.step * varStep).toFixed(isCIRef ? 1 : dec)}</span>`;
+
+    const rowDisplay = r.variedVal.toFixed(isCIRef ? 1 : dec);
+    const baseRowCls = r.isBase ? 'base-row' : '';
+
+    if (!r.feasible) {
+      const colCount = [showGrey, showBlue, showGreen].filter(Boolean).length + 3;
+      html += `<tr>
+        <td class="row-label ${baseRowCls}">${rowDisplay} ${stepLabel}</td>
+        <td colspan="${colCount}" style="color:var(--muted);font-size:11px;text-align:center">— infeasible —</td>
+      </tr>`;
+      return;
+    }
+
+    const outVal  = isCIRef ? r.blendedPrice : r.blendedCI;
+    const outDec  = isCIRef ? dec : 2;
+    const { bg: outBg, color: outColor } = cellColorStyle(outVal, refVal);
+    const baseCellStyle = r.isBase
+      ? 'outline:2px solid rgba(240,192,64,0.55);outline-offset:-2px;background:rgba(240,192,64,0.12);'
+      : '';
+
+    const diff    = outVal - refVal;
+    const diffPct = refVal !== 0 ? (diff / Math.abs(refVal) * 100) : 0;
+    const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(outDec)
+                  + ` (${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(1)}%)`;
+    const diffColor = diff < 0 ? 'var(--green-hue)' : diff > 0 ? 'var(--danger)' : 'var(--gold)';
+
+    html += `<tr>
+      <td class="row-label ${baseRowCls}">${rowDisplay} ${stepLabel}</td>
+      ${showGrey  ? `<td style="${baseCellStyle}color:var(--grey-hue);font-weight:500">${(r.xGrey*100).toFixed(1)}%<span class="ci-pct-bar" style="width:${(r.xGrey*40).toFixed(0)}px;background:var(--grey-hue)"></span></td>`  : ''}
+      ${showBlue  ? `<td style="${baseCellStyle}color:var(--blue-hue);font-weight:500">${(r.xBlue*100).toFixed(1)}%<span class="ci-pct-bar" style="width:${(r.xBlue*40).toFixed(0)}px;background:var(--blue-hue)"></span></td>`   : ''}
+      ${showGreen ? `<td style="${baseCellStyle}color:var(--green-hue);font-weight:500">${(r.xGreen*100).toFixed(1)}%<span class="ci-pct-bar" style="width:${(r.xGreen*40).toFixed(0)}px;background:var(--green-hue)"></span></td>` : ''}
+      <td style="background:${r.isBase?'rgba(240,192,64,0.12)':outBg};color:${outColor};font-weight:600;${r.isBase?'outline:2px solid rgba(240,192,64,0.55);outline-offset:-2px;':''}">${outVal.toFixed(outDec)}</td>
+      <td style="color:${diffColor};font-family:var(--mono);font-size:11px">${r.isBase ? '—' : diffStr}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('ciTableWrap').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//   EXCEL DOWNLOAD
+// ══════════════════════════════════════════════
+function downloadExcel() {
+  if (!lastSolution || typeof XLSX === 'undefined') {
+    alert('Please calculate a blend first, or wait for the page to fully load.');
+    return;
+  }
+
+  const { active, data, fracs, blendedCI, blendedPrice, t_ci, t_p } = lastSolution;
+  const molLabel   = molecule === 'H2' ? 'Hydrogen (H₂)' : 'Ammonia (NH₃)';
+  const ciLabel    = ciUnitLabel(molecule, ciUnit);
+  const priceLabel = priceUnit(molecule);
+  const dec        = molecule === 'H2' ? 2 : 0;
+  const step       = priceStep();
+  const now        = new Date().toLocaleString();
+  const wb         = XLSX.utils.book_new();
+
+  // ─────────────────────────────────────────────
+  //  SHEET 1 — Blend Summary
+  // ─────────────────────────────────────────────
+  const summaryAoa = [];
+
+  // Title block
+  summaryAoa.push([`H₂ / NH₃ Blend Calculator — Summary Report`]);
+  summaryAoa.push(['Generated:', now]);
+  summaryAoa.push([]);
+
+  // Config
+  summaryAoa.push(['CONFIGURATION', '', '']);
+  summaryAoa.push(['Molecule',      molLabel]);
+  summaryAoa.push(['CI Unit',       ciLabel]);
+  summaryAoa.push(['Price Unit',    priceLabel]);
+  summaryAoa.push([]);
+
+  // Source feedstock
+  summaryAoa.push(['SOURCE FEEDSTOCK DATA', '', '', '']);
+  summaryAoa.push(['Shade', 'Active in Blend', `Price (${priceLabel})`, `Carbon Intensity (${ciLabel})`]);
+  ['grey','blue','green'].forEach(s => {
+    const isActive = active.includes(s);
+    summaryAoa.push([
+      s.charAt(0).toUpperCase() + s.slice(1),
+      isActive ? 'Yes' : 'No',
+      isActive ? data[s].price : 'N/A',
+      isActive ? data[s].ci   : 'N/A'
+    ]);
+  });
+  summaryAoa.push([]);
+
+  // Targets
+  const refModeLabel = lastSolution.referenceMode === 'ci' ? 'CI Target (Reference)' : 'Price Target (Reference)';
+  const compLabel    = lastSolution.referenceMode === 'ci' ? 'Price (Computed Result)' : 'CI (Computed Result)';
+  summaryAoa.push(['TARGET REQUIREMENTS', '', '']);
+  summaryAoa.push(['Reference Mode', lastSolution.referenceMode === 'ci' ? 'CI Anchored' : 'Price Anchored']);
+  summaryAoa.push([`Target Carbon Intensity (${ciLabel})`, t_ci, lastSolution.referenceMode === 'price' ? '← computed' : '← reference']);
+  summaryAoa.push([`Target Levelized Price (${priceLabel})`, t_p, lastSolution.referenceMode === 'ci' ? '← computed' : '← reference']);
+  summaryAoa.push([]);
+
+  // Blend solution
+  summaryAoa.push(['BLEND SOLUTION', '', '']);
+  summaryAoa.push(['Shade', 'Blending Fraction (%)', `Price Contribution (${priceLabel})`, `CI Contribution (${ciLabel})`]);
+  const activeForDisplay = ['grey','blue','green'];
+  activeForDisplay.forEach(s => {
+    const f = fracs[s];
+    if (!active.includes(s)) return;
+    const contrib_p  = (f * (data[s]?.price ?? 0));
+    const contrib_ci = (f * (data[s]?.ci   ?? 0));
+    summaryAoa.push([
+      s.charAt(0).toUpperCase() + s.slice(1),
+      parseFloat((f * 100).toFixed(4)),
+      parseFloat(contrib_p.toFixed(4)),
+      parseFloat(contrib_ci.toFixed(4))
+    ]);
+  });
+  summaryAoa.push([]);
+  summaryAoa.push(['CONFIRMED RESULTS', '', '']);
+  summaryAoa.push(['Blended Carbon Intensity', parseFloat(blendedCI.toFixed(4)),  ciLabel]);
+  summaryAoa.push(['Blended Price',            parseFloat(blendedPrice.toFixed(4)), priceLabel]);
+  summaryAoa.push(['CI Target Match',          Math.abs(blendedCI - t_ci) < 0.01 ? 'YES ✓' : 'NO ✗']);
+  summaryAoa.push(['Price Target Match',       Math.abs(blendedPrice - t_p) < 0.01 ? 'YES ✓' : 'Computed Result']);
+  summaryAoa.push([]);
+  summaryAoa.push(['Note: Sensitivity table anchors on CI target only. Middle-shade fraction fixed at base value for 3-shade mode.']);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(summaryAoa);
+  ws1['!cols'] = [{ wch: 38 }, { wch: 22 }, { wch: 24 }, { wch: 28 }];
+
+  // Merge title cell
+  ws1['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:3} }];
+
+  XLSX.utils.book_append_sheet(wb, ws1, 'Blend Summary');
+
+  // ─────────────────────────────────────────────
+  //  SHEET 2 — Sensitivity Table
+  //  Axes: Grey = Y (rows), Green = X (columns)
+  // ─────────────────────────────────────────────
+  const isCIRefExcel = lastSolution.referenceMode === 'ci';
+  const deltas     = [-5,-4,-3,-2,-1,0,1,2,3,4,5].map(d => d * step);
+  // Axis: rowShade = grey (Y axis), colShade = green (X axis)
+  const rowShade   = active.includes('grey')  ? 'grey'  : active[0];
+  const colShade   = active.includes('green') ? 'green' : active[active.length - 1];
+  const fixedShade = active.find(s => s !== rowShade && s !== colShade) || null;
+  const fixedFrac  = fixedShade ? fracs[fixedShade] : 0;
+  const baseRowP   = data[rowShade].price;
+  const baseColP   = data[colShade].price;
+
+  function getSensVal(colPrice, rowPrice) {
+    // Returns blended price (CI ref) or blended CI (price ref)
+    if (active.length >= 3 && fixedShade) {
+      const rem = 1 - fixedFrac;
+      if (isCIRefExcel) {
+        const remCI = t_ci - fixedFrac * data[fixedShade].ci;
+        const dCI   = data[colShade].ci - data[rowShade].ci;
+        if (Math.abs(dCI) < 1e-10) return null;
+        const xCol = (remCI - data[rowShade].ci * rem) / dCI;
+        const xRow = rem - xCol;
+        if (xCol < -0.0001 || xRow < -0.0001) return null;
+        return xCol * colPrice + xRow * rowPrice + fixedFrac * data[fixedShade].price;
+      } else {
+        const remP = t_p - fixedFrac * data[fixedShade].price;
+        const dP   = colPrice - rowPrice;
+        if (Math.abs(dP) < 1e-10) return null;
+        const xCol = (remP - rem * rowPrice) / dP;
+        const xRow = rem - xCol;
+        if (xCol < -0.0001 || xRow < -0.0001) return null;
+        return xCol * data[colShade].ci + xRow * data[rowShade].ci + fixedFrac * data[fixedShade].ci;
+      }
+    } else {
+      if (isCIRefExcel) {
+        const dCI = data[colShade].ci - data[rowShade].ci;
+        if (Math.abs(dCI) < 1e-10) return null;
+        const xCol = (t_ci - data[rowShade].ci) / dCI;
+        const xRow = 1 - xCol;
+        if (xCol < -0.0001 || xRow < -0.0001) return null;
+        return xCol * colPrice + xRow * rowPrice;
+      } else {
+        const dP = colPrice - rowPrice;
+        if (Math.abs(dP) < 1e-10) return null;
+        const xCol = (t_p - rowPrice) / dP;
+        const xRow = 1 - xCol;
+        if (xCol < -0.0001 || xRow < -0.0001) return null;
+        return xCol * data[colShade].ci + xRow * data[rowShade].ci;
+      }
+    }
+  }
+
+  const molSym = molecule === 'H2' ? 'H₂' : 'NH₃';
+  const sensAoa = [];
+  const cellDecExcel = isCIRefExcel ? dec : 2;
+
+  // Header info
+  sensAoa.push([isCIRefExcel ? `Blended Price Sensitivity Table — ${molSym}` : `Blended CI Sensitivity Table — ${molSym}`]);
+  sensAoa.push([isCIRefExcel ? `CI Anchor: ${t_ci} ${ciLabel}` : `Price Anchor: ${t_p} ${priceLabel}`]);
+  sensAoa.push([isCIRefExcel ? `Reference Price (computed): ${t_p} ${priceLabel}` : `Reference CI (computed): ${t_ci} ${ciLabel}`]);
+  sensAoa.push([`Step size: ±${step} ${priceLabel}  |  5 steps each direction`]);
+  sensAoa.push([`Y axis (rows): ${rowShade.toUpperCase()} price  |  X axis (columns): ${colShade.toUpperCase()} price`]);
+  sensAoa.push([fixedShade
+    ? `${fixedShade.charAt(0).toUpperCase()+fixedShade.slice(1)} fraction fixed at ${(fixedFrac*100).toFixed(1)}% (base solution)`
+    : `2-shade mode: ${active.map(s=>s.toUpperCase()).join(' + ')} only`]);
+  sensAoa.push([`Cell values in: ${isCIRefExcel ? priceLabel : ciLabel}`]);
+  sensAoa.push([]);
+
+  // Column header row 1: col-shade (green) prices  [X axis]
+  const colPrices  = deltas.map(d => baseColP + d);
+  const hRow1 = [`${rowShade.toUpperCase()} (Y) ↓  \\  ${colShade.toUpperCase()} (X) →`];
+  colPrices.forEach(p => hRow1.push(parseFloat(p.toFixed(dec))));
+  sensAoa.push(hRow1);
+
+  // Column header row 2: delta labels
+  const hRow2 = [`(${priceLabel})`];
+  deltas.forEach(d => hRow2.push(d === 0 ? 'BASE' : (d > 0 ? '+' : '') + d));
+  sensAoa.push(hRow2);
+
+  // Data rows: rows = grey (Y), cols = green (X)
+  deltas.forEach(rd => {
+    const rowPrice = baseRowP + rd;
+    const row = [parseFloat(rowPrice.toFixed(dec))];
+    deltas.forEach(cd => {
+      const colPrice = baseColP + cd;
+      const val      = getSensVal(colPrice, rowPrice);
+      row.push(val !== null ? parseFloat(val.toFixed(cellDecExcel)) : 'N/A');
+    });
+    sensAoa.push(row);
+  });
+
+  sensAoa.push([]);
+  sensAoa.push(['COLOR LEGEND (for reference — colors not reproduced in Excel)']);
+  sensAoa.push(['Interpretation', 'Threshold']);
+  sensAoa.push(['≥ 15% below target price',   '< ' + (t_p * 0.85).toFixed(dec)]);
+  sensAoa.push(['Below target price',               '< ' + t_p]);
+  sensAoa.push(['At target price (±2%)',        t_p + ' ± ' + (t_p * 0.02).toFixed(dec)]);
+  sensAoa.push(['Above target price',               '> ' + t_p]);
+  sensAoa.push(['≥ 15% above target price',    '> ' + (t_p * 1.15).toFixed(dec)]);
+
+  const ws2 = XLSX.utils.aoa_to_sheet(sensAoa);
+
+  // Column widths: first col wider, rest equal
+  const nCols = 1 + deltas.length;
+  ws2['!cols'] = [{ wch: 22 }, ...Array(deltas.length).fill({ wch: 12 })];
+
+  // Merge title rows
+  ws2['!merges'] = [
+    { s:{r:0,c:0}, e:{r:0,c:nCols-1} },
+    { s:{r:1,c:0}, e:{r:1,c:nCols-1} },
+    { s:{r:2,c:0}, e:{r:2,c:nCols-1} },
+    { s:{r:3,c:0}, e:{r:3,c:nCols-1} },
+    { s:{r:4,c:0}, e:{r:4,c:nCols-1} },
+    { s:{r:5,c:0}, e:{r:5,c:nCols-1} }
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws2, 'Sensitivity Table');
+
+  // ─────────────────────────────────────────────
+  //  SHEET 3 — CI Sensitivity
+  // ─────────────────────────────────────────────
+  const ciRows   = getCISensRows();
+  const ciSensAoa = [];
+  const ciLabel2  = ciUnitLabel(molecule, ciUnit);
+
+  const isCIRefS3 = lastSolution.referenceMode === 'ci';
+  const varStepS3 = isCIRefS3 ? 0.1 : (priceStep() / 4);
+  ciSensAoa.push([isCIRefS3 ? `CI Sensitivity Analysis — ${molSym}` : `Price Sensitivity Analysis — ${molSym}`]);
+  ciSensAoa.push([isCIRefS3
+    ? `Base CI Target: ${t_ci} ${ciLabel2}  |  Step: ±0.1 ${ciLabel2}`
+    : `Base Price Target: ${t_p} ${priceLabel}  |  Step: ±${varStepS3.toFixed(dec)} ${priceLabel}`]);
+  ciSensAoa.push([`3 steps each direction`]);
+  ciSensAoa.push([`Source prices held constant at inputs. Middle-shade fraction fixed for 3-shade mode.`]);
+  ciSensAoa.push([]);
+
+  // Header row
+  const ciHdr = [
+    isCIRefS3 ? `Target CI (${ciLabel2})` : `Target Price (${priceLabel})`,
+    'Step'
+  ];
+  if (active.includes('grey'))  ciHdr.push('Grey %');
+  if (active.includes('blue'))  ciHdr.push('Blue %');
+  if (active.includes('green')) ciHdr.push('Green %');
+  const outColHdr = isCIRefS3 ? `Blended Price (${priceLabel})` : `Blended CI (${ciLabel2})`;
+  const refColHdr = isCIRefS3 ? `vs Ref Price (${priceLabel})` : `vs Ref CI (${ciLabel2})`;
+  ciHdr.push(outColHdr, refColHdr, 'vs Ref (%)');
+  ciSensAoa.push(ciHdr);
+
+  ciRows.forEach(r => {
+    const stepStr = r.step === 0 ? 'BASE' : (r.step > 0 ? '+' : '') + (r.step * varStepS3).toFixed(isCIRefS3 ? 1 : dec);
+    if (!r.feasible) {
+      const row = [parseFloat(r.variedVal.toFixed(isCIRefS3 ? 1 : dec)), stepStr];
+      ciHdr.slice(2).forEach(() => row.push('N/A'));
+      ciSensAoa.push(row);
+      return;
+    }
+    const outVal  = isCIRefS3 ? r.blendedPrice : r.blendedCI;
+    const refValS3 = isCIRefS3 ? t_p : t_ci;
+    const outDecS3 = isCIRefS3 ? dec : 2;
+    const diff    = outVal - refValS3;
+    const diffPct = refValS3 !== 0 ? (diff / Math.abs(refValS3) * 100) : 0;
+    const row = [
+      parseFloat(r.variedVal.toFixed(isCIRefS3 ? 1 : dec)),
+      stepStr
+    ];
+    if (active.includes('grey'))  row.push(parseFloat((r.xGrey  * 100).toFixed(2)));
+    if (active.includes('blue'))  row.push(parseFloat((r.xBlue  * 100).toFixed(2)));
+    if (active.includes('green')) row.push(parseFloat((r.xGreen * 100).toFixed(2)));
+    row.push(
+      parseFloat(outVal.toFixed(outDecS3)),
+      parseFloat(diff.toFixed(outDecS3)),
+      parseFloat(diffPct.toFixed(2))
+    );
+    ciSensAoa.push(row);
+  });
+
+  ciSensAoa.push([]);
+  ciSensAoa.push(['Note: Blend fractions solved using CI constraint + sum=1. Prices are resultant, not targeted.']);
+
+  const ws3      = XLSX.utils.aoa_to_sheet(ciSensAoa);
+  const nCiCols  = ciHdr.length;
+  ws3['!cols']   = [{ wch: 22 }, { wch: 12 }, ...Array(nCiCols - 2).fill({ wch: 18 })];
+  ws3['!merges'] = [
+    { s:{r:0,c:0}, e:{r:0,c:nCiCols-1} },
+    { s:{r:1,c:0}, e:{r:1,c:nCiCols-1} },
+    { s:{r:2,c:0}, e:{r:2,c:nCiCols-1} },
+    { s:{r:3,c:0}, e:{r:3,c:nCiCols-1} }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws3, 'CI Sensitivity');
+
+  // ─────────────────────────────────────────────
+  //  Write & trigger download
+  // ─────────────────────────────────────────────
+  const date     = new Date().toISOString().slice(0, 10);
+  const filename = `BlendCalc_${molecule}_${date}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+// ══════════════════════════════════════════════
+//   INIT
+// ══════════════════════════════════════════════
+updateUnits();
+</script>
+</body>
+</html>
