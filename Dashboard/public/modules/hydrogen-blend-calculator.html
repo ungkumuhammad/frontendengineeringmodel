@@ -869,6 +869,26 @@
     background: rgba(240,80,96,0.12); border-color: rgba(240,80,96,0.35); color: var(--danger);
   }
 
+  .advice-chip {
+    font-family: var(--mono); font-size: 11px; line-height: 1.5; padding: 8px 14px; border-radius: 8px;
+    background: rgba(56,178,240,0.08); border: 1px solid rgba(56,178,240,0.28); color: var(--blue-hue);
+    flex: 1 1 auto; min-width: 220px;
+  }
+  .advice-chip.bad {
+    background: rgba(240,80,96,0.10); border-color: rgba(240,80,96,0.35); color: var(--danger);
+  }
+  .advice-chip b { color: var(--text); }
+  .advice-apply-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--blue-hue); background: rgba(56,178,240,0.08); border: 1px solid rgba(56,178,240,0.3);
+    border-radius: 6px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .advice-apply-btn:hover:not(:disabled) { background: rgba(56,178,240,0.16); border-color: rgba(56,178,240,0.5); }
+  .advice-apply-btn:disabled { opacity: 0.4; cursor: default; }
+  .heatmap-table td.row-label .advice-note {
+    display: block; font-size: 8px; color: var(--muted); margin-top: 2px; white-space: nowrap;
+  }
+
   /* Required-price result cards */
   .req-cards-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
@@ -976,14 +996,14 @@
       <div class="field" id="priceField_grey">
         <label>Price</label>
         <div class="input-wrap">
-          <input type="number" id="grey_price" step="0.01" placeholder="e.g. 2.00">
+          <input type="number" id="grey_price" step="0.01" placeholder="e.g. 2.00" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="grey_price_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
       <div class="field">
         <label>Carbon Intensity (CI)</label>
         <div class="input-wrap">
-          <input type="number" id="grey_ci" step="0.01" placeholder="e.g. 12.0">
+          <input type="number" id="grey_ci" step="0.01" placeholder="e.g. 12.0" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="grey_ci_unit">kgCO₂e/kg</span>
         </div>
       </div>
@@ -1006,7 +1026,7 @@
           Limit max price
         </label>
         <div class="input-wrap" id="capWrap_grey" style="display:none;">
-          <input type="number" id="grey_cap" step="0.01" placeholder="e.g. 3.00">
+          <input type="number" id="grey_cap" step="0.01" placeholder="e.g. 3.00" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="grey_cap_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
@@ -1025,14 +1045,14 @@
       <div class="field" id="priceField_blue">
         <label>Price</label>
         <div class="input-wrap">
-          <input type="number" id="blue_price" step="0.01" placeholder="e.g. 3.50">
+          <input type="number" id="blue_price" step="0.01" placeholder="e.g. 3.50" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="blue_price_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
       <div class="field">
         <label>Carbon Intensity (CI)</label>
         <div class="input-wrap">
-          <input type="number" id="blue_ci" step="0.01" placeholder="e.g. 5.0">
+          <input type="number" id="blue_ci" step="0.01" placeholder="e.g. 5.0" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="blue_ci_unit">kgCO₂e/kg</span>
         </div>
       </div>
@@ -1055,7 +1075,7 @@
           Limit max price
         </label>
         <div class="input-wrap" id="capWrap_blue" style="display:none;">
-          <input type="number" id="blue_cap" step="0.01" placeholder="e.g. 4.50">
+          <input type="number" id="blue_cap" step="0.01" placeholder="e.g. 4.50" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="blue_cap_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
@@ -1074,14 +1094,14 @@
       <div class="field" id="priceField_green">
         <label>Price</label>
         <div class="input-wrap">
-          <input type="number" id="green_price" step="0.01" placeholder="e.g. 6.00">
+          <input type="number" id="green_price" step="0.01" placeholder="e.g. 6.00" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="green_price_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
       <div class="field">
         <label>Carbon Intensity (CI)</label>
         <div class="input-wrap">
-          <input type="number" id="green_ci" step="0.01" placeholder="e.g. 0.0">
+          <input type="number" id="green_ci" step="0.01" placeholder="e.g. 0.0" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="green_ci_unit">kgCO₂e/kg</span>
         </div>
       </div>
@@ -1104,7 +1124,7 @@
           Limit max price
         </label>
         <div class="input-wrap" id="capWrap_green" style="display:none;">
-          <input type="number" id="green_cap" step="0.01" placeholder="e.g. 8.00">
+          <input type="number" id="green_cap" step="0.01" placeholder="e.g. 8.00" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="green_cap_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
@@ -1112,8 +1132,14 @@
   </div>
 
   <!-- ══ REQUIRED-PRICE FRACTION SUM INDICATOR ══ -->
-  <div class="reqprice-only flex-row" id="fracSumRow" style="margin-top:-8px;margin-bottom:20px;justify-content:flex-end;">
+  <div class="reqprice-only flex-row" id="fracSumRow" style="margin-top:-8px;margin-bottom:12px;justify-content:flex-end;">
     <span class="frac-sum-chip" id="fracSumChip">Blend % total: 0%</span>
+  </div>
+
+  <!-- ══ ADVISED BLEND % (live, sensitive to CI values / CI ceiling / solve+cap toggles) ══ -->
+  <div class="reqprice-only flex-row" id="adviceRow" style="margin-top:-8px;margin-bottom:20px;align-items:center;">
+    <span class="advice-chip" id="adviceChip">Advised blend % (to exactly hit the CI ceiling at minimum cost): enter CI values + a CI ceiling first</span>
+    <button class="advice-apply-btn" id="applyAdviceBtn" onclick="applyAdvisedBlend()" disabled>⚡ Apply advised %</button>
   </div>
 
   <!-- ══ TARGET ══ -->
@@ -1139,7 +1165,7 @@
           <span id="ciRefBadge" class="ref-active-badge">● REFERENCE</span>
         </label>
         <div class="input-wrap reference-input" id="ciInputWrap">
-          <input type="number" id="target_ci" step="0.01" placeholder="e.g. 4.0">
+          <input type="number" id="target_ci" step="0.01" placeholder="e.g. 4.0" oninput="onReqLiveInputChange()">
           <span class="unit-badge" id="target_ci_unit">kgCO₂e/kg</span>
         </div>
       </div>
@@ -1298,6 +1324,8 @@
       </div>
     </div>
 
+    <div class="advice-chip" id="resultAdviceChip" style="margin-bottom:24px;">—</div>
+
     <div class="section-label">Required Price by Shade</div>
     <div class="req-cards-grid" id="reqCardsGrid"></div>
   </div>
@@ -1323,6 +1351,9 @@
         <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,80,96,0.45)"></div>≥15% more expensive / over cap</div>
         <div class="legend-item"><div class="legend-swatch" style="background:rgba(90,112,144,0.25)"></div>Infeasible (CI ceiling breached)</div>
       </div>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:10px;">
+        The small text under each row's CI ceiling is the advised min-cost blend % that would exactly hit that row — it shifts row by row, showing how sensitive the recipe is to the CI ceiling.
+      </p>
     </div>
   </div>
 
@@ -1459,6 +1490,7 @@ function setReferenceMode(mode) {
   } else {
     ['grey','blue','green'].forEach(s => onSolveToggle(s));
     updateFracSum();
+    updateAdvisedBlend();
   }
 
   if (mode === 'ci') {
@@ -1528,7 +1560,7 @@ function onShadeToggle() {
   }
 
   updateModeNote(active);
-  if (referenceMode === 'reqprice') updateFracSum();
+  if (referenceMode === 'reqprice') { updateFracSum(); updateAdvisedBlend(); }
   resetResults();
 }
 
@@ -1561,12 +1593,14 @@ function onSolveToggle(s) {
   const solving = document.getElementById(s + '_solve').checked;
   document.getElementById('priceField_' + s).style.display = solving ? 'none' : '';
   document.getElementById('solveRow_' + s).classList.toggle('active', solving);
+  updateAdvisedBlend();
   resetResults();
 }
 
 function onCapToggle(s) {
   const on = document.getElementById(s + '_capOn').checked;
   document.getElementById('capWrap_' + s).style.display = on ? 'flex' : 'none';
+  updateAdvisedBlend();
   resetResults();
 }
 
@@ -1586,6 +1620,116 @@ function updateFracSum() {
   });
   chip.textContent = `Blend % total: ${sum.toFixed(1)}%`;
   chip.classList.toggle('bad', Math.abs(sum - 100) > 0.05);
+}
+
+function onReqLiveInputChange() {
+  if (referenceMode !== 'reqprice') return;
+  updateAdvisedBlend();
+}
+
+// ══════════════════════════════════════════════
+//   ADVISED BLEND % — live, re-solved from CI values,
+//   the CI ceiling, and each shade's solve/cap state.
+//   Uses the exact same CI-matching + min-cost-pair logic
+//   as the base CI-anchor mode, so it is fully "sensitive"
+//   to any of those inputs changing.
+// ══════════════════════════════════════════════
+let lastAdvice = null;
+
+function gatherReqCIData() {
+  const active = activeShades();
+  const ciMap = {}, rankMap = {};
+  for (const s of active) {
+    const ci = getVal(s + '_ci');
+    if (isNaN(ci)) return null;
+    ciMap[s] = ci;
+    const solving = document.getElementById(s + '_solve').checked;
+    if (solving) {
+      const capOn = document.getElementById(s + '_capOn').checked;
+      const cap = capOn ? getVal(s + '_cap') : NaN;
+      rankMap[s] = !isNaN(cap) ? cap : 0; // rank unpriced shades by their cap (or optimistically 0)
+    } else {
+      const p = getVal(s + '_price');
+      rankMap[s] = isNaN(p) ? 0 : p;
+    }
+  }
+  return { active, ciMap, rankMap };
+}
+
+// Solves the blend fractions that hit tCI exactly, at minimum ranked cost.
+// (Same approach the base CI-anchor mode uses: for 2 shades the split is
+// unique; for 3 shades, pick whichever pair minimises cost.)
+function adviseBlendSplit(active, ciMap, tCI, rankMap) {
+  if (!active.length) return { feasible: false };
+
+  if (active.length === 1) {
+    const s = active[0];
+    const fracs = { grey: 0, blue: 0, green: 0 }; fracs[s] = 1;
+    return { feasible: ciMap[s] <= tCI + 1e-9, fracs, achievedCI: ciMap[s] };
+  }
+
+  const dataLike = {};
+  active.forEach(s => dataLike[s] = { ci: ciMap[s], price: rankMap[s] });
+
+  if (active.length === 2) {
+    const [sA, sB] = active;
+    const sol = solve2ShadeByCI(sA, sB, dataLike, tCI);
+    if (!sol) return { feasible: false };
+    const fracs = { grey: 0, blue: 0, green: 0 }; fracs[sA] = sol.xA; fracs[sB] = sol.xB;
+    return { feasible: true, fracs, achievedCI: sol.blendedCI };
+  }
+
+  const orderedPairs = [['grey','blue'],['grey','green'],['blue','green']];
+  let best = null, bestVal = Infinity;
+  for (const [sA, sB] of orderedPairs) {
+    const sol = solve2ShadeByCI(sA, sB, dataLike, tCI);
+    if (sol && sol.blendedPrice < bestVal) { bestVal = sol.blendedPrice; best = { sA, sB, sol }; }
+  }
+  if (!best) return { feasible: false };
+  const fracs = { grey: 0, blue: 0, green: 0 }; fracs[best.sA] = best.sol.xA; fracs[best.sB] = best.sol.xB;
+  return { feasible: true, fracs, achievedCI: best.sol.blendedCI };
+}
+
+function updateAdvisedBlend() {
+  const chip = document.getElementById('adviceChip');
+  const btn  = document.getElementById('applyAdviceBtn');
+  if (!chip || referenceMode !== 'reqprice') return;
+
+  const gathered = gatherReqCIData();
+  const tCI = getVal('target_ci');
+
+  if (!gathered || isNaN(tCI) || !gathered.active.length) {
+    chip.textContent = 'Advised blend % (to exactly hit the CI ceiling at minimum cost): enter CI values + a CI ceiling first';
+    chip.classList.remove('bad');
+    lastAdvice = null;
+    btn.disabled = true;
+    return;
+  }
+
+  const advice = adviseBlendSplit(gathered.active, gathered.ciMap, tCI, gathered.rankMap);
+  lastAdvice = advice;
+
+  if (!advice.feasible) {
+    const cis = gathered.active.map(s => gathered.ciMap[s]);
+    chip.innerHTML = `No blend of the selected shades can reach a CI of <b>${tCI}</b> — achievable range: [${Math.min(...cis).toFixed(2)}, ${Math.max(...cis).toFixed(2)}]`;
+    chip.classList.add('bad');
+    btn.disabled = true;
+    return;
+  }
+
+  chip.classList.remove('bad');
+  const parts = gathered.active.map(s => `${s.toUpperCase()} <b>${(advice.fracs[s]*100).toFixed(1)}%</b>`).join(' · ');
+  chip.innerHTML = `Advised split to exactly hit the CI ceiling at minimum cost: ${parts}`;
+  btn.disabled = false;
+}
+
+function applyAdvisedBlend() {
+  if (!lastAdvice || !lastAdvice.feasible) return;
+  activeShades().forEach(s => {
+    document.getElementById(s + '_frac').value = (lastAdvice.fracs[s] * 100).toFixed(1);
+  });
+  updateFracSum();
+  resetResults();
 }
 
 // ══════════════════════════════════════════════
@@ -2218,10 +2362,19 @@ function calculateRequiredPrice() {
   solveShades.forEach(s => { if (data[s].cap !== null && requiredPrice !== null && requiredPrice > data[s].cap + 1e-9) capViolations.push(s); });
   knownShades.forEach(s => { if (data[s].cap !== null && data[s].knownPrice > data[s].cap + 1e-9) capViolations.push(s); });
 
+  // Advised blend % — the min-cost split that would hit the CI ceiling exactly,
+  // for comparison against the fixed blend % the user actually entered.
+  const ciMap = {}, rankMap = {};
+  active.forEach(s => {
+    ciMap[s] = data[s].ci;
+    rankMap[s] = data[s].solving ? (data[s].cap !== null ? data[s].cap : 0) : data[s].knownPrice;
+  });
+  const advice = adviseBlendSplit(active, ciMap, tCI, rankMap);
+
   hideError();
   lastReqSolution = {
     active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK,
-    capViolations, solveShades, knownShades, dec, ciLabel, pu
+    capViolations, solveShades, knownShades, dec, ciLabel, pu, ciMap, rankMap, advice
   };
   showRequiredPriceResults(lastReqSolution);
   buildRequiredPriceHeatmap(lastReqSolution);
@@ -2230,7 +2383,24 @@ function calculateRequiredPrice() {
 }
 
 function showRequiredPriceResults(sol) {
-  const { active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK, capViolations, solveShades, dec, ciLabel, pu } = sol;
+  const { active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK, capViolations, solveShades, dec, ciLabel, pu, advice } = sol;
+
+  // Advised blend % vs the fixed blend % actually entered
+  const adviceEl = document.getElementById('resultAdviceChip');
+  if (!advice || !advice.feasible) {
+    adviceEl.classList.add('bad');
+    adviceEl.textContent = advice
+      ? `Advised blend %: no split of the selected shades can reach a CI of ${tCI} ${ciLabel}.`
+      : 'Advised blend %: unavailable.';
+  } else {
+    adviceEl.classList.remove('bad');
+    const parts = active.map(s => {
+      const adv = advice.fracs[s] * 100, cur = data[s].frac * 100;
+      const close = Math.abs(adv - cur) <= 0.5;
+      return `${s.toUpperCase()} <b>${adv.toFixed(1)}%</b>${close ? '' : ` <span style="color:var(--muted)">(yours: ${cur.toFixed(1)}%)</span>`}`;
+    }).join(' · ');
+    adviceEl.innerHTML = `Advised min-cost blend % to exactly hit the CI ceiling: ${parts}. <button class="advice-apply-btn" style="margin-left:8px;padding:3px 10px;" onclick="applyAdvisedBlend(); calculate();">⚡ Use this split &amp; recalc</button>`;
+  }
 
   const panel = document.getElementById('reqResultsPanel');
   panel.style.display = 'block';
@@ -2327,7 +2497,7 @@ function toggleReqHeatmap() {
 }
 
 function buildRequiredPriceHeatmap(sol) {
-  const { data, tCI, tP, blendedCI, knownShades, solveShades, dec, ciLabel, pu } = sol;
+  const { active, data, tCI, tP, blendedCI, knownShades, solveShades, dec, ciLabel, pu, ciMap, rankMap } = sol;
 
   if (!solveShades.length) {
     document.getElementById('reqHeatmapWrap').innerHTML =
@@ -2388,7 +2558,14 @@ function buildRequiredPriceHeatmap(sol) {
       ? ` <span class="base-tag">BASE</span>`
       : ` <span style="color:${rd<0?'var(--danger)':'var(--green-hue)'}">${sign}${rd.toFixed(1)}</span>`;
 
-    html += `<tr><td class="row-label ${isBaseRow?'base-row':''}">${rowCI.toFixed(2)}${deltaLabel}</td>`;
+    // Advised min-cost blend % for THIS row's CI ceiling — makes the advice
+    // table "sensitive": scan down the rows to see the recipe shift with CI.
+    const rowAdvice = adviseBlendSplit(active, ciMap, rowCI, rankMap);
+    const adviceNote = rowAdvice.feasible
+      ? active.map(s => `${s[0].toUpperCase()}${(rowAdvice.fracs[s]*100).toFixed(0)}%`).join(' ')
+      : 'no split fits';
+
+    html += `<tr><td class="row-label ${isBaseRow?'base-row':''}">${rowCI.toFixed(2)}${deltaLabel}<span class="advice-note">${adviceNote}</span></td>`;
 
     deltasP.forEach(cd => {
       const colP       = tP + cd;
@@ -2995,7 +3172,7 @@ function downloadRequiredPriceExcel() {
   }
 
   const { active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK,
-          capViolations, solveShades, knownShades, dec, ciLabel, pu } = lastReqSolution;
+          capViolations, solveShades, knownShades, dec, ciLabel, pu, ciMap, rankMap, advice } = lastReqSolution;
   const molLabel = molecule === 'H2' ? 'Hydrogen (H₂)' : 'Ammonia (NH₃)';
   const now      = new Date().toLocaleString();
   const wb       = XLSX.utils.book_new();
@@ -3035,8 +3212,20 @@ function downloadRequiredPriceExcel() {
   aoa.push(['Feasible', (ciOK && priceOK && capViolations.length === 0) ? 'YES ✓' : 'NO ✗']);
   if (capViolations.length) aoa.push(['Cap violations', capViolations.map(s=>s.toUpperCase()).join(', ')]);
   aoa.push([]);
+  aoa.push(['ADVISED BLEND % (min-cost split to exactly hit the CI ceiling)']);
+  if (advice && advice.feasible) {
+    aoa.push(['Shade', 'Advised %', 'Your Fixed %', 'Difference (pts)']);
+    active.forEach(s => {
+      const adv = advice.fracs[s] * 100, cur = data[s].frac * 100;
+      aoa.push([s.charAt(0).toUpperCase() + s.slice(1), parseFloat(adv.toFixed(2)), parseFloat(cur.toFixed(2)), parseFloat((cur - adv).toFixed(2))]);
+    });
+  } else {
+    aoa.push(['No blend of the selected shades can reach the CI ceiling of ' + tCI + ' ' + ciLabel + '.']);
+  }
+  aoa.push([]);
   aoa.push(['Note: Blended CI depends only on the fixed Blend % and each shade\'s CI — price does not affect it.']);
   aoa.push(['Note: The required price is the single breakeven price applied uniformly across all shade(s) marked "solve".']);
+  aoa.push(['Note: Advised % assumes each "solve" shade is ranked by its price cap (or 0 if uncapped) purely to pick the cheapest CI-matching combination.']);
 
   const ws1 = XLSX.utils.aoa_to_sheet(aoa);
   ws1['!cols'] = [{ wch: 32 }, { wch: 18 }, { wch: 16 }, { wch: 20 }, { wch: 16 }, { wch: 16 }];
@@ -3061,14 +3250,18 @@ function downloadRequiredPriceExcel() {
     hmAoa.push([`Base ceilings: ${tCI} ${ciLabel} / ${tP} ${pu}`]);
     hmAoa.push([]);
 
-    const hRow1 = [`CI ceiling (Y) ↓ \\ Price ceiling (X) →`];
+    const hRow1 = [`CI ceiling (Y) ↓ \\ Price ceiling (X) →`, 'Advised Blend %'];
     deltasP.forEach(d => hRow1.push(parseFloat((tP + d).toFixed(dec))));
     hmAoa.push(hRow1);
 
     deltasCI.forEach(rd => {
       const rowCI  = tCI + rd;
       const ciFail = blendedCI > rowCI + 1e-9;
-      const row = [parseFloat(rowCI.toFixed(2))];
+      const rowAdvice = adviseBlendSplit(active, ciMap, rowCI, rankMap);
+      const adviceStr = rowAdvice.feasible
+        ? active.map(s => `${s.toUpperCase()} ${(rowAdvice.fracs[s]*100).toFixed(1)}%`).join(' / ')
+        : 'no split fits';
+      const row = [parseFloat(rowCI.toFixed(2)), adviceStr];
       deltasP.forEach(cd => {
         if (ciFail) { row.push('CI FAIL'); return; }
         const reqP = reqPriceFor(tP + cd);
@@ -3078,8 +3271,8 @@ function downloadRequiredPriceExcel() {
     });
 
     const ws2 = XLSX.utils.aoa_to_sheet(hmAoa);
-    const nCols2 = 1 + deltasP.length;
-    ws2['!cols'] = [{ wch: 22 }, ...Array(deltasP.length).fill({ wch: 12 })];
+    const nCols2 = 2 + deltasP.length;
+    ws2['!cols'] = [{ wch: 16 }, { wch: 28 }, ...Array(deltasP.length).fill({ wch: 12 })];
     ws2['!merges'] = [
       { s:{r:0,c:0}, e:{r:0,c:nCols2-1} },
       { s:{r:1,c:0}, e:{r:1,c:nCols2-1} },
