@@ -1008,7 +1008,7 @@
         </div>
       </div>
       <div class="field reqprice-only" id="fracField_grey">
-        <label>Blend % (fixed fraction)</label>
+        <label>Blend % (auto-filled — edit to override)</label>
         <div class="input-wrap">
           <input type="number" id="grey_frac" step="0.1" placeholder="e.g. 30" oninput="onFracInput()">
           <span class="unit-badge">%</span>
@@ -1057,7 +1057,7 @@
         </div>
       </div>
       <div class="field reqprice-only" id="fracField_blue">
-        <label>Blend % (fixed fraction)</label>
+        <label>Blend % (auto-filled — edit to override)</label>
         <div class="input-wrap">
           <input type="number" id="blue_frac" step="0.1" placeholder="e.g. 40" oninput="onFracInput()">
           <span class="unit-badge">%</span>
@@ -1106,7 +1106,7 @@
         </div>
       </div>
       <div class="field reqprice-only" id="fracField_green">
-        <label>Blend % (fixed fraction)</label>
+        <label>Blend % (auto-filled — edit to override)</label>
         <div class="input-wrap">
           <input type="number" id="green_frac" step="0.1" placeholder="e.g. 30" oninput="onFracInput()">
           <span class="unit-badge">%</span>
@@ -1138,8 +1138,8 @@
 
   <!-- ══ ADVISED BLEND % (live, sensitive to CI values / CI ceiling / solve+cap toggles) ══ -->
   <div class="reqprice-only flex-row" id="adviceRow" style="margin-top:-8px;margin-bottom:20px;align-items:center;">
-    <span class="advice-chip" id="adviceChip">Advised blend % (to exactly hit the CI ceiling at minimum cost): enter CI values + a CI ceiling first</span>
-    <button class="advice-apply-btn" id="applyAdviceBtn" onclick="applyAdvisedBlend()" disabled>⚡ Apply advised %</button>
+    <span class="advice-chip" id="adviceChip">Advised blend % (auto-filled below once you enter CI values + a CI ceiling): —</span>
+    <button class="advice-apply-btn" id="applyAdviceBtn" onclick="applyAdvisedBlend()" disabled>↻ Reset to advised %</button>
   </div>
 
   <!-- ══ TARGET ══ -->
@@ -1349,10 +1349,10 @@
         <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,192,64,0.25); border:1px solid rgba(240,192,64,0.4)"></div>At base (±2%)</div>
         <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,80,96,0.18)"></div>More expensive than base</div>
         <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,80,96,0.45)"></div>≥15% more expensive / over cap</div>
-        <div class="legend-item"><div class="legend-swatch" style="background:rgba(90,112,144,0.25)"></div>Infeasible (CI ceiling breached)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(90,112,144,0.25)"></div>Infeasible (CI ceiling breached, or 0% used in the optimal blend)</div>
       </div>
       <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:10px;">
-        The small text under each row's CI ceiling is the advised min-cost blend % that would exactly hit that row — it shifts row by row, showing how sensitive the recipe is to the CI ceiling.
+        Every row re-solves the min-cost blend % for that row's own CI ceiling (shown under it) before computing the required price — so both the recipe and the price you'd need shift together as you scan down the CI axis or across the price axis.
       </p>
     </div>
   </div>
@@ -1488,6 +1488,7 @@ function setReferenceMode(mode) {
       document.getElementById('priceField_' + s).style.display = '';
     });
   } else {
+    fracsManuallyEdited = false; // fresh entry into Required Price mode — auto-fill from scratch
     ['grey','blue','green'].forEach(s => onSolveToggle(s));
     updateFracSum();
     updateAdvisedBlend();
@@ -1560,7 +1561,7 @@ function onShadeToggle() {
   }
 
   updateModeNote(active);
-  if (referenceMode === 'reqprice') { updateFracSum(); updateAdvisedBlend(); }
+  if (referenceMode === 'reqprice') { fracsManuallyEdited = false; updateFracSum(); updateAdvisedBlend(); }
   resetResults();
 }
 
@@ -1605,7 +1606,9 @@ function onCapToggle(s) {
 }
 
 function onFracInput() {
+  fracsManuallyEdited = true; // user is hand-editing — stop overwriting their entry
   updateFracSum();
+  updateAdvisedBlend(); // refresh the advice chip/button to reflect the override immediately
   resetResults();
 }
 
@@ -1635,31 +1638,35 @@ function onReqLiveInputChange() {
 //   to any of those inputs changing.
 // ══════════════════════════════════════════════
 let lastAdvice = null;
+let fracsManuallyEdited = false; // true once the user hand-edits a Blend % field; suspends auto-fill until reset
 
 function gatherReqCIData() {
   const active = activeShades();
-  const ciMap = {}, rankMap = {};
+  const ciMap = {}, rankMap = {}, solveSet = [];
   for (const s of active) {
     const ci = getVal(s + '_ci');
     if (isNaN(ci)) return null;
     ciMap[s] = ci;
     const solving = document.getElementById(s + '_solve').checked;
     if (solving) {
-      const capOn = document.getElementById(s + '_capOn').checked;
-      const cap = capOn ? getVal(s + '_cap') : NaN;
-      rankMap[s] = !isNaN(cap) ? cap : 0; // rank unpriced shades by their cap (or optimistically 0)
+      solveSet.push(s);
+      rankMap[s] = 0; // price unknown by design — cost-rank neutrally, don't let its cap exclude it
     } else {
       const p = getVal(s + '_price');
       rankMap[s] = isNaN(p) ? 0 : p;
     }
   }
-  return { active, ciMap, rankMap };
+  return { active, ciMap, rankMap, solveSet };
 }
 
 // Solves the blend fractions that hit tCI exactly, at minimum ranked cost.
 // (Same approach the base CI-anchor mode uses: for 2 shades the split is
-// unique; for 3 shades, pick whichever pair minimises cost.)
-function adviseBlendSplit(active, ciMap, tCI, rankMap) {
+// unique; for 3 shades, pick whichever pair minimises cost.) When solveSet
+// is non-empty, candidate pairs that would give EVERY solve-shade a 0%
+// fraction are skipped where a solve-shade-including alternative exists —
+// otherwise "advice" could recommend excluding the very shade you're
+// trying to price, which leaves nothing to solve for.
+function adviseBlendSplit(active, ciMap, tCI, rankMap, solveSet = []) {
   if (!active.length) return { feasible: false };
 
   if (active.length === 1) {
@@ -1679,15 +1686,35 @@ function adviseBlendSplit(active, ciMap, tCI, rankMap) {
     return { feasible: true, fracs, achievedCI: sol.blendedCI };
   }
 
-  const orderedPairs = [['grey','blue'],['grey','green'],['blue','green']];
-  let best = null, bestVal = Infinity;
-  for (const [sA, sB] of orderedPairs) {
-    const sol = solve2ShadeByCI(sA, sB, dataLike, tCI);
-    if (sol && sol.blendedPrice < bestVal) { bestVal = sol.blendedPrice; best = { sA, sB, sol }; }
+  const allPairs = [['grey','blue'],['grey','green'],['blue','green']];
+  const needsSolveShade = solveSet.length > 0;
+  const candidatePairs = needsSolveShade
+    ? allPairs.filter(([a,b]) => solveSet.includes(a) || solveSet.includes(b))
+    : allPairs;
+
+  function search(pairs) {
+    let best = null, bestVal = Infinity;
+    for (const [sA, sB] of pairs) {
+      const sol = solve2ShadeByCI(sA, sB, dataLike, tCI);
+      if (sol && sol.blendedPrice < bestVal) { bestVal = sol.blendedPrice; best = { sA, sB, sol }; }
+    }
+    return best;
   }
+
+  let best = search(candidatePairs);
+  if (!best && needsSolveShade) best = search(allPairs); // fall back if no solve-shade pair is CI-feasible
   if (!best) return { feasible: false };
   const fracs = { grey: 0, blue: 0, green: 0 }; fracs[best.sA] = best.sol.xA; fracs[best.sB] = best.sol.xB;
   return { feasible: true, fracs, achievedCI: best.sol.blendedCI };
+}
+
+function writeFracFields(advice, active) {
+  active.forEach(s => {
+    // 2 decimals keeps the auto-filled % rounding tight enough that the CI
+    // check below doesn't flag the tool's own advice as breaching the ceiling.
+    document.getElementById(s + '_frac').value = (advice.fracs[s] * 100).toFixed(2);
+  });
+  updateFracSum();
 }
 
 function updateAdvisedBlend() {
@@ -1699,14 +1726,14 @@ function updateAdvisedBlend() {
   const tCI = getVal('target_ci');
 
   if (!gathered || isNaN(tCI) || !gathered.active.length) {
-    chip.textContent = 'Advised blend % (to exactly hit the CI ceiling at minimum cost): enter CI values + a CI ceiling first';
+    chip.textContent = 'Advised blend % (auto-filled below once you enter CI values + a CI ceiling): —';
     chip.classList.remove('bad');
     lastAdvice = null;
     btn.disabled = true;
     return;
   }
 
-  const advice = adviseBlendSplit(gathered.active, gathered.ciMap, tCI, gathered.rankMap);
+  const advice = adviseBlendSplit(gathered.active, gathered.ciMap, tCI, gathered.rankMap, gathered.solveSet);
   lastAdvice = advice;
 
   if (!advice.feasible) {
@@ -1719,16 +1746,24 @@ function updateAdvisedBlend() {
 
   chip.classList.remove('bad');
   const parts = gathered.active.map(s => `${s.toUpperCase()} <b>${(advice.fracs[s]*100).toFixed(1)}%</b>`).join(' · ');
-  chip.innerHTML = `Advised split to exactly hit the CI ceiling at minimum cost: ${parts}`;
-  btn.disabled = false;
+
+  // Auto-fill the Blend % fields — no manual entry needed — unless the user
+  // has hand-edited a field, in which case we leave their override alone.
+  if (!fracsManuallyEdited) {
+    writeFracFields(advice, gathered.active);
+    chip.innerHTML = `Auto-filled blend % (min-cost split to exactly hit the CI ceiling): ${parts}`;
+    btn.disabled = true;
+  } else {
+    chip.innerHTML = `Advised split to exactly hit the CI ceiling at minimum cost: ${parts} <span style="color:var(--muted)">(you've overridden the Blend % — click Reset to re-sync)</span>`;
+    btn.disabled = false;
+  }
 }
 
 function applyAdvisedBlend() {
   if (!lastAdvice || !lastAdvice.feasible) return;
-  activeShades().forEach(s => {
-    document.getElementById(s + '_frac').value = (lastAdvice.fracs[s] * 100).toFixed(1);
-  });
-  updateFracSum();
+  fracsManuallyEdited = false; // re-enable auto-fill going forward
+  writeFracFields(lastAdvice, activeShades());
+  updateAdvisedBlend();
   resetResults();
 }
 
@@ -2305,6 +2340,25 @@ function calculateRequiredPrice() {
   if (isNaN(tCI)) { showError('Please enter a Max Target CI ceiling.', '', ''); return; }
   if (isNaN(tP))  { showError('Please enter a Max Target Blended Price ceiling.', '', ''); return; }
 
+  // Early, specific feasibility check: is the CI ceiling reachable by ANY
+  // blend of the active shades at all? Catch this before the generic
+  // "fill in Blend %" error below, since that's not the real problem here.
+  const preCiMap = {};
+  let allCiPresent = true;
+  active.forEach(s => {
+    const ci = getVal(s + '_ci');
+    if (isNaN(ci)) { allCiPresent = false; } else { preCiMap[s] = ci; }
+  });
+  if (allCiPresent) {
+    const cis = active.map(s => preCiMap[s]);
+    const ciLo = Math.min(...cis), ciHi = Math.max(...cis);
+    if (tCI < ciLo - 1e-9) {
+      showError(`No blend of the selected shades can reach a CI ceiling of ${tCI} ${ciLabel}.`,
+        `Achievable CI: [${ciLo.toFixed(2)}, ${ciHi.toFixed(2)}] ${ciLabel}`, '');
+      return;
+    }
+  }
+
   const data = {};
   let fracSum = 0;
   for (const s of active) {
@@ -2337,7 +2391,7 @@ function calculateRequiredPrice() {
   }
 
   const blendedCI = active.reduce((sum, s) => sum + data[s].frac * data[s].ci, 0);
-  const ciOK = blendedCI <= tCI + 1e-9;
+  const ciOK = blendedCI <= tCI + 0.01; // small headroom for the 2-decimal Blend % rounding
 
   const solveShades = active.filter(s => data[s].solving);
   const knownShades = active.filter(s => !data[s].solving);
@@ -2367,9 +2421,9 @@ function calculateRequiredPrice() {
   const ciMap = {}, rankMap = {};
   active.forEach(s => {
     ciMap[s] = data[s].ci;
-    rankMap[s] = data[s].solving ? (data[s].cap !== null ? data[s].cap : 0) : data[s].knownPrice;
+    rankMap[s] = data[s].solving ? 0 : data[s].knownPrice; // solve-shade cost is unknown by design — rank neutrally
   });
-  const advice = adviseBlendSplit(active, ciMap, tCI, rankMap);
+  const advice = adviseBlendSplit(active, ciMap, tCI, rankMap, solveShades);
 
   hideError();
   lastReqSolution = {
@@ -2497,11 +2551,16 @@ function toggleReqHeatmap() {
 }
 
 function buildRequiredPriceHeatmap(sol) {
-  const { active, data, tCI, tP, blendedCI, knownShades, solveShades, dec, ciLabel, pu, ciMap, rankMap } = sol;
+  const { active, data, tCI, tP, knownShades, solveShades, dec, ciLabel, pu, ciMap, rankMap, advice } = sol;
 
   if (!solveShades.length) {
     document.getElementById('reqHeatmapWrap').innerHTML =
       `<p style="font-family:var(--mono);font-size:12px;color:var(--muted)">Mark at least one shade "Solve required price" to generate the heat map.</p>`;
+    return;
+  }
+  if (!advice || !advice.feasible) {
+    document.getElementById('reqHeatmapWrap').innerHTML =
+      `<p style="font-family:var(--mono);font-size:12px;color:var(--danger)">No blend of the selected shades can reach a CI of ${tCI} ${ciLabel} — adjust the CI ceiling or the shades' CI values.</p>`;
     return;
   }
 
@@ -2510,19 +2569,18 @@ function buildRequiredPriceHeatmap(sol) {
   const steps      = [-5,-4,-3,-2,-1,0,1,2,3,4,5];
   const deltasCI   = steps.map(d => d * ciStepV);
   const deltasP    = steps.map(d => d * priceStepV);
+  const solveLabel = solveShades.map(s => s.toUpperCase()).join('+');
 
-  const knownContribution = knownShades.reduce((sum, s) => sum + data[s].frac * data[s].knownPrice, 0);
-  const solveFracSum      = solveShades.reduce((sum, s) => sum + data[s].frac, 0);
-  const solveLabel        = solveShades.map(s => s.toUpperCase()).join('+');
-
-  function reqPriceFor(pCeiling) {
-    return (pCeiling - knownContribution) / solveFracSum;
-  }
-  const baseReq = reqPriceFor(tP);
+  // Global reference cell (your actual ceilings, optimal blend) — used to
+  // color every cell so the whole table reads relative to one baseline.
+  const baseKnownContribution = knownShades.reduce((sum, s) => sum + advice.fracs[s] * data[s].knownPrice, 0);
+  const baseSolveFracSum      = solveShades.reduce((sum, s) => sum + advice.fracs[s], 0);
+  const baseReq = baseSolveFracSum > 1e-9 ? (tP - baseKnownContribution) / baseSolveFracSum : null;
 
   document.getElementById('reqHeatmapTitle').textContent = `REQUIRED PRICE HEAT MAP — ${solveLabel}`;
   document.getElementById('reqHeatmapSubtitle').innerHTML =
-    `Required price for <b>${solveLabel}</b> as the CI ceiling (rows) and price ceiling (columns) vary around your inputs` +
+    `Required price for <b>${solveLabel}</b> as the CI ceiling (rows) and price ceiling (columns) vary — each row re-optimises the blend %` +
+    ` for that row's own CI ceiling (shown under it), so the table reflects the best achievable recipe at every point` +
     ` &nbsp;·&nbsp; base cell = your current ceilings (${tCI} ${ciLabel} / ${tP} ${pu})`;
 
   let html = '<table class="heatmap-table"><thead><tr>';
@@ -2553,19 +2611,27 @@ function buildRequiredPriceHeatmap(sol) {
     const rowCI     = tCI + rd;
     const isBaseRow = rd === 0;
     const sign      = rd > 0 ? '+' : '';
-    const ciFail    = blendedCI > rowCI + 1e-9;
     const deltaLabel = rd === 0
       ? ` <span class="base-tag">BASE</span>`
       : ` <span style="color:${rd<0?'var(--danger)':'var(--green-hue)'}">${sign}${rd.toFixed(1)}</span>`;
 
-    // Advised min-cost blend % for THIS row's CI ceiling — makes the advice
-    // table "sensitive": scan down the rows to see the recipe shift with CI.
-    const rowAdvice = adviseBlendSplit(active, ciMap, rowCI, rankMap);
+    // Re-optimise the blend % for THIS row's own CI ceiling — the table is
+    // "sensitive": scan down the rows to see both the recipe AND the
+    // required price shift together as the CI ceiling moves.
+    const rowAdvice = adviseBlendSplit(active, ciMap, rowCI, rankMap, solveShades);
+    const ciFail = !rowAdvice.feasible;
     const adviceNote = rowAdvice.feasible
       ? active.map(s => `${s[0].toUpperCase()}${(rowAdvice.fracs[s]*100).toFixed(0)}%`).join(' ')
       : 'no split fits';
 
     html += `<tr><td class="row-label ${isBaseRow?'base-row':''}">${rowCI.toFixed(2)}${deltaLabel}<span class="advice-note">${adviceNote}</span></td>`;
+
+    let rowKnownContribution = 0, rowSolveFracSum = 0;
+    if (!ciFail) {
+      knownShades.forEach(s => rowKnownContribution += rowAdvice.fracs[s] * data[s].knownPrice);
+      solveShades.forEach(s => rowSolveFracSum += rowAdvice.fracs[s]);
+    }
+    const solveUnused = !ciFail && rowSolveFracSum <= 1e-9;
 
     deltasP.forEach(cd => {
       const colP       = tP + cd;
@@ -2576,7 +2642,11 @@ function buildRequiredPriceHeatmap(sol) {
         html += `<td class="ci-fail" style="${outline}"><span>CI ✕</span></td>`;
         return;
       }
-      const reqP = reqPriceFor(colP);
+      if (solveUnused) {
+        html += `<td class="ci-fail" style="${outline}"><span>0% used</span></td>`;
+        return;
+      }
+      const reqP = (colP - rowKnownContribution) / rowSolveFracSum;
       if (reqP < 0) {
         html += `<td style="${outline}"><span class="infeasible">—</span></td>`;
         return;
@@ -2584,7 +2654,7 @@ function buildRequiredPriceHeatmap(sol) {
       const overCap = solveShades.some(s => data[s].cap !== null && reqP > data[s].cap + 1e-9);
       let bg, color;
       if (overCap) { bg = 'rgba(240,80,96,0.30)'; color = 'var(--danger)'; }
-      else { ({ bg, color } = cellColorStyle(reqP, baseReq)); }
+      else { ({ bg, color } = cellColorStyle(reqP, baseReq !== null ? baseReq : reqP)); }
       const bg2 = isBaseCell ? 'rgba(240,192,64,0.16)' : bg;
       html += `<td class="${overCap?'over-cap-cell':''}" style="background:${bg2};color:${color};font-weight:500;${outline}">
         <span style="font-size:12px">${reqP.toFixed(dec)}${overCap ? ' ⚠' : ''}</span>
@@ -3233,38 +3303,46 @@ function downloadRequiredPriceExcel() {
   XLSX.utils.book_append_sheet(wb, ws1, 'Required Price Summary');
 
   // ── Sheet 2: Required Price Heat Map ──
-  if (solveShades.length) {
+  // Mirrors the on-screen table: every row re-optimises the blend % for
+  // that row's own CI ceiling before computing the required price.
+  if (solveShades.length && advice && advice.feasible) {
     const ciStepV    = 0.1;
     const priceStepV = priceStep();
     const steps      = [-5,-4,-3,-2,-1,0,1,2,3,4,5];
     const deltasCI   = steps.map(d => d * ciStepV);
     const deltasP    = steps.map(d => d * priceStepV);
-    const knownContribution = knownShades.reduce((sum, s) => sum + data[s].frac * data[s].knownPrice, 0);
-    const solveFracSum      = solveShades.reduce((sum, s) => sum + data[s].frac, 0);
-    const solveLabel        = solveShades.map(s => s.toUpperCase()).join('+');
-    const reqPriceFor = (pCeiling) => (pCeiling - knownContribution) / solveFracSum;
+    const solveLabel = solveShades.map(s => s.toUpperCase()).join('+');
 
     const hmAoa = [];
     hmAoa.push([`Required Price Heat Map — ${solveLabel}`]);
-    hmAoa.push([`Rows: Max CI ceiling (±0.5 ${ciLabel})  |  Columns: Max Price ceiling (±5 steps of ${priceStepV} ${pu})`]);
+    hmAoa.push([`Rows: Max CI ceiling (±0.5 ${ciLabel}), each re-optimising the blend %  |  Columns: Max Price ceiling (±5 steps of ${priceStepV} ${pu})`]);
     hmAoa.push([`Base ceilings: ${tCI} ${ciLabel} / ${tP} ${pu}`]);
     hmAoa.push([]);
 
-    const hRow1 = [`CI ceiling (Y) ↓ \\ Price ceiling (X) →`, 'Advised Blend %'];
+    const hRow1 = [`CI ceiling (Y) ↓ \\ Price ceiling (X) →`, 'Advised Blend % (for this row)'];
     deltasP.forEach(d => hRow1.push(parseFloat((tP + d).toFixed(dec))));
     hmAoa.push(hRow1);
 
     deltasCI.forEach(rd => {
       const rowCI  = tCI + rd;
-      const ciFail = blendedCI > rowCI + 1e-9;
-      const rowAdvice = adviseBlendSplit(active, ciMap, rowCI, rankMap);
+      const rowAdvice = adviseBlendSplit(active, ciMap, rowCI, rankMap, solveShades);
+      const ciFail = !rowAdvice.feasible;
       const adviceStr = rowAdvice.feasible
         ? active.map(s => `${s.toUpperCase()} ${(rowAdvice.fracs[s]*100).toFixed(1)}%`).join(' / ')
         : 'no split fits';
+
+      let rowKnownContribution = 0, rowSolveFracSum = 0;
+      if (!ciFail) {
+        knownShades.forEach(s => rowKnownContribution += rowAdvice.fracs[s] * data[s].knownPrice);
+        solveShades.forEach(s => rowSolveFracSum += rowAdvice.fracs[s]);
+      }
+      const solveUnused = !ciFail && rowSolveFracSum <= 1e-9;
+
       const row = [parseFloat(rowCI.toFixed(2)), adviceStr];
       deltasP.forEach(cd => {
         if (ciFail) { row.push('CI FAIL'); return; }
-        const reqP = reqPriceFor(tP + cd);
+        if (solveUnused) { row.push('0% used'); return; }
+        const reqP = (tP + cd - rowKnownContribution) / rowSolveFracSum;
         row.push(reqP < 0 ? 'N/A' : parseFloat(reqP.toFixed(dec)));
       });
       hmAoa.push(row);
