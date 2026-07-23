@@ -828,6 +828,98 @@
     display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle;
     margin-left: 4px; opacity: 0.6;
   }
+
+  /* ══════════════════════════════════════════════
+     REQUIRED PRICE MODE
+  ══════════════════════════════════════════════ */
+  .reqprice-only { display: none !important; }
+  .reqprice-only.show { display: block !important; }
+  .reqprice-only.show.flex-row { display: flex !important; }
+
+  .ceiling-badge {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+    background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.35);
+    color: var(--gold); display: inline-flex; align-items: center; gap: 3px;
+  }
+
+  .solve-row {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    cursor: pointer; margin-top: 4px;
+  }
+  .solve-row input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--gold); cursor: pointer; }
+  .solve-row.active { color: var(--gold); }
+
+  .cap-row {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    cursor: pointer; margin-top: 8px; margin-bottom: 6px;
+  }
+  .cap-row input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--blue-hue); cursor: pointer; }
+
+  .frac-input-note {
+    font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 6px;
+  }
+  .frac-sum-chip {
+    font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: 12px;
+    background: rgba(34,212,138,0.12); border: 1px solid rgba(34,212,138,0.3); color: var(--green-hue);
+  }
+  .frac-sum-chip.bad {
+    background: rgba(240,80,96,0.12); border-color: rgba(240,80,96,0.35); color: var(--danger);
+  }
+
+  /* Required-price result cards */
+  .req-cards-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+    margin-bottom: 24px;
+  }
+  .req-card {
+    background: rgba(0,0,0,0.25); border: 1px solid var(--border-lit);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .req-card .req-shade-name {
+    font-family: var(--display); font-size: 16px; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 7px; margin-bottom: 8px;
+  }
+  .req-card .req-price-val {
+    font-family: var(--mono); font-size: 24px; font-weight: 500; color: #fff;
+  }
+  .req-card .req-price-cap-note {
+    font-family: var(--mono); font-size: 10px; margin-top: 6px; color: var(--muted);
+  }
+  .req-card.over-cap { border-color: rgba(240,80,96,0.45); background: rgba(240,80,96,0.08); }
+  .req-card.over-cap .req-price-val { color: var(--danger); }
+  .req-card.ok-cap .req-price-val { color: var(--green-hue); }
+
+  .feasibility-banner {
+    border-radius: 10px; padding: 14px 20px; margin-bottom: 24px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.6;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .feasibility-banner.pass {
+    background: rgba(34,212,138,0.10); border: 1px solid rgba(34,212,138,0.3); color: var(--green-hue);
+  }
+  .feasibility-banner.fail {
+    background: rgba(240,80,96,0.10); border: 1px solid rgba(240,80,96,0.35); color: var(--danger);
+  }
+  .feasibility-banner strong {
+    font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* Heatmap */
+  .heatmap-toggle-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--gold);
+    background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.3);
+    border-radius: 8px; padding: 9px 20px; cursor: pointer; transition: all 0.2s;
+  }
+  .heatmap-toggle-btn:hover { background: rgba(240,192,64,0.15); border-color: rgba(240,192,64,0.55); }
+  .heatmap-panel { display: none; opacity: 0; transition: opacity 0.3s; }
+  .heatmap-panel.show { display: block; }
+  .heatmap-panel.animate { opacity: 1; }
+  .heatmap-table td.ci-fail { color: var(--muted); font-size: 10px; letter-spacing: 0.05em; }
+  .heatmap-table td.over-cap-cell { position: relative; }
 </style>
 </head>
 <body class="light">
@@ -881,7 +973,7 @@
           <span class="toggle-thumb"></span>
         </label>
       </div>
-      <div class="field">
+      <div class="field" id="priceField_grey">
         <label>Price</label>
         <div class="input-wrap">
           <input type="number" id="grey_price" step="0.01" placeholder="e.g. 2.00">
@@ -893,6 +985,29 @@
         <div class="input-wrap">
           <input type="number" id="grey_ci" step="0.01" placeholder="e.g. 12.0">
           <span class="unit-badge" id="grey_ci_unit">kgCO₂e/kg</span>
+        </div>
+      </div>
+      <div class="field reqprice-only" id="fracField_grey">
+        <label>Blend % (fixed fraction)</label>
+        <div class="input-wrap">
+          <input type="number" id="grey_frac" step="0.1" placeholder="e.g. 30" oninput="onFracInput()">
+          <span class="unit-badge">%</span>
+        </div>
+      </div>
+      <div class="reqprice-only" id="solveWrap_grey">
+        <label class="solve-row" id="solveRow_grey">
+          <input type="checkbox" id="grey_solve" onchange="onSolveToggle('grey')">
+          Solve required price for GREY
+        </label>
+      </div>
+      <div class="reqprice-only" id="capWrapOuter_grey">
+        <label class="cap-row">
+          <input type="checkbox" id="grey_capOn" onchange="onCapToggle('grey')">
+          Limit max price
+        </label>
+        <div class="input-wrap" id="capWrap_grey" style="display:none;">
+          <input type="number" id="grey_cap" step="0.01" placeholder="e.g. 3.00">
+          <span class="unit-badge" id="grey_cap_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
     </div>
@@ -907,7 +1022,7 @@
           <span class="toggle-thumb"></span>
         </label>
       </div>
-      <div class="field">
+      <div class="field" id="priceField_blue">
         <label>Price</label>
         <div class="input-wrap">
           <input type="number" id="blue_price" step="0.01" placeholder="e.g. 3.50">
@@ -919,6 +1034,29 @@
         <div class="input-wrap">
           <input type="number" id="blue_ci" step="0.01" placeholder="e.g. 5.0">
           <span class="unit-badge" id="blue_ci_unit">kgCO₂e/kg</span>
+        </div>
+      </div>
+      <div class="field reqprice-only" id="fracField_blue">
+        <label>Blend % (fixed fraction)</label>
+        <div class="input-wrap">
+          <input type="number" id="blue_frac" step="0.1" placeholder="e.g. 40" oninput="onFracInput()">
+          <span class="unit-badge">%</span>
+        </div>
+      </div>
+      <div class="reqprice-only" id="solveWrap_blue">
+        <label class="solve-row" id="solveRow_blue">
+          <input type="checkbox" id="blue_solve" onchange="onSolveToggle('blue')">
+          Solve required price for BLUE
+        </label>
+      </div>
+      <div class="reqprice-only" id="capWrapOuter_blue">
+        <label class="cap-row">
+          <input type="checkbox" id="blue_capOn" onchange="onCapToggle('blue')">
+          Limit max price
+        </label>
+        <div class="input-wrap" id="capWrap_blue" style="display:none;">
+          <input type="number" id="blue_cap" step="0.01" placeholder="e.g. 4.50">
+          <span class="unit-badge" id="blue_cap_unit">USD/kg<sub>H₂</sub></span>
         </div>
       </div>
     </div>
@@ -933,7 +1071,7 @@
           <span class="toggle-thumb"></span>
         </label>
       </div>
-      <div class="field">
+      <div class="field" id="priceField_green">
         <label>Price</label>
         <div class="input-wrap">
           <input type="number" id="green_price" step="0.01" placeholder="e.g. 6.00">
@@ -947,7 +1085,35 @@
           <span class="unit-badge" id="green_ci_unit">kgCO₂e/kg</span>
         </div>
       </div>
+      <div class="field reqprice-only" id="fracField_green">
+        <label>Blend % (fixed fraction)</label>
+        <div class="input-wrap">
+          <input type="number" id="green_frac" step="0.1" placeholder="e.g. 30" oninput="onFracInput()">
+          <span class="unit-badge">%</span>
+        </div>
+      </div>
+      <div class="reqprice-only" id="solveWrap_green">
+        <label class="solve-row" id="solveRow_green">
+          <input type="checkbox" id="green_solve" onchange="onSolveToggle('green')">
+          Solve required price for GREEN
+        </label>
+      </div>
+      <div class="reqprice-only" id="capWrapOuter_green">
+        <label class="cap-row">
+          <input type="checkbox" id="green_capOn" onchange="onCapToggle('green')">
+          Limit max price
+        </label>
+        <div class="input-wrap" id="capWrap_green" style="display:none;">
+          <input type="number" id="green_cap" step="0.01" placeholder="e.g. 8.00">
+          <span class="unit-badge" id="green_cap_unit">USD/kg<sub>H₂</sub></span>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- ══ REQUIRED-PRICE FRACTION SUM INDICATOR ══ -->
+  <div class="reqprice-only flex-row" id="fracSumRow" style="margin-top:-8px;margin-bottom:20px;justify-content:flex-end;">
+    <span class="frac-sum-chip" id="fracSumChip">Blend % total: 0%</span>
   </div>
 
   <!-- ══ TARGET ══ -->
@@ -960,6 +1126,7 @@
         <div class="toggle-pills" id="refModePills">
           <button class="pill active" data-ref="ci" onclick="setReferenceMode('ci')">↳ CI Target</button>
           <button class="pill" data-ref="price" onclick="setReferenceMode('price')">↳ Price Target</button>
+          <button class="pill" data-ref="reqprice" onclick="setReferenceMode('reqprice')">↳ Required Price</button>
         </div>
         <span class="ref-hint" id="refHint">Enter your CI target — blended price will be computed as a result</span>
       </div>
@@ -968,7 +1135,7 @@
     <div class="target-grid">
       <div class="field" style="margin:0">
         <label style="display:flex;align-items:center;gap:7px;">
-          Target CI
+          <span id="targetCiLabel">Target CI</span>
           <span id="ciRefBadge" class="ref-active-badge">● REFERENCE</span>
         </label>
         <div class="input-wrap reference-input" id="ciInputWrap">
@@ -978,7 +1145,7 @@
       </div>
       <div class="field" style="margin:0">
         <label style="display:flex;align-items:center;gap:7px;">
-          Target Levelized Cost
+          <span id="targetPriceLabel">Target Levelized Cost</span>
           <span id="priceRefBadge" class="computed-ref-badge">◌ COMPUTED</span>
         </label>
         <div class="input-wrap computed-input" id="priceInputWrap">
@@ -1085,6 +1252,80 @@
     </div>
   </div>
 
+  <!-- ══ REQUIRED PRICE RESULTS ══ -->
+  <div class="results-panel" id="reqResultsPanel">
+    <div class="results-header">
+      <div class="results-title">REQUIRED PRICE SOLUTION</div>
+    </div>
+
+    <div class="feasibility-banner" id="reqFeasBanner">
+      <strong id="reqFeasTitle">✓ FEASIBLE</strong>
+      <span id="reqFeasDetail"></span>
+    </div>
+
+    <div class="blend-bars" id="reqBlendBars">
+      <div class="blend-row" id="reqrow_grey">
+        <div class="blend-meta">
+          <div class="blend-name"><span class="shade-dot" style="background:var(--grey-hue)"></span><span style="color:var(--grey-hue)">GREY</span></div>
+          <div class="blend-pct" id="reqgrey_pct">—</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill grey" id="reqgrey_bar"></div></div>
+      </div>
+      <div class="blend-row" id="reqrow_blue">
+        <div class="blend-meta">
+          <div class="blend-name"><span class="shade-dot" style="background:var(--blue-hue)"></span><span style="color:var(--blue-hue)">BLUE</span></div>
+          <div class="blend-pct" id="reqblue_pct">—</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill blue" id="reqblue_bar"></div></div>
+      </div>
+      <div class="blend-row" id="reqrow_green">
+        <div class="blend-meta">
+          <div class="blend-name"><span class="shade-dot" style="background:var(--green-hue)"></span><span style="color:var(--green-hue)">GREEN</span></div>
+          <div class="blend-pct" id="reqgreen_pct">—</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill green" id="reqgreen_bar"></div></div>
+      </div>
+    </div>
+
+    <div class="confirmed-grid" style="margin-bottom:24px;">
+      <div class="metric-card">
+        <div class="metric-label">Blended CI (fixed blend) vs Ceiling</div>
+        <div class="metric-val" id="req_conf_ci">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Achieved Blended Price vs Ceiling</div>
+        <div class="metric-val" id="req_conf_price">—</div>
+      </div>
+    </div>
+
+    <div class="section-label">Required Price by Shade</div>
+    <div class="req-cards-grid" id="reqCardsGrid"></div>
+  </div>
+
+  <!-- ══ REQUIRED PRICE HEATMAP ══ -->
+  <div id="reqHeatmapSection" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="heatmap-toggle-btn" id="reqHeatmapToggleBtn" onclick="toggleReqHeatmap()">
+        ▼ &nbsp;SHOW REQUIRED-PRICE HEAT MAP
+      </button>
+    </div>
+    <div class="heatmap-panel" id="reqHeatmapPanel">
+      <div class="sens-header-block">
+        <div class="sens-title" id="reqHeatmapTitle">REQUIRED PRICE HEAT MAP</div>
+        <div class="sens-subtitle" id="reqHeatmapSubtitle">How the required price shifts as your CI and price ceilings move</div>
+      </div>
+      <div class="table-wrap" id="reqHeatmapWrap"></div>
+      <div class="legend" style="margin-top:14px;">
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(34,212,138,0.45)"></div>≥15% cheaper than base</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(34,212,138,0.18)"></div>Cheaper than base</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,192,64,0.25); border:1px solid rgba(240,192,64,0.4)"></div>At base (±2%)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,80,96,0.18)"></div>More expensive than base</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,80,96,0.45)"></div>≥15% more expensive / over cap</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(90,112,144,0.25)"></div>Infeasible (CI ceiling breached)</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ SENSITIVITY TABLE ══ -->
   <div id="sensSection" style="display:none">
     <div style="margin-bottom:16px;">
@@ -1161,10 +1402,14 @@
     </button>
     <div class="download-hint">
       Exports full report as <strong>.xlsx</strong> — open in Excel, Google Sheets, or Numbers
-      <div class="dl-sheets">
+      <div class="dl-sheets" id="dlSheetsStandard">
         <span class="dl-sheet-chip">Sheet 1 · Blend Summary</span>
         <span class="dl-sheet-chip">Sheet 2 · Price Sensitivity</span>
         <span class="dl-sheet-chip">Sheet 3 · CI Sensitivity</span>
+      </div>
+      <div class="dl-sheets reqprice-only flex-row" id="dlSheetsReqPrice">
+        <span class="dl-sheet-chip">Sheet 1 · Required Price Summary</span>
+        <span class="dl-sheet-chip">Sheet 2 · Required Price Heatmap</span>
       </div>
     </div>
   </div>
@@ -1177,10 +1422,12 @@
 // ══════════════════════════════════════════════
 let molecule      = 'H2';    // 'H2' | 'NH3'
 let ciUnit        = 'kgco2'; // 'kgco2' | 'gco2mj'
-let referenceMode = 'ci';    // 'ci' | 'price'
+let referenceMode = 'ci';    // 'ci' | 'price' | 'reqprice'
 let sensOpen      = false;
 let mathOpen      = false;
 let lastSolution  = null;
+let lastReqSolution = null;
+let reqHeatmapOpen  = false;
 
 // ══════════════════════════════════════════════
 //   REFERENCE MODE TOGGLE
@@ -1197,7 +1444,22 @@ function setReferenceMode(mode) {
   const ciRefBadge  = document.getElementById('ciRefBadge');
   const prBadge     = document.getElementById('priceRefBadge');
   const hint        = document.getElementById('refHint');
-  const dec         = molecule === 'H2' ? 2 : 0;
+  const ciLabelEl   = document.getElementById('targetCiLabel');
+  const priceLabelEl= document.getElementById('targetPriceLabel');
+
+  // Toggle the reqprice-only shade-card controls (frac / solve / cap)
+  document.querySelectorAll('.reqprice-only').forEach(el => el.classList.toggle('show', mode === 'reqprice'));
+  document.getElementById('dlSheetsStandard').style.display = mode === 'reqprice' ? 'none' : '';
+  // Toggle the plain Price field per shade — hidden while its "solve" checkbox is on (handled in onSolveToggle),
+  // but always visible again when leaving reqprice mode.
+  if (mode !== 'reqprice') {
+    ['grey','blue','green'].forEach(s => {
+      document.getElementById('priceField_' + s).style.display = '';
+    });
+  } else {
+    ['grey','blue','green'].forEach(s => onSolveToggle(s));
+    updateFracSum();
+  }
 
   if (mode === 'ci') {
     ciWrap.classList.add('reference-input');    ciWrap.classList.remove('computed-input');
@@ -1210,7 +1472,9 @@ function setReferenceMode(mode) {
     ciRefBadge.textContent = '● REFERENCE'; ciRefBadge.className = 'ref-active-badge';
     prBadge.textContent    = '◌ COMPUTED';  prBadge.className    = 'computed-ref-badge';
     hint.textContent = 'Enter your CI target — blended price will be computed as a result';
-  } else {
+    if (ciLabelEl) ciLabelEl.textContent = 'Target CI';
+    if (priceLabelEl) priceLabelEl.textContent = 'Target Levelized Cost';
+  } else if (mode === 'price') {
     priceWrap.classList.add('reference-input'); priceWrap.classList.remove('computed-input');
     ciWrap.classList.add('computed-input');     ciWrap.classList.remove('reference-input');
     priceInput.removeAttribute('readonly');
@@ -1221,6 +1485,21 @@ function setReferenceMode(mode) {
     prBadge.textContent    = '● REFERENCE'; prBadge.className    = 'ref-active-badge';
     ciRefBadge.textContent = '◌ COMPUTED';  ciRefBadge.className = 'computed-ref-badge';
     hint.textContent = 'Enter your price target — blended CI will be computed as a result';
+    if (ciLabelEl) ciLabelEl.textContent = 'Target CI';
+    if (priceLabelEl) priceLabelEl.textContent = 'Target Levelized Cost';
+  } else {
+    // reqprice: both fields are editable ceilings
+    ciWrap.classList.remove('reference-input', 'computed-input');
+    priceWrap.classList.remove('reference-input', 'computed-input');
+    ciInput.removeAttribute('readonly');
+    priceInput.removeAttribute('readonly');
+    ciInput.placeholder = 'e.g. 4.0 (max allowed)';
+    priceInput.placeholder = 'e.g. 3.50 (max allowed)';
+    ciRefBadge.textContent = '◆ CEILING'; ciRefBadge.className = 'ceiling-badge';
+    prBadge.textContent    = '◆ CEILING'; prBadge.className    = 'ceiling-badge';
+    hint.textContent = 'Set both ceilings — the tool solves the required price for whichever shade(s) you mark "Solve required price"';
+    if (ciLabelEl) ciLabelEl.textContent = 'Max Target CI';
+    if (priceLabelEl) priceLabelEl.textContent = 'Max Target Blended Price';
   }
   resetResults();
 }
@@ -1249,12 +1528,18 @@ function onShadeToggle() {
   }
 
   updateModeNote(active);
+  if (referenceMode === 'reqprice') updateFracSum();
   resetResults();
 }
 
 function updateModeNote(active) {
   const note = document.getElementById('modeNote');
   const hint = document.getElementById('calcHint');
+  if (referenceMode === 'reqprice') {
+    note.classList.remove('show');
+    hint.textContent = 'Fixed blend % · Solves required price for the shade(s) marked "solve"';
+    return;
+  }
   if (active.length === 3) {
     note.classList.remove('show');
     hint.textContent = 'Solves 3-equation linear system · Validates feasibility';
@@ -1267,6 +1552,40 @@ function updateModeNote(active) {
     note.classList.add('show');
     hint.textContent = '100% single shade — no blending required';
   }
+}
+
+// ══════════════════════════════════════════════
+//   REQUIRED PRICE MODE — per-shade controls
+// ══════════════════════════════════════════════
+function onSolveToggle(s) {
+  const solving = document.getElementById(s + '_solve').checked;
+  document.getElementById('priceField_' + s).style.display = solving ? 'none' : '';
+  document.getElementById('solveRow_' + s).classList.toggle('active', solving);
+  resetResults();
+}
+
+function onCapToggle(s) {
+  const on = document.getElementById(s + '_capOn').checked;
+  document.getElementById('capWrap_' + s).style.display = on ? 'flex' : 'none';
+  resetResults();
+}
+
+function onFracInput() {
+  updateFracSum();
+  resetResults();
+}
+
+function updateFracSum() {
+  const chip = document.getElementById('fracSumChip');
+  if (!chip) return;
+  const active = activeShades();
+  let sum = 0;
+  active.forEach(s => {
+    const v = getVal(s + '_frac');
+    if (!isNaN(v)) sum += v;
+  });
+  chip.textContent = `Blend % total: ${sum.toFixed(1)}%`;
+  chip.classList.toggle('bad', Math.abs(sum - 100) > 0.05);
 }
 
 // ══════════════════════════════════════════════
@@ -1312,6 +1631,12 @@ function updateUnits() {
   });
   document.getElementById('target_price_unit').innerHTML = puHtml;
   document.getElementById('target_ci_unit').textContent = cu;
+
+  // Required-price mode cap unit badges
+  ['grey','blue','green'].forEach(s => {
+    const capEl = document.getElementById(`${s}_cap_unit`);
+    if (capEl) capEl.innerHTML = puHtml;
+  });
 
   // CI unit pill labels
   const molLabel = document.querySelectorAll('.mol-label-unit');
@@ -1387,6 +1712,8 @@ function solve2ShadeByPrice(sA, sB, data, t_p) {
 }
 
 function calculate() {
+  if (referenceMode === 'reqprice') { calculateRequiredPrice(); return; }
+
   const active = activeShades();
   const dec    = molecule === 'H2' ? 2 : 0;
   const ciLabel = ciUnitLabel(molecule, ciUnit);
@@ -1605,6 +1932,17 @@ function resetResults() {
   document.getElementById('sensSection').style.display = 'none';
   document.getElementById('ciSensSection').classList.remove('show');
   document.getElementById('downloadSection').classList.remove('show');
+
+  // Required-price mode panels
+  const reqPanel = document.getElementById('reqResultsPanel');
+  reqPanel.classList.remove('show', 'animate');
+  reqPanel.style.display = 'none';
+  document.getElementById('reqgrey_bar').style.width  = '0';
+  document.getElementById('reqblue_bar').style.width  = '0';
+  document.getElementById('reqgreen_bar').style.width = '0';
+  document.getElementById('reqHeatmapSection').style.display = 'none';
+  lastReqSolution = null;
+
   hideError();
 }
 
@@ -1621,6 +1959,9 @@ function showError(msg, range1, range2) {
   b.classList.add('show');
   document.getElementById('resultsPanel').classList.remove('show', 'animate');
   document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('reqResultsPanel').classList.remove('show', 'animate');
+  document.getElementById('reqResultsPanel').style.display = 'none';
+  document.getElementById('reqHeatmapSection').style.display = 'none';
 }
 function hideError() {
   document.getElementById('errorBanner').classList.remove('show');
@@ -1797,6 +2138,286 @@ function buildSensitivityTable() {
   document.getElementById('tableWrap').innerHTML = html;
   // Update legend subtitle in the sens legend
   const legTitle = document.querySelector('#sensLegend')?.previousElementSibling;
+}
+
+// ══════════════════════════════════════════════
+//   REQUIRED PRICE MODE
+//   Given a fixed blend % per shade + known CI per shade:
+//     • Blended CI is fully determined by the fixed fractions — checked
+//       against the CI ceiling (price plays no part in CI).
+//     • Blended price = Σ(fraction × price). Shades with a known price
+//       contribute a fixed amount; shades marked "solve" share the
+//       remaining budget equally (same $/unit — the "required price"),
+//       solved from: Σ(known contrib) + requiredPrice × Σ(solve fracs) = ceiling.
+// ══════════════════════════════════════════════
+function calculateRequiredPrice() {
+  const active = activeShades();
+  const dec     = molecule === 'H2' ? 2 : 0;
+  const ciLabel = ciUnitLabel(molecule, ciUnit);
+  const pu      = priceUnit(molecule);
+
+  const tCI = getVal('target_ci');
+  const tP  = getVal('target_price');
+  if (isNaN(tCI)) { showError('Please enter a Max Target CI ceiling.', '', ''); return; }
+  if (isNaN(tP))  { showError('Please enter a Max Target Blended Price ceiling.', '', ''); return; }
+
+  const data = {};
+  let fracSum = 0;
+  for (const s of active) {
+    const ci   = getVal(s + '_ci');
+    const frac = getVal(s + '_frac');
+    if (isNaN(ci))   { showError(`Please enter Carbon Intensity for ${s.toUpperCase()}.`, '', ''); return; }
+    if (isNaN(frac) || frac < 0) { showError(`Please enter a valid Blend % for ${s.toUpperCase()}.`, '', ''); return; }
+
+    const solving = document.getElementById(s + '_solve').checked;
+    const capOn   = document.getElementById(s + '_capOn').checked;
+    let cap = null;
+    if (capOn) {
+      cap = getVal(s + '_cap');
+      if (isNaN(cap)) { showError(`Please enter a Max Price cap for ${s.toUpperCase()}, or untick "Limit max price".`, '', ''); return; }
+    }
+
+    let knownPrice = null;
+    if (!solving) {
+      knownPrice = getVal(s + '_price');
+      if (isNaN(knownPrice)) { showError(`Please enter a known Price for ${s.toUpperCase()}, or check "Solve required price for ${s.toUpperCase()}".`, '', ''); return; }
+    }
+
+    data[s] = { ci, frac: frac / 100, solving, cap, knownPrice };
+    fracSum += frac;
+  }
+
+  if (Math.abs(fracSum - 100) > 0.1) {
+    showError(`Blend percentages must sum to 100% (currently ${fracSum.toFixed(1)}%). Adjust the Blend % fields.`, '', '');
+    return;
+  }
+
+  const blendedCI = active.reduce((sum, s) => sum + data[s].frac * data[s].ci, 0);
+  const ciOK = blendedCI <= tCI + 1e-9;
+
+  const solveShades = active.filter(s => data[s].solving);
+  const knownShades = active.filter(s => !data[s].solving);
+  const knownContribution = knownShades.reduce((sum, s) => sum + data[s].frac * data[s].knownPrice, 0);
+  const solveFracSum = solveShades.reduce((sum, s) => sum + data[s].frac, 0);
+
+  if (solveShades.length && solveFracSum <= 1e-9) {
+    showError(`Shade(s) marked "solve required price" have a 0% blend fraction — assign them a Blend % first.`, '', '');
+    return;
+  }
+
+  let requiredPrice = null, achievedPrice;
+  if (solveShades.length === 0) {
+    achievedPrice = knownContribution;
+  } else {
+    requiredPrice = (tP - knownContribution) / solveFracSum;
+    achievedPrice = knownContribution + requiredPrice * solveFracSum;
+  }
+  const priceOK = requiredPrice === null ? (achievedPrice <= tP + 1e-9) : requiredPrice >= -1e-9;
+
+  const capViolations = [];
+  solveShades.forEach(s => { if (data[s].cap !== null && requiredPrice !== null && requiredPrice > data[s].cap + 1e-9) capViolations.push(s); });
+  knownShades.forEach(s => { if (data[s].cap !== null && data[s].knownPrice > data[s].cap + 1e-9) capViolations.push(s); });
+
+  hideError();
+  lastReqSolution = {
+    active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK,
+    capViolations, solveShades, knownShades, dec, ciLabel, pu
+  };
+  showRequiredPriceResults(lastReqSolution);
+  buildRequiredPriceHeatmap(lastReqSolution);
+  document.getElementById('reqHeatmapSection').style.display = 'block';
+  document.getElementById('downloadSection').classList.add('show');
+}
+
+function showRequiredPriceResults(sol) {
+  const { active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK, capViolations, solveShades, dec, ciLabel, pu } = sol;
+
+  const panel = document.getElementById('reqResultsPanel');
+  panel.style.display = 'block';
+  requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('animate')));
+  panel.classList.add('show');
+
+  // Blend bars reflect the fixed input fractions
+  ['grey','blue','green'].forEach(s => {
+    const row = document.getElementById('reqrow_' + s);
+    if (active.includes(s)) {
+      row.style.display = 'flex';
+      document.getElementById('req' + s + '_pct').textContent = (data[s].frac * 100).toFixed(1) + '%';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  setTimeout(() => {
+    ['grey','blue','green'].forEach(s => {
+      document.getElementById('req' + s + '_bar').style.width = active.includes(s) ? (data[s].frac * 100) + '%' : '0';
+    });
+  }, 80);
+
+  document.getElementById('req_conf_ci').innerHTML =
+    `<span style="color:${ciOK ? 'var(--green-hue)' : 'var(--danger)'}">${blendedCI.toFixed(2)}</span>` +
+    `<span class="metric-unit"> ${ciLabel} / ${tCI} max</span>`;
+
+  document.getElementById('req_conf_price').innerHTML =
+    `<span style="color:${priceOK ? 'var(--green-hue)' : 'var(--danger)'}">${achievedPrice.toFixed(dec)}</span>` +
+    `<span class="metric-unit"> ${pu} / ${tP} max</span>`;
+
+  // Feasibility banner
+  const feasible = ciOK && priceOK && capViolations.length === 0;
+  const banner = document.getElementById('reqFeasBanner');
+  const title  = document.getElementById('reqFeasTitle');
+  const detail = document.getElementById('reqFeasDetail');
+  banner.className = 'feasibility-banner ' + (feasible ? 'pass' : 'fail');
+  const reasons = [];
+  if (!ciOK) reasons.push(`fixed blend CI (${blendedCI.toFixed(2)} ${ciLabel}) exceeds the ${tCI} ${ciLabel} ceiling`);
+  if (requiredPrice !== null && requiredPrice < 0) reasons.push(`required price is negative (${requiredPrice.toFixed(dec)} ${pu}) — the price ceiling is unreachable even at zero cost`);
+  else if (!priceOK) reasons.push(`achieved blended price (${achievedPrice.toFixed(dec)} ${pu}) exceeds the ${tP} ${pu} ceiling`);
+  if (capViolations.length) reasons.push(`max price cap exceeded for: ${capViolations.map(s=>s.toUpperCase()).join(', ')}`);
+
+  if (feasible) {
+    title.textContent = '✓ FEASIBLE';
+    detail.textContent = solveShades.length
+      ? `Solved required price of ${requiredPrice.toFixed(dec)} ${pu} for ${solveShades.map(s=>s.toUpperCase()).join(', ')} satisfies both ceilings.`
+      : `Fixed blend already satisfies both ceilings with fully known prices.`;
+  } else {
+    title.textContent = '⚠ NOT FEASIBLE';
+    detail.textContent = 'Reason(s): ' + reasons.join('; ') + '.';
+  }
+
+  // Required-price cards — one per solved shade
+  const grid = document.getElementById('reqCardsGrid');
+  const shadeColor = s => s==='green'?'var(--green-hue)':s==='blue'?'var(--blue-hue)':'var(--grey-hue)';
+  if (!solveShades.length) {
+    grid.innerHTML = `<div class="req-card"><div class="req-shade-name">No shade marked to solve</div>
+      <div class="req-price-cap-note">Check "Solve required price" on a shade card to compute its breakeven price.</div></div>`;
+  } else {
+    grid.innerHTML = solveShades.map(s => {
+      const cap = data[s].cap;
+      const overCap = cap !== null && requiredPrice !== null && requiredPrice > cap + 1e-9;
+      const cls = requiredPrice === null ? '' : (overCap ? 'over-cap' : 'ok-cap');
+      const valStr = requiredPrice === null ? '—' : requiredPrice.toFixed(dec);
+      return `<div class="req-card ${cls}">
+        <div class="req-shade-name"><span class="shade-dot" style="background:${shadeColor(s)}"></span><span style="color:${shadeColor(s)}">${s.toUpperCase()}</span></div>
+        <div class="req-price-val">${valStr} <span style="font-size:12px;font-weight:400;color:var(--muted)">${pu}</span></div>
+        <div class="req-price-cap-note">${cap !== null ? `Cap: ${cap.toFixed(dec)} ${pu} ${overCap ? ' — EXCEEDED' : '(within cap)'}` : 'No cap set'}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+//   REQUIRED PRICE HEAT MAP
+//   Rows: Max Target CI ceiling varied ±5 steps of 0.1
+//   Cols: Max Target Blended Price ceiling varied ±5 steps
+//   Cell: required price for the solved shade(s), or "CI ✕" if the
+//         fixed blend's CI can't meet that row's (tighter) ceiling.
+// ══════════════════════════════════════════════
+function toggleReqHeatmap() {
+  reqHeatmapOpen = !reqHeatmapOpen;
+  const panel = document.getElementById('reqHeatmapPanel');
+  const btn   = document.getElementById('reqHeatmapToggleBtn');
+  if (reqHeatmapOpen) {
+    panel.classList.add('show');
+    requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('animate')));
+    btn.textContent = '▲  HIDE REQUIRED-PRICE HEAT MAP';
+  } else {
+    panel.classList.remove('animate');
+    setTimeout(() => panel.classList.remove('show'), 300);
+    btn.textContent = '▼  SHOW REQUIRED-PRICE HEAT MAP';
+  }
+}
+
+function buildRequiredPriceHeatmap(sol) {
+  const { data, tCI, tP, blendedCI, knownShades, solveShades, dec, ciLabel, pu } = sol;
+
+  if (!solveShades.length) {
+    document.getElementById('reqHeatmapWrap').innerHTML =
+      `<p style="font-family:var(--mono);font-size:12px;color:var(--muted)">Mark at least one shade "Solve required price" to generate the heat map.</p>`;
+    return;
+  }
+
+  const ciStepV    = 0.1;
+  const priceStepV = priceStep();
+  const steps      = [-5,-4,-3,-2,-1,0,1,2,3,4,5];
+  const deltasCI   = steps.map(d => d * ciStepV);
+  const deltasP    = steps.map(d => d * priceStepV);
+
+  const knownContribution = knownShades.reduce((sum, s) => sum + data[s].frac * data[s].knownPrice, 0);
+  const solveFracSum      = solveShades.reduce((sum, s) => sum + data[s].frac, 0);
+  const solveLabel        = solveShades.map(s => s.toUpperCase()).join('+');
+
+  function reqPriceFor(pCeiling) {
+    return (pCeiling - knownContribution) / solveFracSum;
+  }
+  const baseReq = reqPriceFor(tP);
+
+  document.getElementById('reqHeatmapTitle').textContent = `REQUIRED PRICE HEAT MAP — ${solveLabel}`;
+  document.getElementById('reqHeatmapSubtitle').innerHTML =
+    `Required price for <b>${solveLabel}</b> as the CI ceiling (rows) and price ceiling (columns) vary around your inputs` +
+    ` &nbsp;·&nbsp; base cell = your current ceilings (${tCI} ${ciLabel} / ${tP} ${pu})`;
+
+  let html = '<table class="heatmap-table"><thead><tr>';
+  html += `<th class="row-axis"><div style="display:flex;flex-direction:column;gap:3px;">
+      <span class="axis-label" style="color:var(--gold)">MAX CI CEILING</span>
+      <span style="color:var(--muted);font-size:9px;margin-top:2px;">Y axis · ${ciLabel}</span>
+    </div></th>`;
+  deltasP.forEach(d => {
+    const p = (tP + d).toFixed(dec);
+    const sign = d > 0 ? '+' : '';
+    const cls  = d > 0 ? 'pos' : (d < 0 ? 'neg' : '');
+    html += `<th class="col-header" style="min-width:76px"><div class="col-label-wrap">
+      <span style="color:var(--blue-hue);font-weight:600;font-size:11px">${p}</span>
+      <span class="col-delta ${cls}">${d === 0 ? 'BASE' : sign + d}</span>
+    </div></th>`;
+  });
+  html += `</tr>
+    <tr style="background:var(--bg-card2)">
+      <td class="row-label" style="font-size:9px;color:var(--muted);border-right:1px solid var(--border);white-space:nowrap;">
+        ↑ <span style="color:var(--gold);font-weight:600">Y: MAX CI</span><br>
+        <span style="color:var(--blue-hue);font-size:8px">X: MAX PRICE → ${pu}</span>
+      </td>
+      ${deltasP.map(()=>`<td style="border-bottom:1px solid var(--border);"></td>`).join('')}
+    </tr>
+    </thead><tbody>`;
+
+  deltasCI.forEach(rd => {
+    const rowCI     = tCI + rd;
+    const isBaseRow = rd === 0;
+    const sign      = rd > 0 ? '+' : '';
+    const ciFail    = blendedCI > rowCI + 1e-9;
+    const deltaLabel = rd === 0
+      ? ` <span class="base-tag">BASE</span>`
+      : ` <span style="color:${rd<0?'var(--danger)':'var(--green-hue)'}">${sign}${rd.toFixed(1)}</span>`;
+
+    html += `<tr><td class="row-label ${isBaseRow?'base-row':''}">${rowCI.toFixed(2)}${deltaLabel}</td>`;
+
+    deltasP.forEach(cd => {
+      const colP       = tP + cd;
+      const isBaseCell = rd === 0 && cd === 0;
+      const outline    = isBaseCell ? 'outline:2px solid rgba(240,192,64,0.55);outline-offset:-2px;' : '';
+
+      if (ciFail) {
+        html += `<td class="ci-fail" style="${outline}"><span>CI ✕</span></td>`;
+        return;
+      }
+      const reqP = reqPriceFor(colP);
+      if (reqP < 0) {
+        html += `<td style="${outline}"><span class="infeasible">—</span></td>`;
+        return;
+      }
+      const overCap = solveShades.some(s => data[s].cap !== null && reqP > data[s].cap + 1e-9);
+      let bg, color;
+      if (overCap) { bg = 'rgba(240,80,96,0.30)'; color = 'var(--danger)'; }
+      else { ({ bg, color } = cellColorStyle(reqP, baseReq)); }
+      const bg2 = isBaseCell ? 'rgba(240,192,64,0.16)' : bg;
+      html += `<td class="${overCap?'over-cap-cell':''}" style="background:${bg2};color:${color};font-weight:500;${outline}">
+        <span style="font-size:12px">${reqP.toFixed(dec)}${overCap ? ' ⚠' : ''}</span>
+      </td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('reqHeatmapWrap').innerHTML = html;
 }
 
 // ══════════════════════════════════════════════
@@ -2075,6 +2696,8 @@ function buildCISensitivityTable() {
 //   EXCEL DOWNLOAD
 // ══════════════════════════════════════════════
 function downloadExcel() {
+  if (referenceMode === 'reqprice') { downloadRequiredPriceExcel(); return; }
+
   if (!lastSolution || typeof XLSX === 'undefined') {
     alert('Please calculate a blend first, or wait for the page to fully load.');
     return;
@@ -2360,6 +2983,113 @@ function downloadExcel() {
   const date     = new Date().toISOString().slice(0, 10);
   const filename = `BlendCalc_${molecule}_${date}.xlsx`;
   XLSX.writeFile(wb, filename);
+}
+
+// ══════════════════════════════════════════════
+//   REQUIRED PRICE — EXCEL DOWNLOAD
+// ══════════════════════════════════════════════
+function downloadRequiredPriceExcel() {
+  if (!lastReqSolution || typeof XLSX === 'undefined') {
+    alert('Please calculate a required price first, or wait for the page to fully load.');
+    return;
+  }
+
+  const { active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK,
+          capViolations, solveShades, knownShades, dec, ciLabel, pu } = lastReqSolution;
+  const molLabel = molecule === 'H2' ? 'Hydrogen (H₂)' : 'Ammonia (NH₃)';
+  const now      = new Date().toLocaleString();
+  const wb       = XLSX.utils.book_new();
+
+  // ── Sheet 1: Required Price Summary ──
+  const aoa = [];
+  aoa.push(['H₂ / NH₃ Blend Calculator — Required Price Report']);
+  aoa.push(['Generated:', now]);
+  aoa.push([]);
+  aoa.push(['CONFIGURATION']);
+  aoa.push(['Molecule', molLabel]);
+  aoa.push(['CI Unit', ciLabel]);
+  aoa.push(['Price Unit', pu]);
+  aoa.push([]);
+  aoa.push(['CEILINGS']);
+  aoa.push([`Max Target CI (${ciLabel})`, tCI]);
+  aoa.push([`Max Target Blended Price (${pu})`, tP]);
+  aoa.push([]);
+  aoa.push(['FIXED BLEND & SOURCE DATA']);
+  aoa.push(['Shade', 'Blend %', `CI (${ciLabel})`, 'Price Mode', `Price (${pu})`, `Max Price Cap (${pu})`]);
+  ['grey','blue','green'].forEach(s => {
+    if (!active.includes(s)) return;
+    const d = data[s];
+    aoa.push([
+      s.charAt(0).toUpperCase() + s.slice(1),
+      parseFloat((d.frac * 100).toFixed(2)),
+      d.ci,
+      d.solving ? 'Solve required price' : 'Known (fixed)',
+      d.solving ? (requiredPrice !== null ? parseFloat(requiredPrice.toFixed(dec)) : 'N/A') : d.knownPrice,
+      d.cap !== null ? d.cap : 'No cap'
+    ]);
+  });
+  aoa.push([]);
+  aoa.push(['RESULTS']);
+  aoa.push(['Blended CI (fixed blend)', parseFloat(blendedCI.toFixed(4)), ciLabel, ciOK ? 'Within ceiling' : 'EXCEEDS CEILING']);
+  aoa.push(['Achieved Blended Price', parseFloat(achievedPrice.toFixed(4)), pu, priceOK ? 'Within ceiling' : 'EXCEEDS CEILING']);
+  aoa.push(['Feasible', (ciOK && priceOK && capViolations.length === 0) ? 'YES ✓' : 'NO ✗']);
+  if (capViolations.length) aoa.push(['Cap violations', capViolations.map(s=>s.toUpperCase()).join(', ')]);
+  aoa.push([]);
+  aoa.push(['Note: Blended CI depends only on the fixed Blend % and each shade\'s CI — price does not affect it.']);
+  aoa.push(['Note: The required price is the single breakeven price applied uniformly across all shade(s) marked "solve".']);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(aoa);
+  ws1['!cols'] = [{ wch: 32 }, { wch: 18 }, { wch: 16 }, { wch: 20 }, { wch: 16 }, { wch: 16 }];
+  ws1['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:5} }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Required Price Summary');
+
+  // ── Sheet 2: Required Price Heat Map ──
+  if (solveShades.length) {
+    const ciStepV    = 0.1;
+    const priceStepV = priceStep();
+    const steps      = [-5,-4,-3,-2,-1,0,1,2,3,4,5];
+    const deltasCI   = steps.map(d => d * ciStepV);
+    const deltasP    = steps.map(d => d * priceStepV);
+    const knownContribution = knownShades.reduce((sum, s) => sum + data[s].frac * data[s].knownPrice, 0);
+    const solveFracSum      = solveShades.reduce((sum, s) => sum + data[s].frac, 0);
+    const solveLabel        = solveShades.map(s => s.toUpperCase()).join('+');
+    const reqPriceFor = (pCeiling) => (pCeiling - knownContribution) / solveFracSum;
+
+    const hmAoa = [];
+    hmAoa.push([`Required Price Heat Map — ${solveLabel}`]);
+    hmAoa.push([`Rows: Max CI ceiling (±0.5 ${ciLabel})  |  Columns: Max Price ceiling (±5 steps of ${priceStepV} ${pu})`]);
+    hmAoa.push([`Base ceilings: ${tCI} ${ciLabel} / ${tP} ${pu}`]);
+    hmAoa.push([]);
+
+    const hRow1 = [`CI ceiling (Y) ↓ \\ Price ceiling (X) →`];
+    deltasP.forEach(d => hRow1.push(parseFloat((tP + d).toFixed(dec))));
+    hmAoa.push(hRow1);
+
+    deltasCI.forEach(rd => {
+      const rowCI  = tCI + rd;
+      const ciFail = blendedCI > rowCI + 1e-9;
+      const row = [parseFloat(rowCI.toFixed(2))];
+      deltasP.forEach(cd => {
+        if (ciFail) { row.push('CI FAIL'); return; }
+        const reqP = reqPriceFor(tP + cd);
+        row.push(reqP < 0 ? 'N/A' : parseFloat(reqP.toFixed(dec)));
+      });
+      hmAoa.push(row);
+    });
+
+    const ws2 = XLSX.utils.aoa_to_sheet(hmAoa);
+    const nCols2 = 1 + deltasP.length;
+    ws2['!cols'] = [{ wch: 22 }, ...Array(deltasP.length).fill({ wch: 12 })];
+    ws2['!merges'] = [
+      { s:{r:0,c:0}, e:{r:0,c:nCols2-1} },
+      { s:{r:1,c:0}, e:{r:1,c:nCols2-1} },
+      { s:{r:2,c:0}, e:{r:2,c:nCols2-1} }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Required Price Heatmap');
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `BlendCalc_RequiredPrice_${molecule}_${date}.xlsx`);
 }
 
 // ══════════════════════════════════════════════
