@@ -47,3 +47,31 @@ export function friendlyBrowser(ua: string | null | undefined): string {
   if (ua.includes("Safari/")) return "Safari";
   return "Other";
 }
+
+/**
+ * True when an error means we never reached Supabase at all (DNS/socket
+ * failure) rather than the backend rejecting the request. A paused Supabase
+ * project stops resolving entirely, which surfaces as `fetch failed` /
+ * ENOTFOUND — that must not be reported to the user as bad credentials.
+ */
+export function isBackendUnreachable(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    name?: string;
+    message?: string;
+    status?: number;
+    cause?: unknown;
+  };
+
+  // supabase-js wraps network failures as AuthRetryableFetchError (status 0).
+  if (err.name === "AuthRetryableFetchError") return true;
+  if (err.message === "fetch failed") return true;
+
+  const code = (err.cause as { code?: string } | undefined)?.code;
+  return (
+    code === "ENOTFOUND" ||
+    code === "EAI_AGAIN" ||
+    code === "ECONNREFUSED" ||
+    code === "ETIMEDOUT"
+  );
+}

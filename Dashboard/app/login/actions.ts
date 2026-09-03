@@ -4,8 +4,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { recordLogin, recordLogout, recordActivity } from "@/services/audit";
-import { parseClientIp } from "@/lib/utils";
+import { isBackendUnreachable, parseClientIp } from "@/lib/utils";
 import type { ActionResult } from "@/types";
+
+const UNREACHABLE_MESSAGE =
+  "Can't reach the authentication service right now. This is not a problem " +
+  "with your password — please try again shortly, or contact your administrator.";
 
 /**
  * Email/password login. On success: records a login_logs row + activity_log,
@@ -23,21 +27,45 @@ export async function login(
   }
 
   const supabase = createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
 
-  if (error || !data.user) {
+  let signIn;
+  try {
+    signIn = await supabase.auth.signInWithPassword({ email, password });
+  } catch (err) {
+    // A paused/unresolvable Supabase project throws rather than returning an
+    // error; reporting that as bad credentials sends people chasing passwords.
+    if (isBackendUnreachable(err)) return { ok: false, message: UNREACHABLE_MESSAGE };
+    throw err;
+  }
+
+  const { data, error } = signIn;
+
+  if (error) {
+    if (isBackendUnreachable(error)) return { ok: false, message: UNREACHABLE_MESSAGE };
+    return { ok: false, message: "Invalid email or password." };
+  }
+  if (!data.user) {
     return { ok: false, message: "Invalid email or password." };
   }
 
   // Enforce the "disabled" flag at login time as well as in middleware.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, disabled")
-    .eq("id", data.user.id)
-    .single();
+  let profileQuery;
+  try {
+    profileQuery = await supabase
+      .from("profiles")
+      .select("role, disabled")
+      .eq("id", data.user.id)
+      .single();
+  } catch (err) {
+    if (isBackendUnreachable(err)) return { ok: false, message: UNREACHABLE_MESSAGE };
+    throw err;
+  }
+
+  const { data: profile, error: profileError } = profileQuery;
+
+  if (profileError && isBackendUnreachable(profileError)) {
+    return { ok: false, message: UNREACHABLE_MESSAGE };
+  }
 
   if (!profile || profile.disabled) {
     await supabase.auth.signOut();
