@@ -2956,7 +2956,7 @@ function downloadExcel() {
   const priceLabel = priceUnit(molecule);
   const dec        = molecule === 'H2' ? 2 : 0;
   const step       = priceStep();
-  const now        = new Date().toLocaleString();
+  const now        = new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
   const wb         = XLSX.utils.book_new();
 
   // ─────────────────────────────────────────────
@@ -3244,7 +3244,7 @@ function downloadRequiredPriceExcel() {
   const { active, data, tCI, tP, blendedCI, ciOK, requiredPrice, achievedPrice, priceOK,
           capViolations, solveShades, knownShades, dec, ciLabel, pu, ciMap, rankMap, advice } = lastReqSolution;
   const molLabel = molecule === 'H2' ? 'Hydrogen (H₂)' : 'Ammonia (NH₃)';
-  const now      = new Date().toLocaleString();
+  const now      = new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
   const wb       = XLSX.utils.book_new();
 
   // ── Sheet 1: Required Price Summary ──

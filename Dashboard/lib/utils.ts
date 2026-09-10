@@ -5,12 +5,13 @@ export function cn(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(" ");
 }
 
-/** Format an ISO timestamp for display, tolerant of null. */
+/** Format an ISO timestamp for display (Malaysia Time, UTC+8), tolerant of null. */
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
     year: "numeric",
     month: "short",
     day: "2-digit",
