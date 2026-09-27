@@ -221,6 +221,16 @@
   .dt td.wrap { white-space: normal; }
   .section-svg text { font-family: var(--sans); }
   .section-svg .lv-lbl { cursor: default; }
+  .gap-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 20px; align-items: center; }
+  @media (max-width: 1100px) { .gap-grid { grid-template-columns: 1fr; } }
+  .gap-sum h4 { font-family: var(--head); font-size: 14px; color: var(--brand-ink); margin-bottom: 2px; }
+  .gap-sum .sub { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+  .gap-sum ul { list-style: none; display: grid; gap: 10px; }
+  .gap-sum li { font-size: 13px; color: var(--text2); padding-left: 12px; border-left: 3px solid var(--border-hi); }
+  .gap-sum li b { color: var(--text); }
+  .gap-sum li.top { border-left-color: var(--warn); }
+  .gap-sum li.bot { border-left-color: var(--cryo); }
+  .gap-sum li.fb { border-left-color: var(--steel); }
   ol.gaps { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text2); }
   ol.gaps b { color: var(--text); }
 </style>
@@ -484,8 +494,15 @@
         <div class="panel-h"><span class="t">Required storage</span><span class="s" id="heroSub"></span></div>
         <div class="panel-b"><div class="kpis" id="heroKpis"></div></div>
       </div>
-      <div class="msg msg-info"><b>Receiving (import) terminal.</b> Sizing is driven by downstream demand: ships discharge into the tank and send-out draws it down. An export terminal fed by a production plant is not modelled here.</div>
       <div id="sizingMsgs"></div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Max fill vs net working capacity — levels to scale</span><span class="s" id="gapSub"></span></div>
+        <div class="panel-b gap-grid">
+          <div class="chart" id="gapChart"></div>
+          <div class="gap-sum" id="gapSum"></div>
+        </div>
+      </div>
 
       <div class="two-col">
         <div class="panel">
@@ -1129,9 +1146,9 @@ function renderSummaries(sz, cx) {
 function renderSizing(sz) {
   $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
   $("heroKpis").innerHTML =
+    kpi("Max fill at MDLL", fmt(sz.grossMdllT * sz.N), "t",
+      `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.grossMdllT)} t · ` : ""}${fmt(sz.area * sz.L.mdll * sz.N)} m³ · ${fmt(sz.H - sz.L.mdll, 2)} m freeboard above`, true) +
     kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · rounded to ${fmt(num(P.buffer.roundStepT))} t`, true) +
-    kpi("Net volume", fmt(sz.perTankNetM3 * sz.N * sz.dens / 1000), "t",
-      `${fmt(sz.perTankNetM3 * sz.N)} m³${sz.N > 1 ? ` (${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³)` : ""} at ${fmt(sz.dens, 1)} kg/m³`, true) +
     kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
     kpi("Stock cover", fmt(sz.stockDays, 1), "days", `full tank at ${fmt(sz.qOp)} t/d (${fmt(num(P.demand.operatingDays))} op. days) · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`) +
@@ -1142,18 +1159,16 @@ function renderSizing(sz) {
     : "Freeboard + pump heel + alarm margins leave no working range — increase the shell height or review the level inputs."]);
   if (sz.grossMdllT > PGS12.bandHiT) m.push(["err", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — above the ≈70 kt that PGS 12 (§1, Opmerking 2) says NEN-EN 14620 tanks reach even with >40 mm plate. Add a tank.`]);
   else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — inside PGS 12's ≈60–70 kt practical ceiling. Shell plate near the 40 mm limit; see the PGS 12 tab.`]);
-  if (!sz.lumped && sz.workH > 0) m.push(["info", `PGS 12 level stack: ${fmt(sz.H - sz.L.lah, 2)} m unusable at the top and ${fmt(sz.L.lal, 2)} m at the bottom, per tank. See the <b>PGS 12 tank &amp; levels</b> tab.`]);
   if (sz.D > num(P.geometry.maxDiameterM)) m.push(["warn", `Inner diameter ${fmt(sz.D, 1)} m exceeds the ${fmt(num(P.geometry.maxDiameterM))} m limit. Add a tank, raise the height, or use a smaller ship.`]);
   if (sz.plot.ha > num(P.geometry.plotHa)) m.push(["warn", `Plot required ${fmt(sz.plot.ha, 2)} ha (linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha available.`]);
   if (sz.plotUse > 1) m.push(["warn", `Tank footprint incl. clearance (${fmt(sz.footHa, 2)} ha) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha plot.`]);
   if (sz.intervalD * 24 < sz.callH) m.push(["err", `Ships would arrive every ${fmt(sz.intervalD, 1)} days but each call takes ${fmt(sz.callH)} h — jetty cannot keep up.`]);
   else if (sz.jettyOcc > 0.5) m.push(["warn", `Jetty occupancy ${pct(sz.jettyOcc, 0)} — high; queueing and demurrage likely.`]);
-  const vy0 = voyage(sz);
-  m.push(["info", `One vessel needs <b>${fmt(vy0.rt, 1)} days</b> per round trip, but the terminal needs a cargo every <b>${fmt(sz.intervalD, 1)} days</b> → <b>${vy0.fleet} vessel${vy0.fleet > 1 ? "s" : ""}</b> (${fmt(vy0.fleetExact, 2)} exact, ${pct(vy0.fleetUse, 0)} utilised).`]);
   if (sz.intervalD < sz.bufferDays) m.push(["info", `Ship interval (${fmt(sz.intervalD, 1)} d) is shorter than the buffer (${fmt(sz.bufferDays, 1)} d): consecutive ship delays would overlap.`]);
   const isTepsa = sz.lumped && Math.abs(sz.net - 40000) < 1 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
   if (isTepsa) m.push(["ok", `<b>TEPSA check:</b> 40,000 t net · Ø${fmt(sz.D, 1)} m · ${fmt(sz.nominalM3)} m³ nominal — matches the Scenario D datasheet (40,000 t · Ø55.0 m · 69,557 m³).`]);
   $("sizingMsgs").innerHTML = m.map(([k, t]) => `<div class="msg msg-${k}">${t}</div>`).join("");
+  drawGap(sz);
 
   $("buildSub").textContent = `daily send-out ${fmt(sz.q)} t/d`;
   const b = P.buffer;
@@ -1379,6 +1394,88 @@ function renderPgs(sz) {
     "TEPSA Scenario D datasheet — 40,000 t net, Ø55.0 × 29.3 m, 69,557 m³ nominal (lumped-basis calibration)",
   ].map((x) => `<li>${x}</li>`).join("");
   drawSection(sz);
+}
+
+// Max fill vs net working capacity, per tank: the liquid bands between the floor and MDLL, with the
+// freeboard above. Heights are to scale; the diameter is compressed so the thin bands stay visible.
+function drawGap(sz) {
+  const host = $("gapChart"), sum = $("gapSum"), L = sz.L;
+  if (!(sz.H > 0) || !(sz.workH > 0) || !(sz.area > 0)) {
+    host.innerHTML = `<div class="msg msg-err">No valid geometry to draw.</div>`; sum.innerHTML = ""; $("gapSub").textContent = ""; return;
+  }
+  const t = sz.levelT, R0 = Math.round;
+  const fbH = sz.H - L.mdll, topH = L.mdll - L.lah, botH = L.lal;
+  const mdllT = sz.grossMdllT, fbT = t(fbH), topT = t(topH), botT = t(botH), heelT = t(L.lall), lowT = t(L.lal - L.lall);
+  const tripT = sz.lumped ? NaN : t(L.mdll - L.lahh), alarmT = sz.lumped ? NaN : t(L.lahh - L.lah);
+  const gapT = mdllT - sz.perTankT, nomT = t(sz.H);
+  const per = sz.N > 1 ? " per tank" : "";
+  $("gapSub").textContent = `per tank · Ø${fmt(sz.D, 1)} m · ${fmt(t(1))} t per metre of height`;
+
+  const W = 760, xT = 190, wT = 200, st = 46, Hp = 360, yb = st + Hp, Hh = yb + 46;
+  const s = Hp / sz.H, y = (h) => yb - h * s, n = (v) => (+v).toFixed(1), xR = xT + wT;
+  const T = (x, yy, txt, o = {}) => `<text x="${n(x)}" y="${n(yy)}" text-anchor="${o.a || "start"}" style="font-size:${o.fs || 11}px;font-weight:${o.w || 400};fill:${o.c || "var(--text2)"}">${txt}</text>`;
+  const Ln = (x1, y1, x2, y2, o = {}) => `<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" style="stroke:${o.c || "var(--steel)"};stroke-width:${o.w || 1}${o.d ? ";stroke-dasharray:" + o.d : ""}"/>`;
+  const Rc = (x, yy, w, h, o = {}) => `<rect x="${n(x)}" y="${n(yy)}" width="${n(w)}" height="${n(Math.max(0, h))}" style="fill:${o.f || "none"};stroke:${o.c || "none"};stroke-width:${o.w || 1};${o.op != null ? "opacity:" + o.op : ""}"/>`;
+  const S = [`<defs>
+    <pattern id="gH" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--cryo);stroke-width:1;opacity:.45"/></pattern>
+    <pattern id="gF" width="5" height="5" patternTransform="rotate(-45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--steel);stroke-width:.8;opacity:.5"/></pattern></defs>`];
+  // bands: heel (bottom), net working, top margin, freeboard (empty)
+  S.push(Rc(xT, y(botH), wT, botH * s, { f: "var(--cryo-deep)" }), Rc(xT, y(botH), wT, botH * s, { f: "url(#gH)" }));
+  S.push(Rc(xT, y(L.lah), wT, sz.workH * s, { f: "var(--cryo-fill)" }));
+  S.push(Rc(xT, y(L.mdll), wT, topH * s, { f: "var(--warn)", op: 0.7 }));
+  S.push(Rc(xT, y(sz.H), wT, fbH * s, { f: "url(#gF)" }));
+  // shell, floor and dome roof
+  S.push(Ln(xT, y(sz.H), xT, yb, { w: 2 }), Ln(xR, y(sz.H), xR, yb, { w: 2 }), Ln(xT - 4, yb, xR + 4, yb, { w: 2.5 }));
+  S.push(`<path d="M${n(xT)} ${n(y(sz.H))} A ${n(wT / 2)} 26 0 0 1 ${n(xR)} ${n(y(sz.H))}" style="fill:none;stroke:var(--steel);stroke-width:2"/>`);
+  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 - 4, `${fmt(sz.perTankT)} t`, { a: "middle", fs: 24, w: 700, c: "var(--brand2-ink)" }));
+  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 + 14, "net working capacity", { a: "middle", fs: 12.5, c: "var(--brand2-ink)" }));
+
+  // left: level ticks, spread so they never overlap
+  const lv = [["Shell top", sz.H, "var(--steel)"], ["MDLL · max fill", L.mdll, "var(--danger)"],
+    [sz.lumped ? "Max working level" : "LAH · max working", L.lah, "var(--warn)"], [sz.lumped ? "Min working level" : "LAL · min working", L.lal, "var(--brand2)"], ["Floor", 0, "var(--steel)"]];
+  const spread = (items, gap, lo, hi) => {
+    let prev = -Infinity; items.forEach((it) => { it.ly = Math.max(it.y0, prev + gap); prev = it.ly; });
+    const over = items.length ? items[items.length - 1].ly - hi : 0;
+    if (over > 0) { items.forEach((it) => { it.ly -= over; }); }
+    if (items.length && items[0].ly < lo) { const d = lo - items[0].ly; items.forEach((it) => { it.ly += d; }); }
+    return items;
+  };
+  spread(lv.map(([txt, h, c]) => ({ txt, h, c, y0: y(h) })), 17, 18, yb + 4).forEach((it) => {
+    S.push(Ln(xT - 2, it.y0, xT - 12, it.y0, { c: it.c, w: 1.2 }), Ln(xT - 12, it.y0, xT - 20, it.ly - 4, { c: it.c, w: .7 }));
+    S.push(T(xT - 24, it.ly, `${it.txt} <tspan style="font-weight:700;fill:${it.c}">${fmt(it.h, 2)} m</tspan>`, { a: "end", fs: 12, c: "var(--text)" }));
+  });
+
+  // right: one label per band (two lines), leaders from the band's mid-height
+  const bands = [
+    { name: `Freeboard — empty`, val: "", c: "var(--steel)", h0: L.mdll, h1: sz.H, sub: `${fmt(fbH, 2)} m · ${fmt(sz.area * fbH)} m³ · would hold ${fmt(fbT)} t` },
+    { name: "Top margin", val: `${fmt(topT)} t`, c: "var(--warn)", h0: L.lah, h1: L.mdll,
+      sub: sz.lumped ? `${fmt(topH, 2)} m lumped margin to the PGS 12 limit` : `${fmt(topH, 2)} m · high alarm ${fmt(alarmT)} t + overfill trip ${fmt(tripT)} t` },
+    { name: "Net working capacity", val: `${fmt(sz.perTankT)} t`, c: "var(--brand2-ink)", h0: L.lal, h1: L.lah, sub: `${fmt(sz.workH, 2)} m · ${fmt(sz.perTankNetM3)} m³` },
+    { name: "Bottom", val: `${fmt(botT)} t`, c: "var(--cryo)", h0: 0, h1: L.lal,
+      sub: sz.lumped ? `${fmt(botH, 2)} m lumped heel` : `${fmt(botH, 2)} m · pump heel ${fmt(heelT)} t + low alarm ${fmt(lowT)} t` },
+  ];
+  const lx = xR + 40;
+  spread(bands.map((b) => Object.assign(b, { y0: y((b.h0 + b.h1) / 2) })), 42, 18, yb - 14).forEach((b) => {
+    S.push(Ln(xR + 2, b.y0, xR + 14, b.y0, { c: b.c, w: 1.2 }), Ln(xR + 14, b.y0, lx - 6, b.ly - 4, { c: b.c, w: .7 }), `<circle cx="${n(xR + 2)}" cy="${n(b.y0)}" r="2.2" style="fill:${b.c}"/>`);
+    S.push(T(lx, b.ly, `${b.name}${b.val ? ` <tspan style="fill:${b.c}">${b.val}</tspan>` : ""}`, { fs: 13.5, w: 700, c: "var(--text)" }));
+    S.push(T(lx, b.ly + 16, b.sub, { fs: 12 }));
+  });
+  S.push(T(xT + wT / 2, yb + 30, `inner Ø ${fmt(sz.D, 1)} m (diameter compressed)`, { a: "middle", fs: 12 }));
+  host.innerHTML = `<svg class="section-svg" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Tank section showing max fill at MDLL, net working capacity and the bands between them">${S.join("")}</svg>`;
+
+  const p = (x) => pct(gapT > 0 ? x / gapT : 0, 0);
+  const heelShare = botT > 0 ? heelT / botT : 0;
+  sum.innerHTML = `<h4>The ${fmt(gapT)} t gap${per}, in short</h4>
+    <div class="sub">Max fill at MDLL ${fmt(mdllT)} t − net working capacity ${fmt(sz.perTankT)} t</div>
+    <ul>
+      <li class="top"><b>Top: ${fmt(topT)} t (${p(topT)}).</b> ${sz.lumped
+        ? `Lumped margin between the max working level and the PGS 12 max design level (TEPSA calibration), not split into alarms and trip.`
+        : `Room for the alarms and overfill trip while a ship is unloading: ${fmt(L.tAl * 60)} min high alarm (${fmt(alarmT)} t) + ${fmt(L.tTrip * 60)} min overfill trip (${fmt(tripT)} t) at ${fmt(sz.riseMh, 2)} m/h rise.`}</li>
+      <li class="bot"><b>Bottom: ${fmt(botT)} t (${p(botT)}).</b> ${sz.lumped
+        ? `The ${fmt(botH, 2)} m lumped heel, which stays in the tank permanently.`
+        : `${heelShare >= 0.8 ? "Almost all of it is" : heelShare >= 0.5 ? "Most of it is" : "It includes"} the ${fmt(L.lall, 2)} m pump heel (${fmt(heelT)} t), which stays in the tank permanently; the rest is the low-alarm margin (${fmt(lowT)} t).`}</li>
+      <li class="fb"><b>Not in the gap: the ${fmt(fbH, 2)} m freeboard.</b> It's empty space above MDLL and comes on top: ${fmt(mdllT)} t at MDLL + ${fmt(fbT)} t freeboard = ${fmt(nomT)} t if brim-full, which is the nominal volume (${fmt(sz.nominalM3)} m³).</li>
+    </ul>${sz.N > 1 ? `<p class="note" style="margin-top:10px">${sz.N} tanks in total: max fill ${fmt(mdllT * sz.N)} t · net ${fmt(sz.net)} t · gap ${fmt(gapT * sz.N)} t.</p>` : ""}`;
 }
 
 // Section through a full-containment tank (after the PGS 12 Tank Anatomy sheet). Tank height and
