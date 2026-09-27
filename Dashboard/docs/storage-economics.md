@@ -39,6 +39,8 @@ daily send-out  q = throughput ÷ 365          (or ÷ operating days)
 density         = PGS 12:2025 Tabel 7 at the storage temperature (681.6 kg/m³ at −33.0 °C), or manual
 parcel          = ship capacity m³ × fill % × density
 required net    = parcel + buffer days × q
+                  buffer days = safety stock (late ship + port closure + strategic)
+                              + ullage reserve (rest of the rule's days: outage, early ship) — ullage can be excluded
 required area   = area whose working range holds the required net (see level basis below)
 required gross  = required area × inner shell height × density   (net + top margin + bottom heel + freeboard)
 design gross    = required gross rounded down or up to the step (user's choice; 0 = no rounding)

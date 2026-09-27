@@ -137,7 +137,9 @@
   .radio-group.cols3 { grid-template-columns: repeat(3, 1fr); }
   .round-pick { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; color: var(--text2); }
   .round-pick b { color: var(--text); }
-  .round-pick .radio-group { grid-template-columns: repeat(2, minmax(150px, auto)); margin-bottom: 0; }
+  .round-pick .radio-group { grid-template-columns: repeat(2, minmax(130px, auto)); margin-bottom: 0; }
+  .round-pick .pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .round-pick .pick + .pick { margin-left: auto; }
   .round-pick .radio-group button { padding: 6px 14px; font-size: 13px; }
 
   /* Tabs */
@@ -379,6 +381,7 @@
             <option value="max">Lean — largest single event only</option>
           </select>
         </div>
+        <div class="field"><label>Ullage reserve <span class="hint">empty space for a downstream outage or an early ship</span></label><select data-path="buffer.ullage"><option value="include">Include — ship can always discharge</option><option value="exclude">Exclude — size for parcel + safety stock only</option></select></div>
         <p class="note" id="ruleNote"></p>
         <div class="row2">
           <div class="field"><label>No send-out <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.noSendoutDays"/></div>
@@ -722,7 +725,7 @@ const DEFAULTS = {
   },
   voyage: { distanceNm: 5000, seaMarginPct: 5, loadPortDays: 1.5, canalWaitDays: 0, offHireDays: 10, bunkerUsdT: 600, fxUsdPerEur: 1.10, freightMethod: "voyage", charterBasis: "share" },
   jetty: { unloadRateTph: 650, berthHours: 12 },
-  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000, roundDir: "up" },
+  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000, roundDir: "up", ullage: "include" },
   geometry: { tanks: 1, innerHeightM: 29.3, levelBasis: "pgs12", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
   // Plot reference (user-supplied, 2026-09-27): 3.7 ha for a 60 kt tank incl. jetty; jetty 500 m from the tank.
   site: { refPlotHa: 3.7, refTankT: 60000, jettyToTankM: 500 },
@@ -939,8 +942,13 @@ function size(shipKey = P.shipClass) {
   const parcel = num(ship.m3) * num(ship.fillPct) / 100 * dens / 1000;
   const b = {}; for (const k of Object.keys(DEFAULTS.buffer)) b[k] = k === "rule" ? P.buffer.rule : Math.max(0, num(P.buffer[k]));
   const rule = RULES[b.rule] || RULES.tepsa;
-  const bufferDays = rule.days(b);
-  const safetyDays = Math.min(b.lateDays + b.portClosureDays + b.strategicDays, bufferDays);
+  // The rule's buffer splits into safety stock at the bottom (late ship, port closure, strategic) and
+  // an ullage reserve at the top (downstream outage, early ship). The ullage can be left out.
+  const ruleDays = rule.days(b);
+  const safetyDays = Math.min(b.lateDays + b.portClosureDays + b.strategicDays, ruleDays);
+  const withUllage = P.buffer.ullage !== "exclude";
+  const ullageRuleDays = ruleDays - safetyDays;
+  const bufferDays = withUllage ? ruleDays : safetyDays;
   const netReq = parcel + bufferDays * q;
   const g = P.geometry;
   const N = Math.max(1, Math.round(num(g.tanks, 1)));
@@ -1009,7 +1017,8 @@ function size(shipKey = P.shipClass) {
   const intervalD = parcel / qAvg;
   return {
     shipKey, dens, thrT, qAvg, qOp, q, parcel, parcelM3: num(ship.m3) * num(ship.fillPct) / 100,
-    rule, bufferDays, safetyDays, ullageDays: bufferDays - safetyDays, bufferT: bufferDays * q,
+    rule, ruleDays, bufferDays, safetyDays, ullageDays: bufferDays - safetyDays, ullageRuleDays, withUllage, bufferT: bufferDays * q,
+    safetyT: safetyDays * q, ullageT: Math.max(0, net - parcel - safetyDays * q),
     netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3, L, lumped,
     req, step, grossLo, grossHi, gross, perTankGrossT: gross / N, roundDir, bufferEffDays: (net - parcel) / q,
     qInM3h, qOutM3h, riseMh, fallMh, grossMdllT, lallT, levelT: t,
@@ -1116,8 +1125,9 @@ function renderShipPicker() {
   }).join("");
 }
 $("roundPick").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-dir]"); if (!b || b.disabled) return;
-  P.buffer.roundDir = b.dataset.dir; syncInputs(); recalc();
+  const b = e.target.closest("[data-dir], [data-ull]"); if (!b || b.disabled) return;
+  if (b.dataset.dir) P.buffer.roundDir = b.dataset.dir; else P.buffer.ullage = b.dataset.ull;
+  syncInputs(); recalc();
 });
 $("shipPicker").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-ship]"); if (!b) return;
@@ -1193,7 +1203,8 @@ function renderSummaries(sz, cx) {
   $("sumCapex").textContent = `€${fmt(cx.total)}M`;
   $("sumPlot").textContent = `${fmt(sz.plot.ha, 2)} ha`;
   $("sumFin").textContent = `${fmt(cx.f.h * 100, 1)} % · ${cx.f.term} yr`;
-  $("ruleNote").textContent = sz.rule.note;
+  $("ruleNote").textContent = sz.withUllage ? sz.rule.note
+    : `${sz.rule.note} Ullage reserve excluded: only the safety stock (${fmt(sz.safetyDays, 1)} d) is added to the parcel.`;
   $("parcelNote").innerHTML = `Parcel = <b>${fmt(sz.parcelM3)} m³ × ${fmt(sz.dens)} kg/m³ = ${fmt(sz.parcel)} t</b> (${shipName(P.shipClass)}).`;
 }
 
@@ -1201,10 +1212,13 @@ function renderSizing(sz) {
   $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
   const short = sz.netReq - sz.net;
   $("roundPick").innerHTML = sz.step > 0 && sz.grossHi > sz.grossLo
-    ? `<span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>. Round to:</span>
+    ? `<div class="pick"><span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>. Round to:</span>
        <div class="radio-group" role="radiogroup" aria-label="Round the gross tank size">${[["down", sz.grossLo, "▼ round down"], ["up", sz.grossHi, "▲ round up"]].map(([d, v, t]) =>
-         `<button type="button" role="radio" aria-checked="${sz.roundDir === d}" data-dir="${d}" class="${sz.roundDir === d ? "active" : ""}"${d === "down" && !(sz.grossLo > 0) ? " disabled" : ""}>${fmt(v)} t<small>${t}</small></button>`).join("")}</div>`
-    : `<span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>${sz.step > 0 ? ` (exactly on the ${fmt(sz.step)} t step)` : " · no rounding"}.</span>`;
+         `<button type="button" role="radio" aria-checked="${sz.roundDir === d}" data-dir="${d}" class="${sz.roundDir === d ? "active" : ""}"${d === "down" && !(sz.grossLo > 0) ? " disabled" : ""}>${fmt(v)} t<small>${t}</small></button>`).join("")}</div></div>`
+    : `<div class="pick"><span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>${sz.step > 0 ? ` (exactly on the ${fmt(sz.step)} t step)` : " · no rounding"}.</span></div>`;
+  $("roundPick").innerHTML += `<div class="pick"><span>Ullage reserve:</span>
+    <div class="radio-group" role="radiogroup" aria-label="Ullage reserve">${[["include", `Include`, `${fmt(sz.ullageRuleDays, 1)} d · ${fmt(sz.ullageRuleDays * sz.q)} t`], ["exclude", "Exclude", "parcel + safety only"]].map(([k, t, sm]) =>
+      `<button type="button" role="radio" aria-checked="${(sz.withUllage ? "include" : "exclude") === k}" data-ull="${k}" class="${(sz.withUllage ? "include" : "exclude") === k ? "active" : ""}">${t}<small>${sm}</small></button>`).join("")}</div></div>`;
   $("heroKpis").innerHTML =
     kpi("Storage size", fmt(sz.gross), "t",
       `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankGrossT)} t · ` : ""}gross to shell top · ${sz.step > 0 ? `rounded ${sz.roundDir} from ${fmt(sz.req.gross)} t` : "no rounding"} · basis for CAPEX`, true) +
@@ -1217,6 +1231,7 @@ function renderSizing(sz) {
   const m = [];
   if (!(sz.workH > 0)) m.push(["err", sz.lumped ? "Heel + top margin exceed the tank height — increase height or reduce the margins."
     : "Freeboard + pump heel + alarm margins leave no working range — increase the shell height or review the level inputs."]);
+  if (!sz.withUllage && sz.ullageRuleDays > 0) m.push(["warn", `Ullage reserve excluded: no planned room for a ${fmt(num(P.buffer.noSendoutDays), 1)} d downstream outage or a ship ${fmt(num(P.buffer.earlyDays), 1)} d early. Only ${fmt(sz.ullageT)} t (${fmt(sz.ullageT / sz.q, 1)} d) of free space is left above the post-discharge peak — a ship arriving then may not discharge fully (demurrage).`]);
   if (short > 0.5) m.push(["warn", `Gross tank size rounded down to ${fmt(sz.gross)} t: net working capacity ${fmt(sz.net)} t is <b>${fmt(short)} t below</b> the ${fmt(sz.netReq)} t required, so the buffer covers ${fmt(Math.max(0, sz.bufferEffDays), 1)} d instead of ${fmt(sz.bufferDays, 1)} d.`]);
   if (sz.grossMdllT > PGS12.bandHiT) m.push(["err", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — above the ≈70 kt that PGS 12 (§1, Opmerking 2) says NEN-EN 14620 tanks reach even with >40 mm plate. Add a tank.`]);
   else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — inside PGS 12's ≈60–70 kt practical ceiling. Shell plate near the 40 mm limit; see the PGS 12 tab.`]);
@@ -1241,7 +1256,9 @@ function renderSizing(sz) {
     { cls: "sub", cells: ["Ship late", fmt(num(b.lateDays), 1), ""] },
     { cls: "sub", cells: ["Port / weather closure", fmt(num(b.portClosureDays), 1), ""] },
     { cls: "sub", cells: ["Strategic reserve", fmt(num(b.strategicDays), 1), ""] },
-    { cells: [`Buffer counted — ${sz.rule.name.toLowerCase()}`, fmt(sz.bufferDays, 1), fmt(sz.bufferT)] },
+    { cls: "sub", cells: ["→ Safety stock (late ship, port closure, strategic)", fmt(sz.safetyDays, 1), fmt(sz.safetyT)] },
+    { cls: "sub", cells: [`→ Ullage reserve (outage, early ship)${sz.withUllage ? "" : " — excluded"}`, fmt(sz.withUllage ? sz.ullageRuleDays : 0, 1), fmt(sz.withUllage ? sz.ullageRuleDays * sz.q : 0)] },
+    { cells: [`Buffer counted — ${sz.rule.name.toLowerCase()}${sz.withUllage ? "" : ", no ullage"}`, fmt(sz.bufferDays, 1), fmt(sz.bufferT)] },
     { cells: ["Required net capacity", "", fmt(sz.netReq)] },
     { cls: "sub", cells: [sz.lumped ? "+ Top margin (lumped, to PGS 12 limit)" : "+ Top margin (high alarm, overfill trip)", "", fmt(sz.req.topT)] },
     { cls: "sub", cells: [sz.lumped ? "+ Bottom heel (lumped)" : "+ Bottom (pump heel, low alarm)", "", fmt(sz.req.botT)] },
@@ -1996,12 +2013,13 @@ function drawInventory(sz) {
   const ref = (t, label) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--text3)" stroke-width="1"/><text class="lbl-txt" x="${W - R + 8}" y="${y(t) + 4}">${label}</text>`;
   svg += ref(sz.net, `Net capacity ${fmt(sz.net / 1000, 1)}k t`);
   if (safety > 0) svg += ref(safety, `Safety stock ${fmt(safety / 1000, 1)}k t`);
-  svg += `<text class="lbl-txt" x="${W - R + 8}" y="${(y(sz.net) + y(safety + sz.parcel)) / 2 + 4}">Ullage reserve</text>`;
+  // Ullage label sits just under the net capacity label so it never collides, however thin the band.
+  svg += `<text class="lbl-txt" x="${W - R + 8}" y="${Math.max(y(sz.net) + 20, (y(sz.net) + y(safety + sz.parcel)) / 2 + 4)}">Ullage reserve ${fmt(sz.ullageT / 1000, 1)}k t</text>`;
   svg += `<line id="invCross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--text3)" stroke-width="1" visibility="hidden"/><circle id="invDot" r="4.5" fill="var(--s1)" stroke="var(--bg2)" stroke-width="2" visibility="hidden"/>`;
   svg += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="invHit"/></svg>`;
   host.innerHTML = svg;
   $("invSub").textContent = `${cycles} arrivals every ${fmt(sz.intervalD, 1)} d · tonnes above heel`;
-  $("invNote").textContent = `Stock falls at ${fmt(sz.qAvg)} t/d between arrivals and rises by ${fmt(sz.parcel)} t at each discharge. Safety stock covers late ships; the ullage reserve above the peak absorbs early ships and downstream outages.`;
+  $("invNote").textContent = `Stock falls at ${fmt(sz.qAvg)} t/d between arrivals and rises by ${fmt(sz.parcel)} t at each discharge. Safety stock covers late ships; the ullage reserve above the peak absorbs early ships and downstream outages${sz.withUllage ? "" : " — excluded from sizing, so only rounding leaves space there"}.`;
   const svgEl = host.querySelector("svg"), hit = $("invHit"), cross = $("invCross"), dot = $("invDot");
   hit.addEventListener("mousemove", (e) => {
     const r = svgEl.getBoundingClientRect();
@@ -2072,7 +2090,7 @@ $("btnPreset").addEventListener("click", () => {
   Object.assign(P.ships.CUSTOM, { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100 });
   Object.assign(P.jetty, { unloadRateTph: 650 });
   // TEPSA quotes 40,000 t net, so the check case sizes to the required net without rounding the gross size.
-  Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 0, roundDir: "up" });
+  Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 0, roundDir: "up", ullage: "include" });
   Object.assign(P.geometry, { tanks: 1, innerHeightM: 29.3, levelBasis: "lumped", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5 });
   syncInputs(); recalc();
   document.querySelector('.tab[data-tab="sizing"]').click();
@@ -2214,7 +2232,7 @@ const INPUT_GROUPS = [
     ["voyage.canalWaitDays", "Canal / waiting", "d per round trip"], ["voyage.offHireDays", "Off-hire", "d/yr per vessel"], ["voyage.bunkerUsdT", "Bunker price", "USD/t", "placeholder"],
     ["voyage.fxUsdPerEur", "FX", "USD per EUR"], ["voyage.freightMethod", "Freight cost"], ["voyage.charterBasis", "Charter basis"]]],
   ["Buffer rule", [["buffer.rule", "How buffer events combine"], ["buffer.noSendoutDays", "No send-out", "d"], ["buffer.earlyDays", "Ship early", "d"], ["buffer.lateDays", "Ship late", "d"],
-    ["buffer.portClosureDays", "Port / weather closure", "d"], ["buffer.strategicDays", "Strategic reserve", "d"], ["buffer.roundStepT", "Round gross tank size to", "t", "0 = no rounding"], ["buffer.roundDir", "Rounding direction"]]],
+    ["buffer.portClosureDays", "Port / weather closure", "d"], ["buffer.strategicDays", "Strategic reserve", "d"], ["buffer.ullage", "Ullage reserve"], ["buffer.roundStepT", "Round gross tank size to", "t", "0 = no rounding"], ["buffer.roundDir", "Rounding direction"]]],
   ["Tank geometry", [["geometry.tanks", "Number of tanks"], ["geometry.innerHeightM", "Inner tank shell height", "m"], ["geometry.levelBasis", "Liquid level basis"],
     ["geometry.heelM", "Bottom heel (lumped basis)", "m"], ["geometry.topMarginM", "Top margin (lumped basis)", "m"], ["geometry.annularGapM", "Inner → outer gap", "m, radial"],
     ["geometry.maxDiameterM", "Max inner diameter", "m"], ["geometry.clearanceM", "Clearance ring", "m per tank"], ["geometry.plotHa", "Available plot", "ha"]]],
@@ -2291,7 +2309,8 @@ async function exportExcel(full) {
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
     R("Throughput", q, "ktpa", `${fmt(sz.q)} t/d send-out used for buffers`);
     R("Ship parcel", sz.parcel, "t", `${shipName(sz.shipKey)} · ${fmt(sz.parcelM3)} m³`);
-    R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t`, null, XF.d1);
+    R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t · ullage reserve ${sz.withUllage ? `included (${fmt(sz.ullageRuleDays, 1)} d)` : "excluded"}`, null, XF.d1);
+    R("Ullage in the design", sz.ullageT, "t", `free space above the post-discharge peak · ${fmt(sz.ullageT / sz.q, 1)} d at ${fmt(sz.q)} t/d`);
     R("Required net capacity", sz.netReq, "t", "parcel + buffer");
     R("Required gross tank size", sz.req.gross, "t", "net + top margin + bottom heel + freeboard, to shell top");
     R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
@@ -2426,6 +2445,8 @@ async function exportExcel(full) {
       R(`Ship parcel (${shipName(sz.shipKey)})`, sz.parcel, "t", `${fmt(sz.parcelM3)} m³ × ${fmt(sz.dens, 1)} kg/m³`);
       [["No send-out (downstream outage)", b.noSendoutDays], ["Ship early", b.earlyDays], ["Ship late", b.lateDays], ["Port / weather closure", b.portClosureDays], ["Strategic reserve", b.strategicDays]]
         .forEach(([l, d]) => R(l, num(d), "d", "", "sub", XF.d1));
+      R("→ Safety stock", sz.safetyDays, "d", `${fmt(sz.safetyT)} t · late ship, port closure, strategic`, "sub", XF.d1);
+      R("→ Ullage reserve", sz.withUllage ? sz.ullageRuleDays : 0, "d", sz.withUllage ? `${fmt(sz.ullageRuleDays * sz.q)} t · outage, early ship` : "excluded by user", "sub", XF.d1);
       R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t at ${fmt(sz.q)} t/d`, null, XF.d1);
       R("Required net capacity", sz.netReq, "t", "");
       R(sz.lumped ? "+ Top margin (lumped)" : "+ Top margin (high alarm, overfill trip)", sz.req.topT, "t", "", "sub");
