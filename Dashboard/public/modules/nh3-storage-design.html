@@ -234,8 +234,8 @@
       <div class="grp-body">
         <div class="radio-group" id="shipPicker"></div>
         <div class="row2">
-          <div class="field"><label>Ship capacity <span class="hint">m³</span></label><input type="number" step="500" min="1000" id="shipM3"/></div>
-          <div class="field"><label>Cargo fill <span class="hint">% of capacity</span></label><input type="number" step="0.5" min="10" max="100" id="shipFill"/></div>
+          <div class="field"><label>Ship capacity <span class="hint">m³</span></label><input type="number" step="500" min="1000" data-ship-field="m3"/></div>
+          <div class="field"><label>Cargo fill <span class="hint">% of capacity</span></label><input type="number" step="0.5" min="10" max="100" data-ship-field="fillPct"/></div>
         </div>
         <div class="field hidden" id="customNameField"><label>Custom ship name</label><input type="text" data-path="ships.CUSTOM.label"/></div>
         <p class="note" id="parcelNote"></p>
@@ -244,6 +244,44 @@
           <div class="field"><label>Berth overhead <span class="hint">h/call</span></label><input type="number" step="1" min="0" data-path="jetty.berthHours"/></div>
         </div>
         <p class="note">Berth overhead = mooring, arm connection, cool-down, paperwork, unmooring.</p>
+      </div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Voyage &amp; fleet<span class="sum-note" id="sumVoyage"></span></summary>
+      <div class="grp-body">
+        <div class="row2">
+          <div class="field"><label>Distance, load port → terminal <span class="hint">nm, one way</span></label><input type="number" step="50" min="1" data-path="voyage.distanceNm"/></div>
+          <div class="field"><label>Service speed <span class="hint">knots</span></label><input type="number" step="0.5" min="1" data-ship-field="speedKn"/></div>
+          <div class="field"><label>Sea margin <span class="hint">% weather/routing</span></label><input type="number" step="1" min="0" data-path="voyage.seaMarginPct"/></div>
+          <div class="field"><label>Load port time <span class="hint">days</span></label><input type="number" step="0.25" min="0" data-path="voyage.loadPortDays"/></div>
+          <div class="field"><label>Canal / waiting <span class="hint">days per round trip</span></label><input type="number" step="0.5" min="0" data-path="voyage.canalWaitDays"/></div>
+          <div class="field"><label>Off-hire <span class="hint">days/yr per vessel</span></label><input type="number" step="1" min="0" max="200" data-path="voyage.offHireDays"/></div>
+        </div>
+        <div class="field"><label>Freight cost</label>
+          <select data-path="voyage.freightMethod">
+            <option value="voyage">Calculate from voyage (hire + fuel + port costs)</option>
+            <option value="manual">Enter €/t per ship class</option>
+          </select>
+        </div>
+        <div id="voyageCostFields">
+          <div class="field"><label>Charter basis</label>
+            <select data-path="voyage.charterBasis">
+              <option value="share">Pay for voyage days used (COA / spot)</option>
+              <option value="dedicated">Dedicated fleet, whole vessels on time charter</option>
+            </select>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Time-charter hire <span class="hint">USD/day</span></label><input type="number" step="1000" min="0" data-ship-field="tcUsdDay"/></div>
+            <div class="field"><label>Port &amp; canal costs <span class="hint">USD k/voyage</span></label><input type="number" step="10" min="0" data-ship-field="portCostUsdK"/></div>
+            <div class="field"><label>Fuel at sea <span class="hint">t/day</span></label><input type="number" step="1" min="0" data-ship-field="seaFuelTpd"/></div>
+            <div class="field"><label>Fuel in port <span class="hint">t/day</span></label><input type="number" step="0.5" min="0" data-ship-field="portFuelTpd"/></div>
+            <div class="field"><label>Bunker price <span class="hint">USD/t</span></label><input type="number" step="10" min="0" data-path="voyage.bunkerUsdT"/></div>
+            <div class="field"><label>FX <span class="hint">USD per EUR</span></label><input type="number" step="0.01" min="0.01" data-path="voyage.fxUsdPerEur"/></div>
+          </div>
+        </div>
+        <div class="field hidden" id="manualFreightField"><label>Freight <span class="hint">€/t, selected class</span></label><input type="number" step="0.5" min="0" data-ship-field="freightEurT"/></div>
+        <p class="note">Speed, hire, fuel and port costs belong to the selected ship class; all classes are editable on the <b>Optimum size</b> tab. Default hire, fuel and distance values are placeholders.</p>
       </div>
     </details>
 
@@ -369,6 +407,17 @@
         </div>
       </div>
 
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-h"><span class="t">Vessel round trip &amp; fleet</span><span class="s" id="voySub"></span></div>
+          <div class="tbl-wrap"><table class="dt" id="voyTable"></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><span class="t">Freight per voyage</span><span class="s" id="frtSub"></span></div>
+          <div class="tbl-wrap"><table class="dt" id="frtTable"></table></div>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="panel-h"><span class="t">Shipping &amp; operations</span></div>
         <div class="tbl-wrap"><table class="dt" id="opsTable"></table></div>
@@ -414,7 +463,7 @@ Break-even tariff: NPV = 0 at the operator return, over the contract term —
         <div class="panel-b"><div class="kpis" id="optKpis"></div></div>
       </div>
       <div class="panel">
-        <div class="panel-h"><span class="t">Ship classes — edit capacity, freight and marine adder</span><span class="s">freight values are placeholders: enter route quotes</span></div>
+        <div class="panel-h"><span class="t">Ship classes</span><span class="s">hire, fuel, speed and manual freight are placeholders — enter route and market data</span></div>
         <div class="tbl-wrap"><table class="dt" id="shipEditTable"></table></div>
       </div>
       <div class="panel">
@@ -484,11 +533,12 @@ const DEFAULTS = {
   demand: { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" },
   shipClass: "CUSTOM",
   ships: {
-    MGC:    { label: "MGC",  m3: 40000, fillPct: 98,  freightEurT: 55, marineAdderEurM: 0 },
-    LGC:    { label: "LGC",  m3: 60000, fillPct: 98,  freightEurT: 45, marineAdderEurM: 0 },
-    VLAC:   { label: "VLAC", m3: 90000, fillPct: 98,  freightEurT: 38, marineAdderEurM: 0 },
-    CUSTOM: { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100, freightEurT: 50, marineAdderEurM: 0 },
+    MGC:    { label: "MGC",  m3: 40000, fillPct: 98,  speedKn: 15,   tcUsdDay: 35000, seaFuelTpd: 32, portFuelTpd: 6, portCostUsdK: 150, freightEurT: 55, marineAdderEurM: 0 },
+    LGC:    { label: "LGC",  m3: 60000, fillPct: 98,  speedKn: 15.5, tcUsdDay: 45000, seaFuelTpd: 40, portFuelTpd: 7, portCostUsdK: 190, freightEurT: 45, marineAdderEurM: 0 },
+    VLAC:   { label: "VLAC", m3: 90000, fillPct: 98,  speedKn: 16,   tcUsdDay: 55000, seaFuelTpd: 50, portFuelTpd: 8, portCostUsdK: 230, freightEurT: 38, marineAdderEurM: 0 },
+    CUSTOM: { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100, speedKn: 15, tcUsdDay: 38000, seaFuelTpd: 34, portFuelTpd: 6, portCostUsdK: 160, freightEurT: 50, marineAdderEurM: 0 },
   },
+  voyage: { distanceNm: 5000, seaMarginPct: 5, loadPortDays: 1.5, canalWaitDays: 0, offHireDays: 10, bunkerUsdT: 600, fxUsdPerEur: 1.10, freightMethod: "voyage", charterBasis: "share" },
   jetty: { unloadRateTph: 650, berthHours: 12 },
   buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 },
   geometry: { tanks: 1, innerHeightM: 29.3, heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
@@ -521,7 +571,8 @@ const DEFAULTS = {
       "Vopak: is '40 kt' net (usable) or gross capacity?",
       "Vopak: confirm utility pass-through basis equals TEPSA",
       "Titan: year of estimate; dredging / marine civil scope",
-      "Freight rates by ship class for the supply route",
+      "Supply load port and distance to Le Havre (default 5,000 nm placeholder)",
+      "Charter hire, fuel consumption and port costs by ship class (placeholders)",
     ],
     decisions: [
       { date: "2026-09-27", text: "Base assumptions: 9 % return, 2.5 % CPI, 25 % tax / 20-yr SL, 2.5 % OPEX, 15-yr full recovery" },
@@ -529,6 +580,7 @@ const DEFAULTS = {
       { date: "2026-09-27", text: "Vopak utilities = TEPSA basis: €1.7/t (pass-through +10 % admin, €150/MWh)" },
       { date: "2026-09-27", text: "Project Titan USD 87M is full-terminal scope; FX 1.10 USD/EUR" },
       { date: "2026-09-27", text: "Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t)" },
+      { date: "2026-09-27", text: "Freight calculated from voyage (distance, speed, hire, fuel, port costs); fleet sized from round trip vs arrival interval" },
     ],
   },
 };
@@ -703,6 +755,34 @@ function capexFor(sz) {
     util, allIn: be.eurT + util, idc: idcFactor(f.h, f.profile) };
 }
 
+// Vessel round trip, fleet size and freight. Arrival interval is set by demand (parcel ÷ send-out);
+// the round trip decides how many vessels are needed to keep that rhythm, and what freight costs.
+function voyage(sz) {
+  const v = P.voyage, s = P.ships[sz.shipKey];
+  const spd = Math.max(0.1, num(s.speedKn));
+  const seaOneWay = num(v.distanceNm) / (spd * 24);
+  const seaDays = 2 * seaOneWay * (1 + num(v.seaMarginPct) / 100);
+  const loadD = num(v.loadPortDays), dischD = sz.callH / 24, waitD = num(v.canalWaitDays);
+  const rt = seaDays + loadD + dischD + waitD;
+  const availDays = Math.max(1, 365 - num(v.offHireDays));
+  const cargoesPerVessel = availDays / rt;
+  const fleetExact = sz.shipsYr / cargoesPerVessel;
+  const fleet = Math.max(1, Math.ceil(fleetExact - 1e-9));
+  const fx = Math.max(0.01, num(v.fxUsdPerEur, 1.1));
+  const hireUsd = num(s.tcUsdDay) * rt;
+  const fuelUsd = (seaDays * num(s.seaFuelTpd) + (loadD + dischD + waitD) * num(s.portFuelTpd)) * num(v.bunkerUsdT);
+  const portUsd = num(s.portCostUsdK) * 1000;
+  const voyUsd = hireUsd + fuelUsd + portUsd;
+  const shareEurT = voyUsd / sz.parcel / fx;
+  const dedicatedUsdYr = fleet * num(s.tcUsdDay) * 365 + (fuelUsd + portUsd) * sz.shipsYr;
+  const dedicatedEurT = dedicatedUsdYr / sz.thrT / fx;
+  const calcEurT = v.charterBasis === "dedicated" ? dedicatedEurT : shareEurT;
+  const manual = v.freightMethod === "manual";
+  return { seaOneWay, seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel, fleetExact, fleet,
+    fleetUse: fleetExact / fleet, fx, hireUsd, fuelUsd, portUsd, voyUsd, shareEurT, dedicatedEurT, dedicatedUsdYr,
+    calcEurT, freight: manual ? num(s.freightEurT) : calcEurT, manual };
+}
+
 // Registered offers evaluated at an arbitrary throughput (fixed-revenue interpolation).
 function vopakAt(sizeKey, qKt, lev) {
   const v = P.register.vopak, t = v[sizeKey];
@@ -727,20 +807,18 @@ function syncInputs() {
     if (v !== undefined && document.activeElement !== el) el.value = v;
   });
   const s = P.ships[P.shipClass];
-  if (document.activeElement !== $("shipM3")) $("shipM3").value = s.m3;
-  if (document.activeElement !== $("shipFill")) $("shipFill").value = s.fillPct;
+  document.querySelectorAll("[data-ship-field]").forEach((el) => { if (document.activeElement !== el) el.value = s[el.dataset.shipField]; });
   $("customNameField").classList.toggle("hidden", P.shipClass !== "CUSTOM");
   renderShipPicker();
 }
 function onInput(e) {
   const el = e.target;
-  if (el.id === "shipM3") P.ships[P.shipClass].m3 = num(el.value);
-  else if (el.id === "shipFill") P.ships[P.shipClass].fillPct = num(el.value);
+  if (el.dataset.shipField) P.ships[P.shipClass][el.dataset.shipField] = num(el.value, P.ships[P.shipClass][el.dataset.shipField]);
   else if (el.dataset.path) {
     const cur = getPath(P, el.dataset.path);
     setPath(P, el.dataset.path, typeof cur === "number" || el.type === "number" ? num(el.value, cur) : el.value);
   } else return;
-  if (el.dataset.path === "ships.CUSTOM.label") renderShipPicker();
+  if (el.dataset.shipField || (el.dataset.path || "").startsWith("ships.")) syncInputs();
   recalc();
 }
 document.addEventListener("input", onInput);
@@ -797,6 +875,10 @@ function recalc() {
 function renderSummaries(sz, cx) {
   $("sumDemand").textContent = `${fmt(sz.qAvg)} t/d`;
   $("sumShip").textContent = `${fmt(sz.parcel)} t`;
+  const vy = voyage(sz);
+  $("sumVoyage").textContent = `${fmt(vy.rt, 1)} d · ${vy.fleet} vsl · €${fmt(vy.freight, 1)}/t`;
+  $("voyageCostFields").classList.toggle("hidden", vy.manual);
+  $("manualFreightField").classList.toggle("hidden", !vy.manual);
   $("sumBuffer").textContent = `${fmt(sz.bufferDays, 1)} d`;
   $("sumGeom").textContent = `Ø${fmt(sz.D, 1)} m`;
   $("sumUtil").textContent = `€${fmt(cx.util, 2)}/t`;
@@ -821,6 +903,8 @@ function renderSizing(sz) {
   if (sz.plotUse > 1) m.push(["warn", `Tank footprint incl. clearance (${fmt(sz.footHa, 2)} ha) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha plot.`]);
   if (sz.intervalD * 24 < sz.callH) m.push(["err", `Ships would arrive every ${fmt(sz.intervalD, 1)} days but each call takes ${fmt(sz.callH)} h — jetty cannot keep up.`]);
   else if (sz.jettyOcc > 0.5) m.push(["warn", `Jetty occupancy ${pct(sz.jettyOcc, 0)} — high; queueing and demurrage likely.`]);
+  const vy0 = voyage(sz);
+  m.push(["info", `One vessel needs <b>${fmt(vy0.rt, 1)} days</b> per round trip, but the terminal needs a cargo every <b>${fmt(sz.intervalD, 1)} days</b> → <b>${vy0.fleet} vessel${vy0.fleet > 1 ? "s" : ""}</b> (${fmt(vy0.fleetExact, 2)} exact, ${pct(vy0.fleetUse, 0)} utilised).`]);
   if (sz.intervalD < sz.bufferDays) m.push(["info", `Ship interval (${fmt(sz.intervalD, 1)} d) is shorter than the buffer (${fmt(sz.bufferDays, 1)} d): consecutive ship delays would overlap.`]);
   const isTepsa = Math.abs(sz.net - 40000) < 1 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
   if (isTepsa) m.push(["ok", `<b>TEPSA check:</b> 40,000 t net · Ø${fmt(sz.D, 1)} m · ${fmt(sz.nominalM3)} m³ nominal — matches the Scenario D datasheet (40,000 t · Ø55.0 m · 69,557 m³).`]);
@@ -865,7 +949,35 @@ function renderSizing(sz) {
     { cells: ["Boil-off (full tank)", fmt(sz.bogTpd, 1) + " t/d", `${fmt(num(P.utilities.bogPctPerDay), 3)} %/day`] },
     { cells: ["Plot use (tanks + clearance)", pct(sz.plotUse, 0), `${fmt(sz.footHa, 2)} of ${fmt(num(P.geometry.plotHa), 1)} ha`] },
   ], [2]);
+  renderVoyage(sz);
   drawInventory(sz);
+}
+
+function renderVoyage(sz) {
+  const vy = voyage(sz), v = P.voyage, s = P.ships[sz.shipKey];
+  $("voySub").textContent = `${fmt(num(v.distanceNm))} nm · ${fmt(num(s.speedKn), 1)} kn`;
+  $("voyTable").innerHTML = rows([
+    { head: ["Leg", "Days", "Basis"] },
+    { cells: ["Laden voyage", fmt(vy.seaDays / 2, 1), `${fmt(num(v.distanceNm))} nm ÷ ${fmt(num(s.speedKn), 1)} kn, +${fmt(num(v.seaMarginPct))} % margin`] },
+    { cells: ["Ballast return", fmt(vy.seaDays / 2, 1), "same distance and speed"] },
+    { cells: ["Load port", fmt(vy.loadD, 1), "input"] },
+    { cells: ["Discharge at terminal", fmt(vy.dischD, 1), `${fmt(sz.callH, 1)} h berth time`] },
+    { cells: ["Canal / waiting", fmt(vy.waitD, 1), "input"] },
+    { cls: "total", cells: ["Round trip per vessel", fmt(vy.rt, 1), `${fmt(vy.cargoesPerVessel, 1)} cargoes / vessel / yr (${fmt(vy.availDays)} d available)`] },
+    { cells: ["Required arrival interval", fmt(sz.intervalD, 1), `${fmt(sz.shipsYr, 1)} cargoes / yr from demand`] },
+    { cls: "total", cells: ["Vessels needed", `${fmt(vy.fleetExact, 2)} → ${vy.fleet}`, `fleet utilisation ${pct(vy.fleetUse, 0)}`] },
+  ], [2]);
+  $("frtSub").textContent = vy.manual ? "manual €/t in use" : (v.charterBasis === "dedicated" ? "dedicated fleet in use" : "voyage share in use");
+  const k = (x) => fmt(x / 1000);
+  $("frtTable").innerHTML = rows([
+    { head: ["Item", "USD k / voyage", "€/t"] },
+    { cells: [`Hire (${fmt(vy.rt, 1)} d × ${fmt(num(s.tcUsdDay))} USD/d)`, k(vy.hireUsd), fmt(vy.hireUsd / sz.parcel / vy.fx, 1)] },
+    { cells: ["Fuel", k(vy.fuelUsd), fmt(vy.fuelUsd / sz.parcel / vy.fx, 1)] },
+    { cells: ["Port & canal costs", k(vy.portUsd), fmt(vy.portUsd / sz.parcel / vy.fx, 1)] },
+    { cls: vy.manual || v.charterBasis === "dedicated" ? "" : "total", cells: ["Voyage share (COA / spot)", k(vy.voyUsd), fmt(vy.shareEurT, 1)] },
+    { cls: !vy.manual && v.charterBasis === "dedicated" ? "total" : "", cells: [`Dedicated fleet (${vy.fleet} vessel${vy.fleet > 1 ? "s" : ""} × 365 d hire)`, fmt(vy.dedicatedUsdYr / 1e6, 1) + " M/yr", fmt(vy.dedicatedEurT, 1)] },
+    { cls: vy.manual ? "total" : "", cells: ["Manual freight input", "", fmt(num(s.freightEurT), 1)] },
+  ]);
 }
 
 function renderCapex(sz, cx) {
@@ -913,8 +1025,8 @@ function renderCapex(sz, cx) {
 function optimumData() {
   return SHIP_KEYS.map((k) => {
     const sz = size(k), cx = capexFor(sz);
-    const freight = num(P.ships[k].freightEurT);
-    return { k, sz, cx, storage: cx.be.eurT, util: cx.util, freight, total: cx.be.eurT + cx.util + freight };
+    const vy = voyage(sz), freight = vy.freight;
+    return { k, sz, cx, vy, storage: cx.be.eurT, util: cx.util, freight, total: cx.be.eurT + cx.util + freight };
   });
 }
 function renderOptimum() {
@@ -927,17 +1039,17 @@ function renderOptimum() {
     kpi("Best ship class", shipName(best.k), "", `${fmt(best.sz.parcel)} t parcel`, true) +
     kpi("Optimum tank (net)", fmt(best.sz.net), "t", `Ø${fmt(best.sz.D, 1)} × ${fmt(best.sz.H, 1)} m · ${best.sz.N} tank(s)`) +
     kpi("CAPEX", "€" + fmt(best.cx.total), "M", "before financing") +
-    kpi("Landed logistics cost", "€" + fmt(best.total, 1), "/t", "storage + utilities + freight") +
-    kpi("Annual logistics cost", "€" + fmt(best.total * q / 1000, 1), "M/yr", "");
+    kpi("Landed logistics cost", "€" + fmt(best.total, 1), "/t", `storage + utilities + freight (${best.vy.manual ? "manual" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share"})`) +
+    kpi("Annual logistics cost", "€" + fmt(best.total * q / 1000, 1), "M/yr", `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`);
 
-  SHIP_KEYS.forEach((k) => { const s = P.ships[k]; $("parcel-" + k).textContent = fmt(num(s.m3) * num(s.fillPct) / 100 * num(P.product.density) / 1000); });
+  data.forEach((d) => { $("parcel-" + d.k).textContent = fmt(d.sz.parcel); $("frtcalc-" + d.k).textContent = fmt(d.vy.calcEurT, 1); });
 
   $("optTable").innerHTML = rows([
-    { head: ["Ship class", "Parcel t", "Net tank t", "Inner Ø m", "Ships / yr", "Jetty occ.", "CAPEX €M", "Storage €/t", "Freight €/t", "Total €/t"] },
+    { head: ["Ship class", "Parcel t", "Net tank t", "Inner Ø m", "Ships / yr", "Round trip d", "Vessels", "CAPEX €M", "Storage €/t", "Freight €/t", "Total €/t"] },
     ...data.map((d) => ({
       cls: d === best ? "best" : "",
       cells: [shipName(d.k) + (d === best ? '<span class="tag best">lowest</span>' : "") + (d.k === P.shipClass ? '<span class="tag">selected</span>' : ""),
-        fmt(d.sz.parcel), fmt(d.sz.net), fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), pct(d.sz.jettyOcc, 0),
+        fmt(d.sz.parcel), fmt(d.sz.net), fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), fmt(d.vy.rt, 1), `${fmt(d.vy.fleetExact, 2)} → ${d.vy.fleet}`,
         fmt(d.cx.total), fmt(d.storage, 1), fmt(d.freight, 1), fmt(d.total, 1)],
     })),
   ]);
@@ -947,12 +1059,18 @@ function renderOptimum() {
 // Editable tables are built once so typing never loses focus; values come from syncInputs().
 function buildStaticTables() {
   $("shipEditTable").innerHTML =
-    `<tr><th>Class</th><th class="num">Capacity m³</th><th class="num">Fill %</th><th class="num">Parcel t</th><th class="num">Freight €/t</th><th class="num">Marine adder €M</th></tr>` +
+    `<tr><th>Class</th><th class="num">Capacity m³</th><th class="num">Fill %</th><th class="num">Parcel t</th><th class="num">Speed kn</th><th class="num">Hire USD/d</th><th class="num">Sea fuel t/d</th><th class="num">Port fuel t/d</th><th class="num">Port USD k</th><th class="num">Calc. freight €/t</th><th class="num">Manual freight €/t</th><th class="num">Marine adder €M</th></tr>` +
     SHIP_KEYS.map((k) => `<tr><td class="lbl">${k === "CUSTOM" ? `<input type="text" data-path="ships.CUSTOM.label" style="width:170px"/>` : k}</td>
       <td class="num"><input type="number" step="500" data-path="ships.${k}.m3"/></td>
       <td class="num"><input type="number" step="0.5" data-path="ships.${k}.fillPct"/></td>
       <td class="num" id="parcel-${k}"></td>
-      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.freightEurT"/></td>
+      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.speedKn" style="width:64px"/></td>
+      <td class="num"><input type="number" step="1000" data-path="ships.${k}.tcUsdDay"/></td>
+      <td class="num"><input type="number" step="1" data-path="ships.${k}.seaFuelTpd" style="width:64px"/></td>
+      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.portFuelTpd" style="width:64px"/></td>
+      <td class="num"><input type="number" step="10" data-path="ships.${k}.portCostUsdK" style="width:72px"/></td>
+      <td class="num" id="frtcalc-${k}"></td>
+      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.freightEurT" style="width:72px"/></td>
       <td class="num"><input type="number" step="1" data-path="ships.${k}.marineAdderEurM"/></td></tr>`).join("");
   $("vopakInputs").innerHTML =
     `<tr><th>Quoted tariff €/t</th><th class="num">Throughput A, ktpa</th><th class="num">A low</th><th class="num">A high</th><th class="num">Throughput B, ktpa</th><th class="num">B low</th><th class="num">B high</th></tr>` +
@@ -1155,7 +1273,7 @@ $("btnPreset").addEventListener("click", () => {
 // Excel export: one workbook, one sheet per view.
 $("btnExcel").addEventListener("click", () => {
   if (typeof XLSX === "undefined") { alert("Excel library failed to load (check network access to cdnjs.cloudflare.com)."); return; }
-  const sz = size(), cx = capexFor(sz), q = sz.thrT / 1000, f = cx.f, u = cx.util;
+  const sz = size(), cx = capexFor(sz), vy = voyage(sz), q = sz.thrT / 1000, f = cx.f, u = cx.util;
   const wb = XLSX.utils.book_new();
   const add = (name, aoa, widths) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = (widths || [40, 18, 18, 18, 18, 18, 18, 18, 18, 18]).map((w) => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws, name); };
   const r1 = (v, d = 1) => (Number.isFinite(v) ? Math.round(v * Math.pow(10, d)) / Math.pow(10, d) : "");
@@ -1177,6 +1295,12 @@ $("btnExcel").addEventListener("click", () => {
     ["Ships per year", r1(sz.shipsYr, 1), ""], ["Ship interval", r1(sz.intervalD, 1), "d"], ["Berth time per call", r1(sz.callH, 1), "h"],
     ["Jetty occupancy", r1(sz.jettyOcc * 100, 1), "%"], ["Stock cover", r1(sz.stockDays, 1), "d"], ["Boil-off (full tank)", r1(sz.bogTpd, 1), "t/d"],
     ["Plot use", r1(sz.plotUse * 100, 0), "%"],
+    [], ["Voyage & fleet"],
+    ["Distance (one way)", num(P.voyage.distanceNm), "nm"], ["Service speed", num(P.ships[sz.shipKey].speedKn), "kn"],
+    ["Sea days (round trip, incl. margin)", r1(vy.seaDays, 2), "d"], ["Round trip per vessel", r1(vy.rt, 2), "d"],
+    ["Cargoes per vessel per year", r1(vy.cargoesPerVessel, 2), ""], ["Vessels needed (exact)", r1(vy.fleetExact, 2), ""], ["Vessels needed", vy.fleet, ""],
+    ["Hire per voyage", r1(vy.hireUsd / 1000, 1), "USD k"], ["Fuel per voyage", r1(vy.fuelUsd / 1000, 1), "USD k"], ["Port costs per voyage", r1(vy.portUsd / 1000, 1), "USD k"],
+    ["Freight — voyage share", r1(vy.shareEurT, 2), "€/t"], ["Freight — dedicated fleet", r1(vy.dedicatedEurT, 2), "€/t"], ["Freight used", r1(vy.freight, 2), "€/t"],
   ], [34, 16, 12]);
 
   add("CAPEX & Tariff", [
@@ -1193,9 +1317,10 @@ $("btnExcel").addEventListener("click", () => {
 
   const od = optimumData();
   add("Ship Options", [
-    ["Ship class", "Capacity m³", "Fill %", "Parcel t", "Net tank t", "Inner Ø m", "Ships/yr", "Jetty occ %", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"],
-    ...od.map((d) => [shipName(d.k), num(P.ships[d.k].m3), num(P.ships[d.k].fillPct), r1(d.sz.parcel, 0), r1(d.sz.net, 0), r1(d.sz.D, 1), r1(d.sz.shipsYr, 1), r1(d.sz.jettyOcc * 100, 1), r1(d.cx.total), r1(d.storage, 2), r1(d.util, 2), r1(d.freight, 2), r1(d.total, 2)]),
-  ], [22, 12, 8, 11, 11, 10, 9, 11, 10, 11, 11, 11, 10]);
+    ["Ship class", "Capacity m³", "Fill %", "Parcel t", "Net tank t", "Inner Ø m", "Ships/yr", "Jetty occ %", "Speed kn", "Round trip d", "Vessels (exact)", "Vessels", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"],
+    ...od.map((d) => [shipName(d.k), num(P.ships[d.k].m3), num(P.ships[d.k].fillPct), r1(d.sz.parcel, 0), r1(d.sz.net, 0), r1(d.sz.D, 1), r1(d.sz.shipsYr, 1), r1(d.sz.jettyOcc * 100, 1), num(P.ships[d.k].speedKn), r1(d.vy.rt, 1), r1(d.vy.fleetExact, 2), d.vy.fleet, r1(d.cx.total), r1(d.storage, 2), r1(d.util, 2), r1(d.freight, 2), r1(d.total, 2)]),
+    [], [`Freight basis: ${P.voyage.freightMethod === "manual" ? "manual €/t" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet (whole vessels)" : "voyage share (COA / spot)"}; distance ${num(P.voyage.distanceNm)} nm`],
+  ], [22, 12, 8, 11, 11, 10, 9, 11, 9, 11, 13, 9, 10, 11, 11, 11, 10]);
 
   const R = P.register, v = R.vopak, t = R.tepsa, ti = R.titan;
   const reg = [["Economics register — derived values use the current financial assumptions"], [], ["VOPAK", v.status], ["Scope", v.scope], [],

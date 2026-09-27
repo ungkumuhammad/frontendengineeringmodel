@@ -38,6 +38,21 @@ Buffer rules (selectable):
 TEPSA check: 30,000 t + (5 + 2) d × 1,425 t/d = 39,975 → 40,000 t; Ø55.0 m × 29.3 m;
 69,574 m³ nominal (datasheet 69,557 m³).
 
+## Voyage & fleet
+
+The arrival interval at the terminal is set by demand (parcel ÷ send-out). Distance and
+speed set each vessel's round trip, which decides the fleet size and the freight cost:
+
+```
+round trip  = 2 × distance ÷ (speed × 24) × (1 + sea margin) + load port + discharge + canal/waiting
+vessels     = cargoes per year ÷ ((365 − off-hire) ÷ round trip), rounded up
+freight €/t = voyage share:   (hire × round trip + fuel + port costs) ÷ parcel ÷ FX
+              dedicated fleet: (vessels × hire × 365 + fuel & port per voyage × cargoes) ÷ throughput ÷ FX
+```
+
+Freight can also be entered manually per ship class. Default distance (5,000 nm), hire, fuel
+and port costs are placeholders.
+
 ## Economics method
 
 - **CAPEX** = tanks × reference storage CAPEX × (net per tank ÷ reference size)^exponent ×
@@ -64,3 +79,4 @@ TEPSA check: 30,000 t + (5 + 2) d × 1,425 t/d = 39,975 → 40,000 t; Ø55.0 m �
 | 2026-09-27 | Vopak utilities = TEPSA basis: €1.7/t (pass-through, +10 % admin, €150/MWh) |
 | 2026-09-27 | Project Titan USD 87M is full-terminal scope; FX 1.10 USD/EUR |
 | 2026-09-27 | Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t) |
+| 2026-09-27 | Freight calculated from voyage; fleet sized from round trip vs arrival interval |
