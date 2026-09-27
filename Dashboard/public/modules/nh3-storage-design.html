@@ -1130,7 +1130,8 @@ function renderSizing(sz) {
   $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
   $("heroKpis").innerHTML =
     kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · rounded to ${fmt(num(P.buffer.roundStepT))} t`, true) +
-    kpi("Net volume", fmt(sz.perTankNetM3 * sz.N), "m³", sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³` : "") +
+    kpi("Net volume", fmt(sz.perTankNetM3 * sz.N * sz.dens / 1000), "t",
+      `${fmt(sz.perTankNetM3 * sz.N)} m³${sz.N > 1 ? ` (${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³)` : ""} at ${fmt(sz.dens, 1)} kg/m³`, true) +
     kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
     kpi("Stock cover", fmt(sz.stockDays, 1), "days", `full tank at ${fmt(sz.qOp)} t/d (${fmt(num(P.demand.operatingDays))} op. days) · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`) +
