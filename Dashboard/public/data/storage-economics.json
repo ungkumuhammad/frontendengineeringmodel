@@ -1,0 +1,180 @@
+{
+  "meta": {
+    "title": "NH3 refrigerated storage economics register",
+    "location": "HAROPA Port, Le Havre (FR)",
+    "currency": "EUR",
+    "updated": "2026-09-27",
+    "status": "Working register - indicative, non-binding figures",
+    "description": "Tolling tariffs, quoted CAPEX and back-calculated CAPEX/IRR for a 40 kt refrigerated ammonia tank. Derived values use sharedAssumptions."
+  },
+  "sharedAssumptions": {
+    "hurdleRateNominalPostTax": 0.09,
+    "cpi": 0.025,
+    "corporateTax": 0.25,
+    "taxDepreciationYears": 20,
+    "fixedOpexPctCapex": 0.025,
+    "recoveryTermYears": 15,
+    "residualValuePctCapex": 0.0,
+    "construction": {
+      "years": 3,
+      "spendProfile": [
+        0.3,
+        0.4,
+        0.3
+      ],
+      "idcFactorAt9pct": 1.141
+    },
+    "referenceThroughputsKtpa": [
+      300,
+      550
+    ],
+    "tankOption": "40 kt net"
+  },
+  "utilities": {
+    "basis": "Pass-through at cost + 10% admin mark-up, same site and electricity tariff for all HAROPA offers",
+    "powerPriceEurPerMWh": 150,
+    "adminMarkup": 0.1,
+    "impliedPowerKWhPerTonne": 10.3,
+    "utilityFeeEurPerTonne": 1.7,
+    "appliesTo": [
+      "TEPSA (quoted)",
+      "Vopak (registered by user decision 2026-09-27, same basis as TEPSA)"
+    ]
+  },
+  "offers": [
+    {
+      "operator": "Vopak",
+      "status": "Non-binding tariff indication",
+      "tank": "1 x refrigerated full containment (steel/steel/concrete)",
+      "scope": [
+        "Tank",
+        "Direct pipeline to on-site cracker",
+        "Jetty and dredging"
+      ],
+      "exclusions": [
+        "Energy & utilities (now set = TEPSA basis, EUR 1.7/t)",
+        "Non-pipeline send-out (e.g. rail)",
+        "Soil remediation 3.7 ha plot (awaiting HAROPA)",
+        "VAT"
+      ],
+      "capexAccuracy": "+/-40%",
+      "contract": {
+        "termYears": 15,
+        "indexation": "CPI"
+      },
+      "tariffsEurPerTonne": {
+        "40kt": {
+          "300": {
+            "low": 95,
+            "high": 135
+          },
+          "550": {
+            "low": 50,
+            "high": 75
+          }
+        },
+        "60kt": {
+          "300": {
+            "low": 105,
+            "high": 150
+          },
+          "550": {
+            "low": 55,
+            "high": 80
+          }
+        }
+      },
+      "utilityFeeEurPerTonne": 1.7,
+      "utilityFeeSource": "Assumed equal to TEPSA (same HAROPA site, pass-through at same EUR 150/MWh tariff)",
+      "derived40kt": {
+        "impliedCapexBeforeFinancingEurM": {
+          "low": 159,
+          "mid": 198,
+          "high": 238
+        },
+        "impliedCapexInclFinancingEurM": {
+          "low": 181,
+          "mid": 226,
+          "high": 272
+        },
+        "tariffInterpolatedAt520ktEurPerTonne": {
+          "low": 53.1,
+          "mid": 66.1,
+          "high": 79.2
+        }
+      }
+    },
+    {
+      "operator": "TEPSA",
+      "status": "Indicative",
+      "tank": "1 x 40,000 t net (58,651 m3 net, 69,557 m3 nominal), ID 55 m / OD 58 m, inner height 29.3 m",
+      "technicalScenarioD": {
+        "throughputTpy": 520000,
+        "storageTempC": -33,
+        "storagePressureMbarg": "100-150",
+        "densityKgM3": 682,
+        "unloadingRateTph": 650,
+        "maxParcelT": 30000,
+        "shipsPerMonth": 1.7,
+        "exportFlowTpd": 1526,
+        "exportRoute": "Pipeline to Air Liquide (ALF-II)",
+        "buffer": {
+          "noExportDays": 5,
+          "shipEarlyDays": 2,
+          "shipLateDays": 2
+        }
+      },
+      "capexEurM": {
+        "terminalStorage": 185,
+        "jetty": 20,
+        "total": 205
+      },
+      "feesEurPerTonne": {
+        "260": 110,
+        "520": 55
+      },
+      "excessThroughputFeeEurPerTonne": 15,
+      "utilityFeeEurPerTonne": 1.7,
+      "derived": {
+        "annualRevenueEurM": 28.6,
+        "impliedIrrCapexBeforeFinancing": 0.062,
+        "impliedIrrCapexInclFinancing": 0.076,
+        "termYearsToReach9pctIrr": 25
+      },
+      "openQuestions": [
+        "Contract term & indexation",
+        "Is dredging in the EUR 20M jetty?",
+        "Is IDC/owner's cost in EUR 205M?",
+        "Soil remediation included?",
+        "Ships/month 1.7 vs 1.44 implied by 30 kt parcels"
+      ]
+    }
+  ],
+  "benchmarks": [
+    {
+      "project": "Project Titan",
+      "location": "Kakinada, India",
+      "capacityKt": 50,
+      "capexUsdM": 87,
+      "note": "Lower cost attributed to Indian engineering and material costs (user note)",
+      "normalisation": {
+        "fxUsdPerEur": 1.1,
+        "capexEurM": 79.1,
+        "eurMPerKt": 1.58,
+        "scaledTo40ktEurM": 69.2,
+        "scalingExponent": 0.6,
+        "comparableTo": "TEPSA total EUR 205M (full terminal)",
+        "tepsaToTitanRatioAt40kt": 2.96,
+        "europeEquivalentEurM": {
+          "factor2_5": 173,
+          "factor3_0": 208
+        }
+      },
+      "openQuestions": [
+        "Year of estimate",
+        "Is dredging/marine civil work included?"
+      ],
+      "scope": "Full terminal (tank, jetty, BOG handling, piping, utilities)"
+    }
+  ]
+}
