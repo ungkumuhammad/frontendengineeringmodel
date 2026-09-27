@@ -135,6 +135,10 @@
   .radio-group button small { display: block; font-size: 10px; font-weight: 400; opacity: .85; }
   .radio-group button.active { background: var(--brand); color: var(--on-brand); }
   .radio-group.cols3 { grid-template-columns: repeat(3, 1fr); }
+  .round-pick { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; color: var(--text2); }
+  .round-pick b { color: var(--text); }
+  .round-pick .radio-group { grid-template-columns: repeat(2, minmax(150px, auto)); margin-bottom: 0; }
+  .round-pick .radio-group button { padding: 6px 14px; font-size: 13px; }
 
   /* Tabs */
   .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
@@ -376,7 +380,8 @@
           <div class="field"><label>Ship early <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.earlyDays"/></div>
           <div class="field"><label>Ship late <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.lateDays"/></div>
           <div class="field"><label>Port / weather closure <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.portClosureDays"/></div>
-          <div class="field"><label>Round net capacity up to <span class="hint">t</span></label><input type="number" step="500" min="0" data-path="buffer.roundStepT"/></div>
+          <div class="field"><label>Round gross tank size to <span class="hint">t, 0 = no rounding</span></label><input type="number" step="500" min="0" data-path="buffer.roundStepT"/></div>
+          <div class="field"><label>Rounding direction</label><select data-path="buffer.roundDir"><option value="up">Up — net ≥ required</option><option value="down">Down — net may fall short</option></select></div>
         </div>
       </div>
     </details>
@@ -492,7 +497,7 @@
     <div class="tabpane active" id="pane-sizing">
       <div class="panel hero">
         <div class="panel-h"><span class="t">Required storage</span><span class="s" id="heroSub"></span></div>
-        <div class="panel-b"><div class="kpis" id="heroKpis"></div></div>
+        <div class="panel-b"><div class="round-pick" id="roundPick"></div><div class="kpis" id="heroKpis"></div></div>
       </div>
       <div id="sizingMsgs"></div>
 
@@ -696,7 +701,7 @@ const DEFAULTS = {
   },
   voyage: { distanceNm: 5000, seaMarginPct: 5, loadPortDays: 1.5, canalWaitDays: 0, offHireDays: 10, bunkerUsdT: 600, fxUsdPerEur: 1.10, freightMethod: "voyage", charterBasis: "share" },
   jetty: { unloadRateTph: 650, berthHours: 12 },
-  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 },
+  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000, roundDir: "up" },
   geometry: { tanks: 1, innerHeightM: 29.3, levelBasis: "pgs12", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
   // Plot reference (user-supplied, 2026-09-27): 3.7 ha for a 60 kt tank incl. jetty; jetty 500 m from the tank.
   site: { refPlotHa: 3.7, refTankT: 60000, jettyToTankM: 500 },
@@ -915,18 +920,16 @@ function size(shipKey = P.shipClass) {
   const bufferDays = rule.days(b);
   const safetyDays = Math.min(b.lateDays + b.portClosureDays + b.strategicDays, bufferDays);
   const netReq = parcel + bufferDays * q;
-  const step = b.roundStepT;
-  const net = step > 0 ? Math.ceil(netReq / step - 1e-9) * step : netReq;
   const g = P.geometry;
   const N = Math.max(1, Math.round(num(g.tanks, 1)));
   const H = num(g.innerHeightM);
-  const perTankT = net / N;
-  const perTankNetM3 = perTankT * 1000 / dens;
   // Level stack. Inflow = full unloading rate into the tank being filled; outflow = full send-out
   // from the tank in service (both conservative for N > 1).
   const qInM3h = num(P.jetty.unloadRateTph) * 1000 / dens, qOutM3h = q / 24 * 1000 / dens;
   const lumped = g.levelBasis === "lumped";
-  let area, L;
+  // levelsFor(area): the level stack of one tank with this cross-section. areaFor(netM3): the
+  // cross-section whose working range holds netM3.
+  let levelsFor, areaFor;
   if (!lumped) {
     const lv = P.levels, z = (x) => Math.max(0, num(x));
     const fb = z(lv.freeboardM), ex = z(lv.extraFreeboardM), lall = z(lv.lallM);
@@ -935,17 +938,40 @@ function size(shipKey = P.shipClass) {
     // A·(H − fb − ex − LALL) = V_net + Q_in·(t_trip + t_alarm) + Q_out·t_low
     const vMargin = qInM3h * (tTrip + tAl) + qOutM3h * tLow;
     const avail = H - fb - ex - lall;
-    area = avail > 0 ? (perTankNetM3 + vMargin) / avail : NaN;
-    const mdll = H - fb - ex, lahh = mdll - qInM3h * tTrip / area, lah = lahh - qInM3h * tAl / area;
-    const lal = lall + qOutM3h * tLow / area;
-    L = { lumped, top: H, fb, ex, mdll, lahh, lah, lal, lall, tTrip, tAl, tLow };
+    areaFor = (netM3) => avail > 0 ? (netM3 + vMargin) / avail : NaN;
+    levelsFor = (area) => {
+      const mdll = H - fb - ex, lahh = mdll - qInM3h * tTrip / area, lah = lahh - qInM3h * tAl / area;
+      const lal = lall + qOutM3h * tLow / area;
+      return { lumped, top: H, fb, ex, mdll, lahh, lah, lal, lall, tTrip, tAl, tLow };
+    };
   } else {
     const heel = num(g.heelM), topM = num(g.topMarginM);
-    area = H - heel - topM > 0 ? perTankNetM3 / (H - heel - topM) : NaN;
+    areaFor = (netM3) => H - heel - topM > 0 ? netM3 / (H - heel - topM) : NaN;
     // Lumped: TEPSA does not split its top margin, so the max design level is taken at the
     // PGS 12 limit (shell top − 0.5 m) for the capacity checks — the largest mass the shell may hold.
-    L = { lumped, top: H, fb: PGS12.freeboardMinM, ex: 0, mdll: H - PGS12.freeboardMinM, lahh: NaN, lah: H - topM, lal: heel, lall: heel, topMargin: topM };
+    levelsFor = () => ({ lumped, top: H, fb: PGS12.freeboardMinM, ex: 0, mdll: H - PGS12.freeboardMinM, lahh: NaN, lah: H - topM, lal: heel, lall: heel, topMargin: topM });
   }
+  // 1) Tank that holds exactly the required net: net + top margin + bottom heel + freeboard = gross
+  //    tank size (to shell top). 2) Round that gross size down or up to the step, as chosen.
+  //    3) Work back from the chosen gross size to the cross-section, levels and net capacity.
+  const tOf = (area, h) => area * h * dens / 1000;
+  const areaReq = areaFor(netReq / N * 1000 / dens);
+  const Lreq = levelsFor(areaReq);
+  const grossReq = tOf(areaReq, H) * N;
+  const req = {
+    area: areaReq, gross: grossReq,
+    topT: tOf(areaReq, Lreq.mdll - Lreq.lah) * N, botT: tOf(areaReq, Lreq.lal) * N, fbT: tOf(areaReq, H - Lreq.mdll) * N,
+  };
+  const step = Math.max(0, num(b.roundStepT));
+  const grossLo = step > 0 ? Math.floor(grossReq / step + 1e-9) * step : grossReq;
+  const grossHi = step > 0 ? Math.ceil(grossReq / step - 1e-9) * step : grossReq;
+  const roundDir = P.buffer.roundDir === "down" && grossLo > 0 ? "down" : "up";
+  const gross = roundDir === "down" ? grossLo : grossHi;
+  const area = gross / N * 1000 / (dens * H);
+  const L = levelsFor(area);
+  const perTankT = Math.max(0, tOf(area, L.lah - L.lal));
+  const net = perTankT * N;
+  const perTankNetM3 = perTankT * 1000 / dens;
   const workH = L.lah - L.lal;
   const D = Math.sqrt(4 * area / Math.PI);
   const OD = D + 2 * num(g.annularGapM);
@@ -963,6 +989,7 @@ function size(shipKey = P.shipClass) {
     shipKey, dens, thrT, qAvg, qOp, q, parcel, parcelM3: num(ship.m3) * num(ship.fillPct) / 100,
     rule, bufferDays, safetyDays, ullageDays: bufferDays - safetyDays, bufferT: bufferDays * q,
     netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3, L, lumped,
+    req, step, grossLo, grossHi, gross, roundDir, bufferEffDays: (net - parcel) / q,
     qInM3h, qOutM3h, riseMh, fallMh, grossMdllT, lallT, levelT: t,
     netToNominal: perTankNetM3 / nominalM3, heelT: heelM3 * dens / 1000,
     plot: plotReq(net), footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
@@ -1066,6 +1093,10 @@ function renderShipPicker() {
     return `<button type="button" data-ship="${k}" class="${P.shipClass === k ? "active" : ""}">${k === "CUSTOM" ? "Other" : k}<small>${fmt(num(s.m3) / 1000)}k m³ · ${fmt(t, 1)} kt</small></button>`;
   }).join("");
 }
+$("roundPick").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-dir]"); if (!b || b.disabled) return;
+  P.buffer.roundDir = b.dataset.dir; syncInputs(); recalc();
+});
 $("shipPicker").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-ship]"); if (!b) return;
   P.shipClass = b.dataset.ship; syncInputs(); recalc();
@@ -1145,11 +1176,17 @@ function renderSummaries(sz, cx) {
 
 function renderSizing(sz) {
   $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
+  const short = sz.netReq - sz.net;
+  $("roundPick").innerHTML = sz.step > 0 && sz.grossHi > sz.grossLo
+    ? `<span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>. Round to:</span>
+       <div class="radio-group" role="radiogroup" aria-label="Round the gross tank size">${[["down", sz.grossLo, "▼ round down"], ["up", sz.grossHi, "▲ round up"]].map(([d, v, t]) =>
+         `<button type="button" role="radio" aria-checked="${sz.roundDir === d}" data-dir="${d}" class="${sz.roundDir === d ? "active" : ""}"${d === "down" && !(sz.grossLo > 0) ? " disabled" : ""}>${fmt(v)} t<small>${t}</small></button>`).join("")}</div>`
+    : `<span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>${sz.step > 0 ? ` (exactly on the ${fmt(sz.step)} t step)` : " · no rounding"}.</span>`;
   $("heroKpis").innerHTML =
     kpi("Max fill at MDLL", fmt(sz.grossMdllT * sz.N), "t",
       `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.grossMdllT)} t · ` : ""}${fmt(sz.area * sz.L.mdll * sz.N)} m³ · ${fmt(sz.H - sz.L.mdll, 2)} m freeboard above`, true) +
-    kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · rounded to ${fmt(num(P.buffer.roundStepT))} t`, true) +
-    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
+    kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · ${short > 0.5 ? `<b style="color:var(--danger)">${fmt(short)} t short</b>` : short < -0.5 ? `${fmt(-short)} t spare` : "matches required"}`, true) +
+    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `${fmt(sz.gross)} t gross${sz.step > 0 ? ` (rounded ${sz.roundDir})` : ""} · net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
     kpi("Stock cover", fmt(sz.stockDays, 1), "days", `full tank at ${fmt(sz.qOp)} t/d (${fmt(num(P.demand.operatingDays))} op. days) · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`) +
     kpi("Plot required, incl. jetty", fmt(sz.plot.ha, 2), "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres`);
@@ -1157,6 +1194,7 @@ function renderSizing(sz) {
   const m = [];
   if (!(sz.workH > 0)) m.push(["err", sz.lumped ? "Heel + top margin exceed the tank height — increase height or reduce the margins."
     : "Freeboard + pump heel + alarm margins leave no working range — increase the shell height or review the level inputs."]);
+  if (short > 0.5) m.push(["warn", `Gross tank size rounded down to ${fmt(sz.gross)} t: net working capacity ${fmt(sz.net)} t is <b>${fmt(short)} t below</b> the ${fmt(sz.netReq)} t required, so the buffer covers ${fmt(Math.max(0, sz.bufferEffDays), 1)} d instead of ${fmt(sz.bufferDays, 1)} d.`]);
   if (sz.grossMdllT > PGS12.bandHiT) m.push(["err", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — above the ≈70 kt that PGS 12 (§1, Opmerking 2) says NEN-EN 14620 tanks reach even with >40 mm plate. Add a tank.`]);
   else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — inside PGS 12's ≈60–70 kt practical ceiling. Shell plate near the 40 mm limit; see the PGS 12 tab.`]);
   if (sz.D > num(P.geometry.maxDiameterM)) m.push(["warn", `Inner diameter ${fmt(sz.D, 1)} m exceeds the ${fmt(num(P.geometry.maxDiameterM))} m limit. Add a tank, raise the height, or use a smaller ship.`]);
@@ -1165,8 +1203,8 @@ function renderSizing(sz) {
   if (sz.intervalD * 24 < sz.callH) m.push(["err", `Ships would arrive every ${fmt(sz.intervalD, 1)} days but each call takes ${fmt(sz.callH)} h — jetty cannot keep up.`]);
   else if (sz.jettyOcc > 0.5) m.push(["warn", `Jetty occupancy ${pct(sz.jettyOcc, 0)} — high; queueing and demurrage likely.`]);
   if (sz.intervalD < sz.bufferDays) m.push(["info", `Ship interval (${fmt(sz.intervalD, 1)} d) is shorter than the buffer (${fmt(sz.bufferDays, 1)} d): consecutive ship delays would overlap.`]);
-  const isTepsa = sz.lumped && Math.abs(sz.net - 40000) < 1 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
-  if (isTepsa) m.push(["ok", `<b>TEPSA check:</b> 40,000 t net · Ø${fmt(sz.D, 1)} m · ${fmt(sz.nominalM3)} m³ nominal — matches the Scenario D datasheet (40,000 t · Ø55.0 m · 69,557 m³).`]);
+  const isTepsa = sz.lumped && Math.abs(sz.net - 40000) < 50 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
+  if (isTepsa) m.push(["ok", `<b>TEPSA check:</b> ${fmt(sz.net)} t net · Ø${fmt(sz.D, 1)} m · ${fmt(sz.nominalM3)} m³ nominal — matches the Scenario D datasheet (40,000 t · Ø55.0 m · 69,557 m³).`]);
   $("sizingMsgs").innerHTML = m.map(([k, t]) => `<div class="msg msg-${k}">${t}</div>`).join("");
   drawGap(sz);
 
@@ -1182,6 +1220,11 @@ function renderSizing(sz) {
     { cls: "sub", cells: ["Strategic reserve", fmt(num(b.strategicDays), 1), ""] },
     { cells: [`Buffer counted — ${sz.rule.name.toLowerCase()}`, fmt(sz.bufferDays, 1), fmt(sz.bufferT)] },
     { cells: ["Required net capacity", "", fmt(sz.netReq)] },
+    { cls: "sub", cells: [sz.lumped ? "+ Top margin (lumped, to PGS 12 limit)" : "+ Top margin (high alarm, overfill trip)", "", fmt(sz.req.topT)] },
+    { cls: "sub", cells: [sz.lumped ? "+ Bottom heel (lumped)" : "+ Bottom (pump heel, low alarm)", "", fmt(sz.req.botT)] },
+    { cls: "sub", cells: ["+ Freeboard", "", fmt(sz.req.fbT)] },
+    { cells: ["Required gross tank size (to shell top)", "", fmt(sz.req.gross)] },
+    { cells: [sz.step > 0 ? `Design gross tank size — rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "Design gross tank size — no rounding", "", fmt(sz.gross)] },
     { cls: "total", cells: ["Design net working capacity", "", fmt(sz.net)] },
   ]);
 
@@ -1877,7 +1920,8 @@ $("btnPreset").addEventListener("click", () => {
   Object.assign(P.product, { densityBasis: "manual", density: 682, tempC: -33 }); P.shipClass = "CUSTOM";
   Object.assign(P.ships.CUSTOM, { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100 });
   Object.assign(P.jetty, { unloadRateTph: 650 });
-  Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 });
+  // TEPSA quotes 40,000 t net, so the check case sizes to the required net without rounding the gross size.
+  Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 0, roundDir: "up" });
   Object.assign(P.geometry, { tanks: 1, innerHeightM: 29.3, levelBasis: "lumped", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5 });
   syncInputs(); recalc();
   document.querySelector('.tab[data-tab="sizing"]').click();
@@ -2019,7 +2063,7 @@ const INPUT_GROUPS = [
     ["voyage.canalWaitDays", "Canal / waiting", "d per round trip"], ["voyage.offHireDays", "Off-hire", "d/yr per vessel"], ["voyage.bunkerUsdT", "Bunker price", "USD/t", "placeholder"],
     ["voyage.fxUsdPerEur", "FX", "USD per EUR"], ["voyage.freightMethod", "Freight cost"], ["voyage.charterBasis", "Charter basis"]]],
   ["Buffer rule", [["buffer.rule", "How buffer events combine"], ["buffer.noSendoutDays", "No send-out", "d"], ["buffer.earlyDays", "Ship early", "d"], ["buffer.lateDays", "Ship late", "d"],
-    ["buffer.portClosureDays", "Port / weather closure", "d"], ["buffer.strategicDays", "Strategic reserve", "d"], ["buffer.roundStepT", "Round net capacity up to", "t"]]],
+    ["buffer.portClosureDays", "Port / weather closure", "d"], ["buffer.strategicDays", "Strategic reserve", "d"], ["buffer.roundStepT", "Round gross tank size to", "t", "0 = no rounding"], ["buffer.roundDir", "Rounding direction"]]],
   ["Tank geometry", [["geometry.tanks", "Number of tanks"], ["geometry.innerHeightM", "Inner tank shell height", "m"], ["geometry.levelBasis", "Liquid level basis"],
     ["geometry.heelM", "Bottom heel (lumped basis)", "m"], ["geometry.topMarginM", "Top margin (lumped basis)", "m"], ["geometry.annularGapM", "Inner → outer gap", "m, radial"],
     ["geometry.maxDiameterM", "Max inner diameter", "m"], ["geometry.clearanceM", "Clearance ring", "m per tank"], ["geometry.plotHa", "Available plot", "ha"]]],
@@ -2096,7 +2140,9 @@ async function exportExcel(full) {
     R("Throughput", q, "ktpa", `${fmt(sz.q)} t/d send-out used for buffers`);
     R("Ship parcel", sz.parcel, "t", `${shipName(sz.shipKey)} · ${fmt(sz.parcelM3)} m³`);
     R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t`, null, XF.d1);
-    R("Required net capacity", sz.netReq, "t", `rounded up to ${fmt(num(P.buffer.roundStepT))} t`);
+    R("Required net capacity", sz.netReq, "t", "parcel + buffer");
+    R("Required gross tank size", sz.req.gross, "t", "net + top margin + bottom heel + freeboard, to shell top");
+    R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
     R("Net working capacity per tank", sz.perTankT, "t", `${fmt(sz.perTankNetM3)} m³`);
     R("Nominal volume per tank", sz.nominalM3, "m³", `net = ${pct(sz.netToNominal)} of nominal`);
     R("Stock cover", sz.stockDays, "d", `at ${fmt(sz.qOp)} t/d operating-day send-out · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`, null, XF.d1);
@@ -2203,7 +2249,12 @@ async function exportExcel(full) {
         .forEach(([l, d]) => R(l, num(d), "d", "", "sub", XF.d1));
       R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t at ${fmt(sz.q)} t/d`, null, XF.d1);
       R("Required net capacity", sz.netReq, "t", "");
-      R("Design net working capacity", sz.net, "t", `rounded up to ${fmt(num(b.roundStepT))} t`, "key");
+      R(sz.lumped ? "+ Top margin (lumped)" : "+ Top margin (high alarm, overfill trip)", sz.req.topT, "t", "", "sub");
+      R(sz.lumped ? "+ Bottom heel (lumped)" : "+ Bottom (pump heel, low alarm)", sz.req.botT, "t", "", "sub");
+      R("+ Freeboard", sz.req.fbT, "t", "", "sub");
+      R("Required gross tank size", sz.req.gross, "t", "to shell top");
+      R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
+      R("Design net working capacity", sz.net, "t", sz.netReq - sz.net > 0.5 ? `${fmt(sz.netReq - sz.net)} t below required` : `${fmt(sz.net - sz.netReq)} t above required`, "key");
 
       S.section("Tank dimensions, per tank", "vs TEPSA Scenario D datasheet");
       S.header(["Item", "This design", "TEPSA D", "Note"], [0, 3]);

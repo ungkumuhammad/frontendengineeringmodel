@@ -38,10 +38,18 @@ separate module (or a terminal-type switch) rather than reusing the demand-drive
 daily send-out  q = throughput ÷ 365          (or ÷ operating days)
 density         = PGS 12:2025 Tabel 7 at the storage temperature (681.6 kg/m³ at −33.0 °C), or manual
 parcel          = ship capacity m³ × fill % × density
-net capacity    = parcel + buffer days × q, rounded up to the step
-tank area       = see level basis below
-nominal volume  = area × inner shell height
+required net    = parcel + buffer days × q
+required area   = area whose working range holds the required net (see level basis below)
+required gross  = required area × inner shell height × density   (net + top margin + bottom heel + freeboard)
+design gross    = required gross rounded down or up to the step (user's choice; 0 = no rounding)
+design area     = design gross ÷ (inner shell height × density)
+net capacity    = design area × (max working level − min working level) × density
+nominal volume  = design area × inner shell height
 ```
+
+Rounding the gross size (not the net) means the step applies to the tank that gets built. Rounding
+down can leave the net below the required net; the module then flags the shortfall and the buffer
+days actually covered. The TEPSA check case uses no rounding, because TEPSA quotes 40,000 t net.
 
 ### Liquid levels
 
