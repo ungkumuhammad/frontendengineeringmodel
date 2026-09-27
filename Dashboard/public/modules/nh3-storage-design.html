@@ -939,7 +939,9 @@ function size(shipKey = P.shipClass) {
     netToNominal: perTankNetM3 / nominalM3, heelT: heelM3 * dens / 1000,
     plot: plotReq(net), footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
     unloadH, callH, shipsYr, shipsMonth: shipsYr / 12, intervalD, jettyOcc: shipsYr * callH / 8760,
-    turns: thrT / net, stockDays: net / qAvg,
+    // Stock cover: days a full working inventory feeds downstream at its operating-day draw
+    // (throughput ÷ operating days); the calendar-average figure (÷ 365) is kept alongside.
+    turns: thrT / net, stockDays: net / qOp, stockDaysAvg: net / qAvg,
     bogTpd: net * num(P.utilities.bogPctPerDay) / 100,
   };
 }
@@ -1120,7 +1122,7 @@ function renderSizing(sz) {
     kpi("Net volume", fmt(sz.perTankNetM3 * sz.N), "m³", sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³` : "") +
     kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
-    kpi("Stock cover", fmt(sz.stockDays, 1), "days", `${fmt(sz.turns, 1)} turns / yr`) +
+    kpi("Stock cover", fmt(sz.stockDays, 1), "days", `full tank at ${fmt(sz.qOp)} t/d (${fmt(num(P.demand.operatingDays))} op. days) · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`) +
     kpi("Plot required, incl. jetty", fmt(sz.plot.ha, 2), "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres`);
 
   const m = [];
@@ -1795,7 +1797,7 @@ $("btnExcel").addEventListener("click", () => {
     ["Nominal volume per tank", r1(sz.nominalM3, 0), "m³"], ["Net / nominal", r1(sz.netToNominal * 100, 1), "%"],
     ["Inner diameter", r1(sz.D, 2), "m"], ["Outer diameter", r1(sz.OD, 2), "m"], ["Inner height", sz.H, "m"],
     ["Ships per year", r1(sz.shipsYr, 1), ""], ["Ship interval", r1(sz.intervalD, 1), "d"], ["Berth time per call", r1(sz.callH, 1), "h"],
-    ["Jetty occupancy", r1(sz.jettyOcc * 100, 1), "%"], ["Stock cover", r1(sz.stockDays, 1), "d"], ["Boil-off (full tank)", r1(sz.bogTpd, 1), "t/d"],
+    ["Jetty occupancy", r1(sz.jettyOcc * 100, 1), "%"], ["Stock cover (operating-day send-out)", r1(sz.stockDays, 1), "d"], ["Stock cover (average send-out, ÷365)", r1(sz.stockDaysAvg, 1), "d"], ["Boil-off (full tank)", r1(sz.bogTpd, 1), "t/d"],
     ["Plot use", r1(sz.plotUse * 100, 0), "%"],
     ["Plot required incl. jetty (linear)", r1(sz.plot.ha, 2), "ha"], ["", r1(sz.plot.m2, 0), "m²"], ["", r1(sz.plot.sqft, 0), "sq ft"], ["", r1(sz.plot.acre, 2), "acres"],
     ["Plot reference", `${num(P.site.refPlotHa)} ha at ${num(P.site.refTankT)} t incl. jetty; jetty ${num(P.site.jettyToTankM)} m from tank`, ""],
