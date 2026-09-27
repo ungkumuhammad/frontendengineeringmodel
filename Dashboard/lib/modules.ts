@@ -10,7 +10,7 @@ export interface ModuleDefinition {
   slug: string;
   title: string;
   description: string;
-  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment";
+  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment" | "Storage Design";
   // Path (under /public) to the self-contained legacy HTML calculator.
   htmlPath: string;
   icon: string;
@@ -52,6 +52,15 @@ export const MODULES: ModuleDefinition[] = [
     category: "Commercial Assessment",
     htmlPath: "/modules/hydrogen-blend-calculator.html",
     icon: "coin",
+  },
+  {
+    slug: "nh3-storage-design",
+    title: "NH₃ Storage Design",
+    description:
+      "Refrigerated ammonia tank sizing from throughput, ship class and buffer rules — tank dimensions, CAPEX, break-even storage tariff, optimum ship/tank size, and a register of terminal operator offers. Excel and project-file export.",
+    category: "Storage Design",
+    htmlPath: "/modules/nh3-storage-design.html",
+    icon: "tank",
   },
 ];
 

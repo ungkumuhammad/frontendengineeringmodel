@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NH₃ Storage Design — Tank Sizing, CAPEX &amp; Tariff</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg2:       #161b22;
+    --bg3:       #1c2330;
+    --bg4:       #111720;
+    --border:    #30363d;
+    --border-hi: #484f58;
+    --text:      #e6edf3;
+    --text2:     #8b949e;
+    --text3:     #6e7681;
+    --accent:    #d29922;
+    --accent2:   #f0b429;
+    --info:      #388bfd;
+    --info-bg:   #1f2d3d;
+    --success:   #3fb950;
+    --success-bg:#162316;
+    --warn:      #e3b341;
+    --warn-bg:   #2d2309;
+    --danger:    #f85149;
+    --danger-bg: #2d1317;
+    --mono: 'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
+    --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --hero-grad: linear-gradient(135deg, #1f1a0a 0%, #1c2330 100%);
+    /* chart series (validated: dark surface #161b22) */
+    --s1: #b8861c;  /* storage tariff / inventory */
+    --s2: #388bfd;  /* utilities */
+    --s3: #239a8d;  /* freight */
+    --grid: #262c36;
+  }
+  :root[data-theme="light"] {
+    --bg:        #f6f8fa;
+    --bg2:       #ffffff;
+    --bg3:       #f0f3f6;
+    --bg4:       #eaeef2;
+    --border:    #d0d7de;
+    --border-hi: #afb8c1;
+    --text:      #1f2328;
+    --text2:     #57606a;
+    --text3:     #6e7781;
+    --accent:    #bf8700;
+    --accent2:   #9a6700;
+    --info:      #0969da;
+    --info-bg:   #ddf4ff;
+    --success:   #1a7f37;
+    --success-bg:#dafbe1;
+    --warn:      #9a6700;
+    --warn-bg:   #fff8c5;
+    --danger:    #cf222e;
+    --danger-bg: #ffebe9;
+    --hero-grad: linear-gradient(135deg, #fff8e6 0%, #eef2f6 100%);
+    /* chart series (validated: light surface) */
+    --s1: #bf8700;
+    --s2: #0969da;
+    --s3: #1a9e8f;
+    --grid: #e4e8ec;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .header-badge { background: var(--accent); color: #000; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; white-space: nowrap; }
+  .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .header-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .icon-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .icon-btn:hover { border-color: var(--border-hi); color: var(--text); }
+  .icon-btn.primary { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  /* Layout */
+  .main { display: grid; grid-template-columns: 370px 1fr; min-height: calc(100vh - 52px); }
+  @media (max-width: 1000px) { .main { grid-template-columns: 1fr; } .sidebar { border-right: none; border-bottom: 1px solid var(--border); } }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+  .content { padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+  details.grp { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; background: var(--bg2); }
+  details.grp > summary { list-style: none; cursor: pointer; padding: 9px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+  details.grp > summary::-webkit-details-marker { display: none; }
+  details.grp > summary::before { content: "▸"; color: var(--text3); transition: transform .15s; }
+  details.grp[open] > summary::before { transform: rotate(90deg); }
+  details.grp > summary .sum-note { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .grp-body { padding: 4px 12px 10px; }
+
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 3px; letter-spacing: 0.02em; }
+  .field .hint { color: var(--text3); font-weight: 400; font-size: 10px; }
+  select, input[type="number"], input[type="text"] { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; font-family: var(--sans); padding: 6px 9px; outline: none; }
+  select:focus, input:focus { border-color: var(--accent); }
+  input[type="number"] { font-family: var(--mono); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .note { font-size: 10.5px; color: var(--text3); line-height: 1.5; margin: -2px 0 10px; }
+  .note b { color: var(--text2); font-weight: 600; }
+
+  .radio-group { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+  .radio-group button { padding: 6px 4px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; background: var(--bg3); border: none; border-right: 1px solid var(--border); line-height: 1.25; }
+  .radio-group button:last-child { border-right: none; }
+  .radio-group button small { display: block; font-size: 9.5px; font-weight: 500; font-family: var(--mono); opacity: .8; }
+  .radio-group button.active { background: var(--accent); color: #000; }
+  .radio-group.cols3 { grid-template-columns: repeat(3, 1fr); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--text2); font-size: 13px; font-weight: 600; padding: 8px 12px; cursor: pointer; margin-bottom: -1px; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tabpane { display: none; flex-direction: column; gap: 14px; }
+  .tabpane.active { display: flex; }
+
+  /* Panels */
+  .panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .panel-h { background: var(--bg3); padding: 8px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .panel-h .t { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
+  .panel-h .s { font-size: 11px; color: var(--text3); margin-left: auto; font-family: var(--mono); }
+  .panel-b { padding: 14px; }
+  .hero { background: var(--hero-grad); border-color: var(--border-hi); }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .kpi { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+  .kpi .l { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+  .kpi .v { font-size: 20px; font-weight: 700; font-family: var(--mono); margin-top: 2px; line-height: 1.2; }
+  .kpi .v .u { font-size: 11px; color: var(--text2); margin-left: 4px; font-weight: 500; font-family: var(--sans); }
+  .kpi .n { font-size: 10.5px; color: var(--text3); margin-top: 3px; }
+  .kpi.big .v { font-size: 30px; color: var(--accent2); }
+  .kpi.big .v.txt { font-size: 20px; font-family: var(--sans); }
+
+  .tbl-wrap { overflow-x: auto; }
+  table.dt { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .dt th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); padding: 7px 10px; border-bottom: 1px solid var(--border); background: var(--bg3); white-space: nowrap; }
+  .dt td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .dt tr:last-child td { border-bottom: none; }
+  .dt .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+  .dt td.lbl { color: var(--text2); }
+  .dt tr.total td { font-weight: 700; background: var(--bg4); border-top: 2px solid var(--border-hi); }
+  .dt tr.sub td.lbl { padding-left: 24px; color: var(--text3); font-size: 11.5px; }
+  .dt tr.best td { background: var(--success-bg); }
+  .dt input[type="number"] { width: 92px; padding: 3px 6px; font-size: 12px; text-align: right; }
+  .dt input[type="text"] { padding: 3px 6px; font-size: 12px; }
+  .ok { color: var(--success); font-weight: 700; }
+  .tag { font-size: 9.5px; font-weight: 700; border: 1px solid var(--border-hi); border-radius: 3px; padding: 0 5px; color: var(--text2); margin-left: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .tag.best { border-color: var(--success); color: var(--success); }
+
+  .msg { border-radius: 6px; padding: 9px 13px; font-size: 12.5px; line-height: 1.55; color: var(--text2); }
+  .msg + .msg { margin-top: 6px; }
+  .msg-info { background: var(--info-bg); border-left: 3px solid var(--info); }
+  .msg-warn { background: var(--warn-bg); border-left: 3px solid var(--warn); }
+  .msg-err  { background: var(--danger-bg); border-left: 3px solid var(--danger); }
+  .msg-ok   { background: var(--success-bg); border-left: 3px solid var(--success); }
+  .msg b { color: var(--text); }
+
+  .formula { font-family: var(--mono); font-size: 12px; background: var(--bg4); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); overflow-x: auto; white-space: pre; }
+
+  /* Charts */
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .axis text { font-size: 11px; fill: var(--text3); font-family: var(--mono); }
+  .chart .lbl-txt { font-size: 11px; fill: var(--text2); }
+  .chart .val-txt { font-size: 11px; fill: var(--text); font-family: var(--mono); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 11.5px; color: var(--text2); }
+  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .tip { position: absolute; pointer-events: none; background: var(--bg2); border: 1px solid var(--border-hi); border-radius: 6px; padding: 6px 9px; font-size: 11.5px; color: var(--text); box-shadow: 0 4px 14px rgba(0,0,0,.25); white-space: nowrap; display: none; z-index: 5; }
+  .tip b { font-family: var(--mono); }
+
+  ul.plain { list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text2); }
+  ul.plain li::before { content: "– "; color: var(--text3); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 1250px) { .two-col { grid-template-columns: 1fr; } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-badge">Storage Design</span>
+  <h1>NH₃ Refrigerated Storage — Tank Sizing, CAPEX &amp; Tariff</h1>
+  <div class="header-actions">
+    <button class="icon-btn" id="btnPreset" title="Load the TEPSA Scenario D inputs used to validate the sizing rule">Load TEPSA check case</button>
+    <button class="icon-btn" id="btnImport" title="Load a project file (.json)">Import project</button>
+    <button class="icon-btn" id="btnExportJson" title="Save all inputs and the economics register as a project file">Export project</button>
+    <button class="icon-btn primary" id="btnExcel">⬇ Excel</button>
+    <button class="icon-btn" id="btnReset" title="Restore all defaults">Reset</button>
+    <button class="icon-btn" id="themeToggle">🌙 <span id="themeLabel">Dark</span></button>
+    <input type="file" id="fileInput" accept=".json,application/json" class="hidden"/>
+  </div>
+</div>
+
+<div class="main">
+  <!-- ================= INPUTS ================= -->
+  <div class="sidebar">
+
+    <details class="grp" open>
+      <summary>Project</summary>
+      <div class="grp-body">
+        <div class="field"><label>Project name</label><input type="text" data-path="project.name"/></div>
+        <div class="field"><label>Location</label><input type="text" data-path="project.location"/></div>
+      </div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Demand (send-out)<span class="sum-note" id="sumDemand"></span></summary>
+      <div class="grp-body">
+        <div class="row2">
+          <div class="field"><label>Throughput <span class="hint">ktpa</span></label><input type="number" step="10" min="1" data-path="demand.throughputKtpa"/></div>
+          <div class="field"><label>Downstream operating days <span class="hint">d/yr</span></label><input type="number" step="1" min="1" max="366" data-path="demand.operatingDays"/></div>
+        </div>
+        <div class="field"><label>Daily send-out used for buffers</label>
+          <select data-path="demand.rateBasis">
+            <option value="average">Average (throughput ÷ 365) — TEPSA basis</option>
+            <option value="operating">Operating-day (throughput ÷ operating days)</option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Product</summary>
+      <div class="grp-body">
+        <div class="row3">
+          <div class="field"><label>Density <span class="hint">kg/m³</span></label><input type="number" step="0.5" data-path="product.density"/></div>
+          <div class="field"><label>Temp <span class="hint">°C</span></label><input type="number" step="0.5" data-path="product.tempC"/></div>
+          <div class="field"><label>Pressure <span class="hint">mbarg</span></label><input type="text" data-path="product.pressure"/></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Shipping (import)<span class="sum-note" id="sumShip"></span></summary>
+      <div class="grp-body">
+        <div class="radio-group" id="shipPicker"></div>
+        <div class="row2">
+          <div class="field"><label>Ship capacity <span class="hint">m³</span></label><input type="number" step="500" min="1000" id="shipM3"/></div>
+          <div class="field"><label>Cargo fill <span class="hint">% of capacity</span></label><input type="number" step="0.5" min="10" max="100" id="shipFill"/></div>
+        </div>
+        <div class="field hidden" id="customNameField"><label>Custom ship name</label><input type="text" data-path="ships.CUSTOM.label"/></div>
+        <p class="note" id="parcelNote"></p>
+        <div class="row2">
+          <div class="field"><label>Unloading rate <span class="hint">t/h</span></label><input type="number" step="10" min="1" data-path="jetty.unloadRateTph"/></div>
+          <div class="field"><label>Berth overhead <span class="hint">h/call</span></label><input type="number" step="1" min="0" data-path="jetty.berthHours"/></div>
+        </div>
+        <p class="note">Berth overhead = mooring, arm connection, cool-down, paperwork, unmooring.</p>
+      </div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Buffer rule<span class="sum-note" id="sumBuffer"></span></summary>
+      <div class="grp-body">
+        <div class="field"><label>How buffer events combine</label>
+          <select data-path="buffer.rule">
+            <option value="tepsa">Recommended — outage + one ship-timing event</option>
+            <option value="additive">Conservative — all events at once</option>
+            <option value="max">Lean — largest single event only</option>
+          </select>
+        </div>
+        <p class="note" id="ruleNote"></p>
+        <div class="row2">
+          <div class="field"><label>No send-out <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.noSendoutDays"/></div>
+          <div class="field"><label>Strategic reserve <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.strategicDays"/></div>
+          <div class="field"><label>Ship early <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.earlyDays"/></div>
+          <div class="field"><label>Ship late <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.lateDays"/></div>
+          <div class="field"><label>Port / weather closure <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.portClosureDays"/></div>
+          <div class="field"><label>Round net capacity up to <span class="hint">t</span></label><input type="number" step="500" min="0" data-path="buffer.roundStepT"/></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Tank geometry<span class="sum-note" id="sumGeom"></span></summary>
+      <div class="grp-body">
+        <div class="row2">
+          <div class="field"><label>Number of tanks</label><input type="number" step="1" min="1" max="6" data-path="geometry.tanks"/></div>
+          <div class="field"><label>Inner tank height <span class="hint">m</span></label><input type="number" step="0.1" min="5" data-path="geometry.innerHeightM"/></div>
+          <div class="field"><label>Bottom heel <span class="hint">m, unusable</span></label><input type="number" step="0.1" min="0" data-path="geometry.heelM"/></div>
+          <div class="field"><label>Top margin <span class="hint">m, unusable</span></label><input type="number" step="0.1" min="0" data-path="geometry.topMarginM"/></div>
+          <div class="field"><label>Inner→outer gap <span class="hint">m, radial</span></label><input type="number" step="0.1" min="0" data-path="geometry.annularGapM"/></div>
+          <div class="field"><label>Max inner diameter <span class="hint">m</span></label><input type="number" step="1" min="5" data-path="geometry.maxDiameterM"/></div>
+          <div class="field"><label>Clearance ring <span class="hint">m, per tank</span></label><input type="number" step="1" min="0" data-path="geometry.clearanceM"/></div>
+          <div class="field"><label>Available plot <span class="hint">ha</span></label><input type="number" step="0.1" min="0" data-path="geometry.plotHa"/></div>
+        </div>
+        <p class="note">Heel 1.5 m + top margin 3.1 m reproduce TEPSA's net/nominal ratio (84.3 %).</p>
+      </div>
+    </details>
+
+    <details class="grp">
+      <summary>Utilities &amp; boil-off<span class="sum-note" id="sumUtil"></span></summary>
+      <div class="grp-body">
+        <div class="row3">
+          <div class="field"><label>Power <span class="hint">kWh/t</span></label><input type="number" step="0.1" min="0" data-path="utilities.powerKWhPerT"/></div>
+          <div class="field"><label>Price <span class="hint">€/MWh</span></label><input type="number" step="1" min="0" data-path="utilities.powerPriceEurMWh"/></div>
+          <div class="field"><label>Mark-up <span class="hint">%</span></label><input type="number" step="1" min="0" data-path="utilities.markupPct"/></div>
+        </div>
+        <div class="field"><label>Boil-off rate <span class="hint">% of full tank / day</span></label><input type="number" step="0.005" min="0" data-path="utilities.bogPctPerDay"/></div>
+        <p class="note">Pass-through at cost + admin mark-up. Same basis applied to every operator at the same site.</p>
+      </div>
+    </details>
+
+    <details class="grp">
+      <summary>CAPEX basis<span class="sum-note" id="sumCapex"></span></summary>
+      <div class="grp-body">
+        <div class="row2">
+          <div class="field"><label>Reference storage CAPEX <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.refStorageEurM"/></div>
+          <div class="field"><label>At reference net size <span class="hint">t</span></label><input type="number" step="1000" min="1" data-path="capex.refNetT"/></div>
+          <div class="field"><label>Scale exponent</label><input type="number" step="0.05" min="0" max="1.2" data-path="capex.exponent"/></div>
+          <div class="field"><label>Location factor <span class="hint">× reference</span></label><input type="number" step="0.05" min="0" data-path="capex.locationFactor"/></div>
+          <div class="field"><label>Jetty / marine <span class="hint">€M fixed</span></label><input type="number" step="1" min="0" data-path="capex.marineEurM"/></div>
+          <div class="field"><label>Dredging, pipeline, other <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.otherEurM"/></div>
+        </div>
+        <div class="field"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="capex.accuracyPct"/></div>
+        <p class="note">Default reference = TEPSA quote: €185M storage for 40,000 t net + €20M jetty (HAROPA, Le Havre). Scaling: CAPEX ∝ size<sup>exponent</sup>.</p>
+      </div>
+    </details>
+
+    <details class="grp">
+      <summary>Financial assumptions<span class="sum-note" id="sumFin"></span></summary>
+      <div class="grp-body">
+        <div class="row2">
+          <div class="field"><label>Operator return <span class="hint">% nominal, post-tax</span></label><input type="number" step="0.25" data-path="fin.hurdlePct"/></div>
+          <div class="field"><label>CPI indexation <span class="hint">%/yr</span></label><input type="number" step="0.1" data-path="fin.cpiPct"/></div>
+          <div class="field"><label>Corporate tax <span class="hint">%</span></label><input type="number" step="0.5" min="0" data-path="fin.taxPct"/></div>
+          <div class="field"><label>Tax depreciation <span class="hint">yrs, SL</span></label><input type="number" step="1" min="1" data-path="fin.depYears"/></div>
+          <div class="field"><label>Fixed OPEX <span class="hint">% CAPEX/yr</span></label><input type="number" step="0.1" min="0" data-path="fin.opexPct"/></div>
+          <div class="field"><label>Contract term <span class="hint">yrs</span></label><input type="number" step="1" min="1" max="50" data-path="fin.termYears"/></div>
+          <div class="field"><label>Residual value <span class="hint">% CAPEX at end</span></label><input type="number" step="5" min="0" data-path="fin.residualPct"/></div>
+          <div class="field"><label>Build period <span class="hint">yrs</span></label><input type="number" step="1" min="0" max="6" data-path="fin.buildYears"/></div>
+        </div>
+        <div class="field"><label>Spend profile <span class="hint">% per build year, e.g. 30/40/30</span></label><input type="text" data-path="fin.spendProfile"/></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ================= OUTPUTS ================= -->
+  <div class="content">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="sizing">Tank sizing</button>
+      <button class="tab" data-tab="capex">CAPEX &amp; tariff</button>
+      <button class="tab" data-tab="optimum">Optimum size</button>
+      <button class="tab" data-tab="register">Economics register</button>
+    </div>
+
+    <!-- ---------- SIZING ---------- -->
+    <div class="tabpane active" id="pane-sizing">
+      <div class="panel hero">
+        <div class="panel-h"><span class="t">Required storage</span><span class="s" id="heroSub"></span></div>
+        <div class="panel-b"><div class="kpis" id="heroKpis"></div></div>
+      </div>
+      <div id="sizingMsgs"></div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-h"><span class="t">Net working capacity build-up</span><span class="s" id="buildSub"></span></div>
+          <div class="tbl-wrap"><table class="dt" id="buildTable"></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><span class="t">Tank dimensions</span><span class="s">vs TEPSA Scenario D datasheet</span></div>
+          <div class="tbl-wrap"><table class="dt" id="dimTable"></table></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Working inventory — nominal ship cycle</span><span class="s" id="invSub"></span></div>
+        <div class="panel-b">
+          <div class="chart" id="invChart"></div>
+          <p class="note" style="margin-top:8px" id="invNote"></p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Shipping &amp; operations</span></div>
+        <div class="tbl-wrap"><table class="dt" id="opsTable"></table></div>
+      </div>
+    </div>
+
+    <!-- ---------- CAPEX ---------- -->
+    <div class="tabpane" id="pane-capex">
+      <div class="panel hero">
+        <div class="panel-h"><span class="t">Estimated CAPEX &amp; break-even storage tariff</span><span class="s" id="capexHeroSub"></span></div>
+        <div class="panel-b"><div class="kpis" id="capexKpis"></div></div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-h"><span class="t">CAPEX breakdown</span><span class="s">€M, before financing</span></div>
+          <div class="tbl-wrap"><table class="dt" id="capexTable"></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><span class="t">Tariff build-up</span><span class="s" id="tariffSub"></span></div>
+          <div class="tbl-wrap"><table class="dt" id="tariffTable"></table></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="t">Market check at this throughput</span><span class="s">registered offers, 40 kt tank, all-in incl. utilities</span></div>
+        <div class="tbl-wrap"><table class="dt" id="marketTable"></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="t">Method</span></div>
+        <div class="panel-b">
+          <div class="formula">Storage CAPEX = tanks × Ref CAPEX × (net per tank ÷ Ref size)^exponent × location factor
+Total CAPEX   = storage + (jetty/marine + ship-class marine adder + other) × location factor
+Break-even tariff: NPV = 0 at the operator return, over the contract term —
+  revenue (CPI-indexed) − fixed OPEX (CPI-indexed) − tax on (revenue − OPEX − depreciation)
+  + residual value, against CAPEX at start of operations (incl. financing during build).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- OPTIMUM ---------- -->
+    <div class="tabpane" id="pane-optimum">
+      <div class="panel hero">
+        <div class="panel-h"><span class="t">Lowest landed logistics cost</span><span class="s" id="optSub"></span></div>
+        <div class="panel-b"><div class="kpis" id="optKpis"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="t">Ship classes — edit capacity, freight and marine adder</span><span class="s">freight values are placeholders: enter route quotes</span></div>
+        <div class="tbl-wrap"><table class="dt" id="shipEditTable"></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="t">Cost per tonne by ship class</span><span class="s">€/t, year-1</span></div>
+        <div class="panel-b">
+          <div class="legend" id="optLegend"></div>
+          <div class="chart" id="optChart"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="t">Comparison table</span></div>
+        <div class="tbl-wrap"><table class="dt" id="optTable"></table></div>
+      </div>
+    </div>
+
+    <!-- ---------- REGISTER ---------- -->
+    <div class="tabpane" id="pane-register">
+      <div class="msg msg-info">All figures are indicative and non-binding. Derived values are recalculated live from the <b>Financial assumptions</b> and <b>Utilities</b> inputs. Edit any registered number below; it is saved with the project file.</div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Vopak — non-binding tariff indication</span><span class="s" id="vopakSub"></span></div>
+        <div class="panel-b" style="padding-bottom:0">
+          <p class="note" id="vopakScope"></p>
+        </div>
+        <div class="tbl-wrap"><table class="dt" id="vopakInputs"></table></div>
+        <div class="tbl-wrap"><table class="dt" id="vopakTable"></table></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">TEPSA — indicative quote</span><span class="s" id="tepsaSub"></span></div>
+        <div class="panel-b" style="padding-bottom:0"><p class="note" id="tepsaScope"></p></div>
+        <div class="tbl-wrap"><table class="dt" id="tepsaInputs"></table></div>
+        <div class="tbl-wrap"><table class="dt" id="tepsaTable"></table></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Benchmark — Project Titan, Kakinada (India)</span></div>
+        <div class="tbl-wrap"><table class="dt" id="titanTable"></table></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-h"><span class="t">Open questions</span></div>
+          <div class="panel-b"><ul class="plain" id="openQs"></ul></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><span class="t">Decision log</span></div>
+          <div class="tbl-wrap"><table class="dt" id="decisions"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+"use strict";
+// ═══════════════════════════════════════════════════════════════
+//   DEFAULT PROJECT — HAROPA Le Havre, 40 kt refrigerated NH3 tank
+// ═══════════════════════════════════════════════════════════════
+const SCHEMA_VERSION = 1;
+const DEFAULTS = {
+  schemaVersion: SCHEMA_VERSION,
+  project: { name: "HAROPA NH₃ import terminal", location: "HAROPA Port, Le Havre (FR)" },
+  product: { name: "Ammonia", density: 682, tempC: -33, pressure: "100–150" },
+  demand: { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" },
+  shipClass: "CUSTOM",
+  ships: {
+    MGC:    { label: "MGC",  m3: 40000, fillPct: 98,  freightEurT: 55, marineAdderEurM: 0 },
+    LGC:    { label: "LGC",  m3: 60000, fillPct: 98,  freightEurT: 45, marineAdderEurM: 0 },
+    VLAC:   { label: "VLAC", m3: 90000, fillPct: 98,  freightEurT: 38, marineAdderEurM: 0 },
+    CUSTOM: { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100, freightEurT: 50, marineAdderEurM: 0 },
+  },
+  jetty: { unloadRateTph: 650, berthHours: 12 },
+  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 },
+  geometry: { tanks: 1, innerHeightM: 29.3, heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
+  utilities: { powerKWhPerT: 10.3, powerPriceEurMWh: 150, markupPct: 10, bogPctPerDay: 0.04 },
+  capex: { refStorageEurM: 185, refNetT: 40000, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
+  fin: { hurdlePct: 9, cpiPct: 2.5, taxPct: 25, depYears: 20, opexPct: 2.5, termYears: 15, residualPct: 0, buildYears: 3, spendProfile: "30/40/30" },
+  register: {
+    vopak: {
+      status: "Non-binding tariff indication",
+      scope: "1 refrigerated tank (steel/steel/concrete), direct pipeline to on-site cracker, jetty and dredging works. Excludes energy & utilities (set = TEPSA basis), non-pipeline send-out (e.g. rail), soil remediation of 3.7 ha plot (awaiting HAROPA), VAT. CAPEX accuracy ±40 %. 15-yr commitment, CPI-indexed.",
+      termYears: 15,
+      q1: 300, q2: 550,
+      t40: { q1: { low: 95, high: 135 }, q2: { low: 50, high: 75 } },
+      t60: { q1: { low: 105, high: 150 }, q2: { low: 55, high: 80 } },
+    },
+    tepsa: {
+      status: "Indicative",
+      scope: "1 × 40,000 t net tank (58,651 m³ net, 69,557 m³ nominal), ID 55 m / OD 58 m, inner height 29.3 m. Export by pipeline to Air Liquide (ALF-II). Excess throughput fee applies to pipeline send-out to ALF-II only. Utility fee = pass-through + 10 % admin at €150/MWh.",
+      storageEurM: 185, jettyEurM: 20, netT: 40000,
+      fee1: { q: 260, eurT: 110 }, fee2: { q: 520, eurT: 55 },
+      excessFeeEurT: 15, utilityFeeEurT: 1.7,
+    },
+    titan: { name: "Project Titan", location: "Kakinada, India", capexUsdM: 87, fxUsdPerEur: 1.10, capacityKt: 50, scope: "Full terminal" },
+    openQuestions: [
+      "TEPSA: contract term and indexation basis",
+      "TEPSA: is dredging included in the €20M jetty?",
+      "TEPSA: is financing during construction / owner's cost in the €205M?",
+      "TEPSA: soil remediation included?",
+      "TEPSA: 1.7 ships/month vs 1.44 implied by 30 kt parcels",
+      "Vopak: is '40 kt' net (usable) or gross capacity?",
+      "Vopak: confirm utility pass-through basis equals TEPSA",
+      "Titan: year of estimate; dredging / marine civil scope",
+      "Freight rates by ship class for the supply route",
+    ],
+    decisions: [
+      { date: "2026-09-27", text: "Base assumptions: 9 % return, 2.5 % CPI, 25 % tax / 20-yr SL, 2.5 % OPEX, 15-yr full recovery" },
+      { date: "2026-09-27", text: "Reference tank 40 kt net; reference throughputs 300 and 550 ktpa" },
+      { date: "2026-09-27", text: "Vopak utilities = TEPSA basis: €1.7/t (pass-through +10 % admin, €150/MWh)" },
+      { date: "2026-09-27", text: "Project Titan USD 87M is full-terminal scope; FX 1.10 USD/EUR" },
+      { date: "2026-09-27", text: "Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t)" },
+    ],
+  },
+};
+
+const SHIP_KEYS = ["MGC", "LGC", "VLAC", "CUSTOM"];
+const STORE_KEY = "nh3StorageProject.v1";
+let P = clone(DEFAULTS);
+
+// ═══════════════════════════════════════════════════════════════
+//   HELPERS
+// ═══════════════════════════════════════════════════════════════
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function $(id) { return document.getElementById(id); }
+function getPath(o, path) { return path.split(".").reduce((a, k) => (a == null ? a : a[k]), o); }
+function setPath(o, path, v) { const ks = path.split("."); const last = ks.pop(); const t = ks.reduce((a, k) => (a[k] ??= {}), o); t[last] = v; }
+function deepMerge(base, over) {
+  if (Array.isArray(base)) return Array.isArray(over) ? clone(over) : clone(base);
+  if (base && typeof base === "object") {
+    const out = {};
+    for (const k of Object.keys(base)) out[k] = over && k in over ? deepMerge(base[k], over[k]) : clone(base[k]);
+    if (over && typeof over === "object") for (const k of Object.keys(over)) if (!(k in base)) out[k] = clone(over[k]);
+    return out;
+  }
+  return over === undefined || over === null ? base : over;
+}
+function num(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? n : d; }
+function fmt(n, d = 0) { return Number.isFinite(n) ? n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—"; }
+function pct(n, d = 1) { return Number.isFinite(n) ? (n * 100).toFixed(d) + " %" : "—"; }
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+function shipName(k) { return k === "CUSTOM" ? (P.ships.CUSTOM.label || "Custom") : k; }
+
+// ═══════════════════════════════════════════════════════════════
+//   FINANCE ENGINE (same model used for every offer & the design)
+// ═══════════════════════════════════════════════════════════════
+function finParams(over = {}) {
+  const f = P.fin;
+  const prof = String(f.spendProfile).split(/[\/,;\s]+/).map(Number).filter((x) => x > 0);
+  const years = Math.max(0, Math.round(num(f.buildYears)));
+  let profile = prof.length === years && years > 0 ? prof : Array(years).fill(1);
+  const s = profile.reduce((a, b) => a + b, 0) || 1;
+  profile = profile.map((x) => x / s);
+  return Object.assign({
+    h: num(f.hurdlePct) / 100, cpi: num(f.cpiPct) / 100, tax: num(f.taxPct) / 100,
+    dep: Math.max(1, num(f.depYears, 20)), opex: num(f.opexPct) / 100,
+    term: Math.max(1, Math.round(num(f.termYears, 15))), resid: num(f.residualPct) / 100,
+    profile, profileOk: years === 0 || prof.length === years,
+  }, over);
+}
+// Capitalisation factor: spend at mid-year of each build year, compounded to start of operations.
+function idcFactor(h, profile) {
+  const n = profile.length;
+  return n === 0 ? 1 : profile.reduce((a, w, i) => a + w * Math.pow(1 + h, n - i - 0.5), 0);
+}
+// Post-tax NPV to the operator; rev0 = year-1 revenue (€M), capexCod = CAPEX at start of operations (€M).
+function npv(rev0, capexCod, f) {
+  let v = -capexCod;
+  const dep = capexCod / f.dep;
+  for (let t = 1; t <= f.term; t++) {
+    const idx = Math.pow(1 + f.cpi, t - 1);
+    const rev = rev0 * idx, opex = f.opex * capexCod * idx;
+    const d = t <= f.dep ? dep : 0;
+    v += (rev - opex - f.tax * (rev - opex - d)) / Math.pow(1 + f.h, t);
+  }
+  const book = Math.max(capexCod - dep * Math.min(f.term, f.dep), 0);
+  const rv = f.resid * capexCod;
+  v += (rv - f.tax * (rv - book)) / Math.pow(1 + f.h, f.term);
+  return v;
+}
+// Break-even year-1 tariff (€/t) for an overnight CAPEX (€M) at throughput q (kt/yr).
+function breakEvenTariff(capexOvernight, qKt, f = finParams()) {
+  const cod = capexOvernight * idcFactor(f.h, f.profile);
+  const n0 = npv(0, cod, f), n1 = npv(1, cod, f);
+  const rev0 = -n0 / (n1 - n0);
+  return { eurT: (rev0 * 1000) / qKt, revEurM: rev0, capexCod: cod };
+}
+// CAPEX the operator can fund from a tariff (€/t) at throughput q; NPV is linear in CAPEX.
+function impliedCapex(eurT, qKt, f = finParams()) {
+  const rev0 = (eurT * qKt) / 1000;
+  const a = npv(rev0, 0, f), b = npv(rev0, 1, f) - a;
+  const cod = -a / b;
+  return { cod, overnight: cod / idcFactor(f.h, f.profile), revEurM: rev0 };
+}
+// Return (IRR) earned by a tariff against a quoted CAPEX. withIdc: quote is before financing.
+function impliedIrr(eurT, qKt, capexEurM, withIdc = true, over = {}) {
+  const base = finParams(over);
+  const rev0 = (eurT * qKt) / 1000;
+  let lo = -0.2, hi = 1.0;
+  const g = (h) => { const f = Object.assign({}, base, { h }); return npv(rev0, capexEurM * (withIdc ? idcFactor(h, f.profile) : 1), f); };
+  if (g(lo) < 0) return NaN;
+  if (g(hi) > 0) return NaN;
+  for (let i = 0; i < 100; i++) { const m = (lo + hi) / 2; if (g(m) > 0) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+function utilityFee() { const u = P.utilities; return num(u.powerKWhPerT) * num(u.powerPriceEurMWh) / 1000 * (1 + num(u.markupPct) / 100); }
+
+// ═══════════════════════════════════════════════════════════════
+//   SIZING ENGINE
+// ═══════════════════════════════════════════════════════════════
+const RULES = {
+  tepsa: {
+    name: "Outage + one ship-timing event",
+    note: "Net = parcel + [no send-out + max(early, late + port closure) + strategic] × daily send-out. A downstream outage can coincide with one ship arriving off-schedule. Reproduces TEPSA's 40,000 t (30,000 + 7 d × 1,425 t/d).",
+    days: (b) => b.noSendoutDays + Math.max(b.earlyDays, b.lateDays + b.portClosureDays) + b.strategicDays,
+  },
+  additive: {
+    name: "All events at once",
+    note: "Net = parcel + [no send-out + early + late + port closure + strategic] × daily send-out. Every event is assumed to happen together — the most robust, and the largest tank.",
+    days: (b) => b.noSendoutDays + b.earlyDays + b.lateDays + b.portClosureDays + b.strategicDays,
+  },
+  max: {
+    name: "Largest single event",
+    note: "Net = parcel + [max(no send-out, early, late + port closure) + strategic] × daily send-out. Events are assumed never to overlap — the smallest tank; accept more demurrage or send-out risk.",
+    days: (b) => Math.max(b.noSendoutDays, b.earlyDays, b.lateDays + b.portClosureDays) + b.strategicDays,
+  },
+};
+
+function size(shipKey = P.shipClass) {
+  const dens = num(P.product.density, 682);
+  const thrT = num(P.demand.throughputKtpa) * 1000;
+  const qAvg = thrT / 365, qOp = thrT / Math.max(1, num(P.demand.operatingDays, 365));
+  const q = P.demand.rateBasis === "operating" ? qOp : qAvg;
+  const ship = P.ships[shipKey];
+  const parcel = num(ship.m3) * num(ship.fillPct) / 100 * dens / 1000;
+  const b = {}; for (const k of Object.keys(DEFAULTS.buffer)) b[k] = k === "rule" ? P.buffer.rule : Math.max(0, num(P.buffer[k]));
+  const rule = RULES[b.rule] || RULES.tepsa;
+  const bufferDays = rule.days(b);
+  const safetyDays = Math.min(b.lateDays + b.portClosureDays + b.strategicDays, bufferDays);
+  const netReq = parcel + bufferDays * q;
+  const step = b.roundStepT;
+  const net = step > 0 ? Math.ceil(netReq / step - 1e-9) * step : netReq;
+  const g = P.geometry;
+  const N = Math.max(1, Math.round(num(g.tanks, 1)));
+  const H = num(g.innerHeightM), heel = num(g.heelM), top = num(g.topMarginM);
+  const workH = H - heel - top;
+  const perTankT = net / N;
+  const perTankNetM3 = perTankT * 1000 / dens;
+  const area = workH > 0 ? perTankNetM3 / workH : NaN;
+  const D = Math.sqrt(4 * area / Math.PI);
+  const OD = D + 2 * num(g.annularGapM);
+  const nominalM3 = area * H;
+  const heelM3 = area * heel;
+  const footM2 = Math.PI / 4 * Math.pow(OD + 2 * num(g.clearanceM), 2) * N;
+  const unloadH = parcel / Math.max(1, num(P.jetty.unloadRateTph));
+  const callH = unloadH + num(P.jetty.berthHours);
+  const shipsYr = thrT / parcel;
+  const intervalD = parcel / qAvg;
+  return {
+    shipKey, dens, thrT, qAvg, qOp, q, parcel, parcelM3: num(ship.m3) * num(ship.fillPct) / 100,
+    rule, bufferDays, safetyDays, ullageDays: bufferDays - safetyDays, bufferT: bufferDays * q,
+    netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3,
+    netToNominal: perTankNetM3 / nominalM3, heelT: heelM3 * dens / 1000,
+    footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
+    unloadH, callH, shipsYr, shipsMonth: shipsYr / 12, intervalD, jettyOcc: shipsYr * callH / 8760,
+    turns: thrT / net, stockDays: net / qAvg,
+    bogTpd: net * num(P.utilities.bogPctPerDay) / 100,
+  };
+}
+
+function capexFor(sz) {
+  const c = P.capex, LF = num(c.locationFactor, 1);
+  const refT = Math.max(1, num(c.refNetT));
+  const storage = sz.N * num(c.refStorageEurM) * Math.pow(sz.perTankT / refT, num(c.exponent)) * LF;
+  const marine = (num(c.marineEurM) + num(P.ships[sz.shipKey].marineAdderEurM)) * LF;
+  const other = num(c.otherEurM) * LF;
+  const total = storage + marine + other;
+  const acc = num(c.accuracyPct) / 100;
+  const f = finParams();
+  const be = breakEvenTariff(total, sz.thrT / 1000, f);
+  const util = utilityFee();
+  return { storage, marine, other, total, low: total * (1 - acc), high: total * (1 + acc), acc, f, be,
+    beLow: breakEvenTariff(total * (1 - acc), sz.thrT / 1000, f).eurT, beHigh: breakEvenTariff(total * (1 + acc), sz.thrT / 1000, f).eurT,
+    util, allIn: be.eurT + util, idc: idcFactor(f.h, f.profile) };
+}
+
+// Registered offers evaluated at an arbitrary throughput (fixed-revenue interpolation).
+function vopakAt(sizeKey, qKt, lev) {
+  const v = P.register.vopak, t = v[sizeKey];
+  const val = (qk) => lev === "mid" ? (num(t[qk].low) + num(t[qk].high)) / 2 : num(t[qk][lev]);
+  const r1 = val("q1") * num(v.q1) / 1000, r2 = val("q2") * num(v.q2) / 1000;
+  const rev = r1 + (r2 - r1) * (qKt - num(v.q1)) / (num(v.q2) - num(v.q1));
+  return { rev, eurT: rev * 1000 / qKt };
+}
+function tepsaAt(qKt) {
+  const t = P.register.tepsa;
+  const r1 = num(t.fee1.eurT) * num(t.fee1.q) / 1000, r2 = num(t.fee2.eurT) * num(t.fee2.q) / 1000;
+  const rev = num(t.fee2.q) === num(t.fee1.q) ? r1 : r1 + (r2 - r1) * (qKt - num(t.fee1.q)) / (num(t.fee2.q) - num(t.fee1.q));
+  return { rev, eurT: rev * 1000 / qKt };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   INPUT BINDING
+// ═══════════════════════════════════════════════════════════════
+function syncInputs() {
+  document.querySelectorAll("[data-path]").forEach((el) => {
+    const v = getPath(P, el.dataset.path);
+    if (v !== undefined && document.activeElement !== el) el.value = v;
+  });
+  const s = P.ships[P.shipClass];
+  if (document.activeElement !== $("shipM3")) $("shipM3").value = s.m3;
+  if (document.activeElement !== $("shipFill")) $("shipFill").value = s.fillPct;
+  $("customNameField").classList.toggle("hidden", P.shipClass !== "CUSTOM");
+  renderShipPicker();
+}
+function onInput(e) {
+  const el = e.target;
+  if (el.id === "shipM3") P.ships[P.shipClass].m3 = num(el.value);
+  else if (el.id === "shipFill") P.ships[P.shipClass].fillPct = num(el.value);
+  else if (el.dataset.path) {
+    const cur = getPath(P, el.dataset.path);
+    setPath(P, el.dataset.path, typeof cur === "number" || el.type === "number" ? num(el.value, cur) : el.value);
+  } else return;
+  if (el.dataset.path === "ships.CUSTOM.label") renderShipPicker();
+  recalc();
+}
+document.addEventListener("input", onInput);
+document.addEventListener("change", onInput);
+
+function renderShipPicker() {
+  $("shipPicker").innerHTML = SHIP_KEYS.map((k) => {
+    const s = P.ships[k];
+    const t = num(s.m3) * num(s.fillPct) / 100 * num(P.product.density) / 1e6;
+    return `<button type="button" data-ship="${k}" class="${P.shipClass === k ? "active" : ""}">${k === "CUSTOM" ? "Other" : k}<small>${fmt(num(s.m3) / 1000)}k m³ · ${fmt(t, 1)} kt</small></button>`;
+  }).join("");
+}
+$("shipPicker").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-ship]"); if (!b) return;
+  P.shipClass = b.dataset.ship; syncInputs(); recalc();
+});
+
+// Tabs
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest(".tab"); if (!b) return;
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === b));
+  document.querySelectorAll(".tabpane").forEach((p) => p.classList.toggle("active", p.id === "pane-" + b.dataset.tab));
+  try { localStorage.setItem("nh3StorageTab", b.dataset.tab); } catch (e) {}
+  recalc();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//   RENDER
+// ═══════════════════════════════════════════════════════════════
+function kpi(label, value, unit, note, big) {
+  const txt = /[a-z]{3}/i.test(String(value).replace(/Ø/g, "")) ? " txt" : "";
+  return `<div class="kpi${big ? " big" : ""}"><div class="l">${label}</div><div class="v${txt}">${value}<span class="u">${unit || ""}</span></div>${note ? `<div class="n">${note}</div>` : ""}</div>`;
+}
+// textCols: column indexes rendered as left-aligned prose instead of right-aligned numbers.
+function rows(list, textCols = []) {
+  const cls = (i, td) => (i === 0 ? (td ? "lbl" : "") : textCols.includes(i) ? (td ? "lbl" : "") : "num");
+  return list.map((r) => {
+    if (r.head) return `<tr>${r.head.map((h, i) => `<th class="${cls(i, false)}">${h}</th>`).join("")}</tr>`;
+    return `<tr class="${r.cls || ""}">${r.cells.map((c, i) => `<td class="${cls(i, true)}">${c}</td>`).join("")}</tr>`;
+  }).join("");
+}
+
+function recalc() {
+  const sz = size();
+  const cx = capexFor(sz);
+  renderSummaries(sz, cx);
+  renderSizing(sz);
+  renderCapex(sz, cx);
+  renderOptimum();
+  renderRegister();
+  save();
+}
+
+function renderSummaries(sz, cx) {
+  $("sumDemand").textContent = `${fmt(sz.qAvg)} t/d`;
+  $("sumShip").textContent = `${fmt(sz.parcel)} t`;
+  $("sumBuffer").textContent = `${fmt(sz.bufferDays, 1)} d`;
+  $("sumGeom").textContent = `Ø${fmt(sz.D, 1)} m`;
+  $("sumUtil").textContent = `€${fmt(cx.util, 2)}/t`;
+  $("sumCapex").textContent = `€${fmt(cx.total)}M`;
+  $("sumFin").textContent = `${fmt(cx.f.h * 100, 1)} % · ${cx.f.term} yr`;
+  $("ruleNote").textContent = sz.rule.note;
+  $("parcelNote").innerHTML = `Parcel = <b>${fmt(sz.parcelM3)} m³ × ${fmt(sz.dens)} kg/m³ = ${fmt(sz.parcel)} t</b> (${shipName(P.shipClass)}).`;
+}
+
+function renderSizing(sz) {
+  $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
+  $("heroKpis").innerHTML =
+    kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · rounded to ${fmt(num(P.buffer.roundStepT))} t`, true) +
+    kpi("Net volume", fmt(sz.perTankNetM3 * sz.N), "m³", sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³` : "") +
+    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
+    kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
+    kpi("Stock cover", fmt(sz.stockDays, 1), "days", `${fmt(sz.turns, 1)} turns / yr`);
+
+  const m = [];
+  if (!(sz.workH > 0)) m.push(["err", "Heel + top margin exceed the tank height — increase height or reduce the margins."]);
+  if (sz.D > num(P.geometry.maxDiameterM)) m.push(["warn", `Inner diameter ${fmt(sz.D, 1)} m exceeds the ${fmt(num(P.geometry.maxDiameterM))} m limit. Add a tank, raise the height, or use a smaller ship.`]);
+  if (sz.plotUse > 1) m.push(["warn", `Tank footprint incl. clearance (${fmt(sz.footHa, 2)} ha) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha plot.`]);
+  if (sz.intervalD * 24 < sz.callH) m.push(["err", `Ships would arrive every ${fmt(sz.intervalD, 1)} days but each call takes ${fmt(sz.callH)} h — jetty cannot keep up.`]);
+  else if (sz.jettyOcc > 0.5) m.push(["warn", `Jetty occupancy ${pct(sz.jettyOcc, 0)} — high; queueing and demurrage likely.`]);
+  if (sz.intervalD < sz.bufferDays) m.push(["info", `Ship interval (${fmt(sz.intervalD, 1)} d) is shorter than the buffer (${fmt(sz.bufferDays, 1)} d): consecutive ship delays would overlap.`]);
+  const isTepsa = Math.abs(sz.net - 40000) < 1 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
+  if (isTepsa) m.push(["ok", `<b>TEPSA check:</b> 40,000 t net · Ø${fmt(sz.D, 1)} m · ${fmt(sz.nominalM3)} m³ nominal — matches the Scenario D datasheet (40,000 t · Ø55.0 m · 69,557 m³).`]);
+  $("sizingMsgs").innerHTML = m.map(([k, t]) => `<div class="msg msg-${k}">${t}</div>`).join("");
+
+  $("buildSub").textContent = `daily send-out ${fmt(sz.q)} t/d`;
+  const b = P.buffer;
+  $("buildTable").innerHTML = rows([
+    { head: ["Component", "Days", "Tonnes"] },
+    { cells: [`Ship parcel (${shipName(sz.shipKey)})`, "", fmt(sz.parcel)] },
+    { cls: "sub", cells: ["No send-out (downstream outage)", fmt(num(b.noSendoutDays), 1), ""] },
+    { cls: "sub", cells: ["Ship early", fmt(num(b.earlyDays), 1), ""] },
+    { cls: "sub", cells: ["Ship late", fmt(num(b.lateDays), 1), ""] },
+    { cls: "sub", cells: ["Port / weather closure", fmt(num(b.portClosureDays), 1), ""] },
+    { cls: "sub", cells: ["Strategic reserve", fmt(num(b.strategicDays), 1), ""] },
+    { cells: [`Buffer counted — ${sz.rule.name.toLowerCase()}`, fmt(sz.bufferDays, 1), fmt(sz.bufferT)] },
+    { cells: ["Required net capacity", "", fmt(sz.netReq)] },
+    { cls: "total", cells: ["Design net working capacity", "", fmt(sz.net)] },
+  ]);
+
+  $("dimTable").innerHTML = rows([
+    { head: ["Per tank", "This design", "TEPSA D"] },
+    { cells: ["Net capacity, t", fmt(sz.perTankT), "40,000"] },
+    { cells: ["Net volume, m³", fmt(sz.perTankNetM3), "58,651"] },
+    { cells: ["Nominal volume, m³", fmt(sz.nominalM3), "69,557"] },
+    { cells: ["Inner diameter, m", fmt(sz.D, 1), "55.0"] },
+    { cells: ["Outer diameter, m", fmt(sz.OD, 1), "58.0"] },
+    { cells: ["Inner height, m", fmt(sz.H, 1), "29.3"] },
+    { cells: ["Working level range, m", fmt(sz.workH, 2), "—"] },
+    { cells: ["Heel (unusable), t", fmt(sz.heelT), "—"] },
+    { cells: ["Footprint incl. clearance, ha", fmt(sz.footHa / sz.N, 2), "—"] },
+  ]);
+
+  $("opsTable").innerHTML = rows([
+    { head: ["Item", "Value", "Note"] },
+    { cells: ["Ships per year", fmt(sz.shipsYr, 1), `${fmt(sz.shipsMonth, 2)} per month`] },
+    { cells: ["Nominal ship interval", fmt(sz.intervalD, 1) + " d", "parcel ÷ average send-out"] },
+    { cells: ["Pumping time per call", fmt(sz.unloadH, 1) + " h", `at ${fmt(num(P.jetty.unloadRateTph))} t/h`] },
+    { cells: ["Berth time per call", fmt(sz.callH, 1) + " h", `incl. ${fmt(num(P.jetty.berthHours))} h overhead`] },
+    { cells: ["Jetty occupancy", pct(sz.jettyOcc), sz.jettyOcc > 0.5 ? "high" : "OK"] },
+    { cells: ["Average / operating-day send-out", `${fmt(sz.qAvg)} / ${fmt(sz.qOp)} t/d`, `${fmt(num(P.demand.operatingDays))} operating days`] },
+    { cells: ["Boil-off (full tank)", fmt(sz.bogTpd, 1) + " t/d", `${fmt(num(P.utilities.bogPctPerDay), 3)} %/day`] },
+    { cells: ["Plot use (tanks + clearance)", pct(sz.plotUse, 0), `${fmt(sz.footHa, 2)} of ${fmt(num(P.geometry.plotHa), 1)} ha`] },
+  ], [2]);
+  drawInventory(sz);
+}
+
+function renderCapex(sz, cx) {
+  const q = sz.thrT / 1000;
+  $("capexHeroSub").textContent = `${fmt(sz.net)} t net · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
+  $("capexKpis").innerHTML =
+    kpi("Total CAPEX", "€" + fmt(cx.total), "M", `range €${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %)`, true) +
+    kpi("Incl. financing", "€" + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
+    kpi("Break-even storage tariff", "€" + fmt(cx.be.eurT, 1), "/t", `range €${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`) +
+    kpi("All-in incl. utilities", "€" + fmt(cx.allIn, 1), "/t", `+ €${fmt(cx.util, 2)}/t utility fee`) +
+    kpi("Annual revenue", "€" + fmt(cx.be.revEurM, 1), "M/yr", "year 1, CPI-indexed after");
+  const c = P.capex;
+  $("capexTable").innerHTML = rows([
+    { head: ["Item", "€M", "Basis"] },
+    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankT)} t)`, fmt(cx.storage, 1), `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)}/${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`] },
+    { cells: ["Jetty / marine", fmt(cx.marine, 1), `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder €${fmt(num(P.ships[sz.shipKey].marineAdderEurM))}M`] },
+    { cells: ["Dredging, pipeline, other", fmt(cx.other, 1), ""] },
+    { cls: "total", cells: ["Total, before financing", fmt(cx.total, 1), `±${fmt(cx.acc * 100)} %`] },
+    { cells: ["Financing during construction", fmt(cx.be.capexCod - cx.total, 1), `${fmt(cx.f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`] },
+    { cls: "total", cells: ["CAPEX at start of operations", fmt(cx.be.capexCod, 1), ""] },
+  ], [2]);
+  $("tariffSub").textContent = `${fmt(cx.f.h * 100, 1)} % return · ${cx.f.term} yr`;
+  // Decompose year-1 revenue into capital recovery and fixed OPEX (year-1 OPEX is exact).
+  const opex1 = cx.f.opex * cx.be.capexCod;
+  $("tariffTable").innerHTML = rows([
+    { head: ["Component", "€M / yr", "€/t"] },
+    { cells: ["Fixed OPEX (year 1)", fmt(opex1, 1), fmt(opex1 * 1000 / q, 1)] },
+    { cells: ["Capital recovery, return & tax", fmt(cx.be.revEurM - opex1, 1), fmt((cx.be.revEurM - opex1) * 1000 / q, 1)] },
+    { cls: "total", cells: ["Break-even storage tariff", fmt(cx.be.revEurM, 1), fmt(cx.be.eurT, 1)] },
+    { cells: ["Utility fee (pass-through)", fmt(cx.util * q / 1000, 2), fmt(cx.util, 2)] },
+    { cls: "total", cells: ["All-in", fmt(cx.be.revEurM + cx.util * q / 1000, 1), fmt(cx.allIn, 1)] },
+  ]);
+  const vl = vopakAt("t40", q, "low"), vm = vopakAt("t40", q, "mid"), vh = vopakAt("t40", q, "high"), tp = tepsaAt(q);
+  const u = cx.util;
+  $("marketTable").innerHTML = rows([
+    { head: ["Source", "Storage €/t", "All-in €/t", "Revenue €M/yr", "Implied CAPEX €M*"] },
+    { cells: ["This design (break-even)", fmt(cx.be.eurT, 1), fmt(cx.allIn, 1), fmt(cx.be.revEurM, 1), fmt(cx.total)] },
+    { cells: ["TEPSA indicative fee", fmt(tp.eurT, 1), fmt(tp.eurT + u, 1), fmt(tp.rev, 1), fmt(impliedCapex(tp.eurT, q).overnight)] },
+    { cells: ["Vopak — low", fmt(vl.eurT, 1), fmt(vl.eurT + u, 1), fmt(vl.rev, 1), fmt(impliedCapex(vl.eurT, q).overnight)] },
+    { cells: ["Vopak — mid", fmt(vm.eurT, 1), fmt(vm.eurT + u, 1), fmt(vm.rev, 1), fmt(impliedCapex(vm.eurT, q).overnight)] },
+    { cells: ["Vopak — high", fmt(vh.eurT, 1), fmt(vh.eurT + u, 1), fmt(vh.rev, 1), fmt(impliedCapex(vh.eurT, q).overnight)] },
+  ]) + `<tr><td colspan="5" class="lbl" style="font-size:10.5px;color:var(--text3)">* CAPEX before financing that the fee would fund at the current financial assumptions. Offers are interpolated on fixed annual revenue between their quoted throughputs.</td></tr>`;
+}
+
+function optimumData() {
+  return SHIP_KEYS.map((k) => {
+    const sz = size(k), cx = capexFor(sz);
+    const freight = num(P.ships[k].freightEurT);
+    return { k, sz, cx, storage: cx.be.eurT, util: cx.util, freight, total: cx.be.eurT + cx.util + freight };
+  });
+}
+function renderOptimum() {
+  const data = optimumData();
+  const valid = data.filter((d) => Number.isFinite(d.total) && d.sz.intervalD * 24 >= d.sz.callH && d.sz.D <= num(P.geometry.maxDiameterM));
+  const best = (valid.length ? valid : data).reduce((a, b) => (b.total < a.total ? b : a));
+  const q = best.sz.thrT / 1000;
+  $("optSub").textContent = `${fmt(q)} ktpa · ${best.sz.rule.name}`;
+  $("optKpis").innerHTML =
+    kpi("Best ship class", shipName(best.k), "", `${fmt(best.sz.parcel)} t parcel`, true) +
+    kpi("Optimum tank (net)", fmt(best.sz.net), "t", `Ø${fmt(best.sz.D, 1)} × ${fmt(best.sz.H, 1)} m · ${best.sz.N} tank(s)`) +
+    kpi("CAPEX", "€" + fmt(best.cx.total), "M", "before financing") +
+    kpi("Landed logistics cost", "€" + fmt(best.total, 1), "/t", "storage + utilities + freight") +
+    kpi("Annual logistics cost", "€" + fmt(best.total * q / 1000, 1), "M/yr", "");
+
+  SHIP_KEYS.forEach((k) => { const s = P.ships[k]; $("parcel-" + k).textContent = fmt(num(s.m3) * num(s.fillPct) / 100 * num(P.product.density) / 1000); });
+
+  $("optTable").innerHTML = rows([
+    { head: ["Ship class", "Parcel t", "Net tank t", "Inner Ø m", "Ships / yr", "Jetty occ.", "CAPEX €M", "Storage €/t", "Freight €/t", "Total €/t"] },
+    ...data.map((d) => ({
+      cls: d === best ? "best" : "",
+      cells: [shipName(d.k) + (d === best ? '<span class="tag best">lowest</span>' : "") + (d.k === P.shipClass ? '<span class="tag">selected</span>' : ""),
+        fmt(d.sz.parcel), fmt(d.sz.net), fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), pct(d.sz.jettyOcc, 0),
+        fmt(d.cx.total), fmt(d.storage, 1), fmt(d.freight, 1), fmt(d.total, 1)],
+    })),
+  ]);
+  drawOptChart(data, best);
+}
+
+// Editable tables are built once so typing never loses focus; values come from syncInputs().
+function buildStaticTables() {
+  $("shipEditTable").innerHTML =
+    `<tr><th>Class</th><th class="num">Capacity m³</th><th class="num">Fill %</th><th class="num">Parcel t</th><th class="num">Freight €/t</th><th class="num">Marine adder €M</th></tr>` +
+    SHIP_KEYS.map((k) => `<tr><td class="lbl">${k === "CUSTOM" ? `<input type="text" data-path="ships.CUSTOM.label" style="width:170px"/>` : k}</td>
+      <td class="num"><input type="number" step="500" data-path="ships.${k}.m3"/></td>
+      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.fillPct"/></td>
+      <td class="num" id="parcel-${k}"></td>
+      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.freightEurT"/></td>
+      <td class="num"><input type="number" step="1" data-path="ships.${k}.marineAdderEurM"/></td></tr>`).join("");
+  $("vopakInputs").innerHTML =
+    `<tr><th>Quoted tariff €/t</th><th class="num">Throughput A, ktpa</th><th class="num">A low</th><th class="num">A high</th><th class="num">Throughput B, ktpa</th><th class="num">B low</th><th class="num">B high</th></tr>` +
+    ["t40", "t60"].map((s) => `<tr><td class="lbl">${s === "t40" ? "40 kt tank" : "60 kt tank"}</td>
+      <td class="num">${s === "t40" ? inp("register.vopak.q1", 10, 70) : ""}</td><td class="num">${inp(`register.vopak.${s}.q1.low`, 1, 70)}</td><td class="num">${inp(`register.vopak.${s}.q1.high`, 1, 70)}</td>
+      <td class="num">${s === "t40" ? inp("register.vopak.q2", 10, 70) : ""}</td><td class="num">${inp(`register.vopak.${s}.q2.low`, 1, 70)}</td><td class="num">${inp(`register.vopak.${s}.q2.high`, 1, 70)}</td></tr>`).join("");
+  $("tepsaInputs").innerHTML =
+    `<tr><th>Quoted</th><th class="num">Storage €M</th><th class="num">Jetty €M</th><th class="num">Net size t</th><th class="num">Fee A: ktpa / €/t</th><th class="num">Fee B: ktpa / €/t</th><th class="num">Excess €/t</th><th class="num">Utility €/t</th></tr>
+     <tr><td class="lbl">TEPSA</td><td class="num">${inp("register.tepsa.storageEurM", 1, 70)}</td><td class="num">${inp("register.tepsa.jettyEurM", 1, 70)}</td><td class="num">${inp("register.tepsa.netT", 1000, 80)}</td>
+     <td class="num">${inp("register.tepsa.fee1.q", 10, 60)} ${inp("register.tepsa.fee1.eurT", 1, 60)}</td><td class="num">${inp("register.tepsa.fee2.q", 10, 60)} ${inp("register.tepsa.fee2.eurT", 1, 60)}</td>
+     <td class="num">${inp("register.tepsa.excessFeeEurT", 0.5, 60)}</td><td class="num">${inp("register.tepsa.utilityFeeEurT", 0.1, 60)}</td></tr>`;
+  $("titanTable").innerHTML =
+    `<tr><th>Input</th><th class="num">Value</th><th>Result</th><th class="num">Value</th></tr>
+     <tr><td class="lbl">CAPEX, USD M (<span id="titanScope"></span>)</td><td class="num">${inp("register.titan.capexUsdM", 1, 80)}</td><td class="lbl">CAPEX, €M</td><td class="num" id="titanEur"></td></tr>
+     <tr><td class="lbl">FX, USD per EUR</td><td class="num">${inp("register.titan.fxUsdPerEur", 0.01, 80)}</td><td class="lbl">€M per kt</td><td class="num" id="titanPerKt"></td></tr>
+     <tr><td class="lbl">Capacity, kt</td><td class="num">${inp("register.titan.capacityKt", 1, 80)}</td><td class="lbl" id="titanScaledLbl"></td><td class="num" id="titanScaled"></td></tr>
+     <tr><td class="lbl"></td><td></td><td class="lbl">TEPSA full terminal ÷ Titan scaled — <b>Europe/India factor</b></td><td class="num"><b id="titanFactor"></b></td></tr>
+     <tr><td colspan="4" class="lbl" style="font-size:10.5px;color:var(--text3)" id="titanHint"></td></tr>`;
+}
+
+function inp(path, step = 1, w) { return `<input type="number" step="${step}" data-path="${path}"${w ? ` style="width:${w}px"` : ""}/>`; }
+
+function renderRegister() {
+  const R = P.register, f = finParams(), u = utilityFee();
+  // ---- Vopak
+  const v = R.vopak;
+  $("vopakSub").textContent = `${v.status} · ${num(v.termYears)}-yr, CPI`;
+  $("vopakScope").textContent = v.scope;
+  const vr = [{ head: ["Case", "Tariff €/t", "All-in €/t", "Revenue €M/yr", "CAPEX incl. financing €M", "CAPEX before financing €M"] }];
+  for (const s of ["t40", "t60"]) for (const qk of ["q1", "q2"]) for (const lev of ["low", "mid", "high"]) {
+    const qKt = num(v[qk]);
+    const t = lev === "mid" ? (num(v[s][qk].low) + num(v[s][qk].high)) / 2 : num(v[s][qk][lev]);
+    const ic = impliedCapex(t, qKt, f);
+    vr.push({ cls: lev === "mid" ? "total" : "", cells: [`${s === "t40" ? "40" : "60"} kt · ${fmt(qKt)} ktpa · ${lev}`, fmt(t, 1), fmt(t + u, 1), fmt(ic.revEurM, 2), fmt(ic.cod), fmt(ic.overnight)] });
+  }
+  $("vopakTable").innerHTML = rows(vr);
+
+  // ---- TEPSA
+  const t = R.tepsa;
+  $("tepsaSub").textContent = t.status;
+  $("tepsaScope").textContent = t.scope;
+  const capT = num(t.storageEurM) + num(t.jettyEurM);
+  let termFor = NaN;
+  for (let yr = 5; yr <= 50; yr++) { if (impliedIrr(num(t.fee2.eurT), num(t.fee2.q), capT, true, { term: yr }) >= f.h) { termFor = yr; break; } }
+  const tr = [{ head: ["Case", "Fee €/t", "All-in €/t", "Revenue €M/yr", "Return (quote before fin.)", "Return (quote incl. fin.)", "Break-even fee €/t"] }];
+  for (const fe of [t.fee1, t.fee2]) {
+    const qKt = num(fe.q), fee = num(fe.eurT);
+    tr.push({ cells: [`${fmt(qKt)} ktpa`, fmt(fee, 1), fmt(fee + num(t.utilityFeeEurT), 1), fmt(fee * qKt / 1000, 1),
+      pct(impliedIrr(fee, qKt, capT, true)), pct(impliedIrr(fee, qKt, capT, false)), fmt(breakEvenTariff(capT, qKt, f).eurT, 1)] });
+  }
+  tr.push({ cls: "total", cells: [`Total CAPEX €${fmt(capT)}M`, "", "", "", "", "", ""] });
+  $("tepsaTable").innerHTML = rows(tr) +
+    `<tr><td colspan="7" class="lbl" style="font-size:11.5px">Contract term needed to earn ${fmt(f.h * 100, 1)} % at the ${fmt(num(t.fee2.q))} ktpa fee: <b>${Number.isFinite(termFor) ? termFor + " years" : "> 50 years"}</b>. Excess throughput: €${fmt(num(t.excessFeeEurT), 1)}/t above take-or-pay (e.g. 220 kt × €${fmt(num(t.excessFeeEurT))} = €${fmt(220 * num(t.excessFeeEurT) / 1000, 1)}M/yr).</td></tr>`;
+
+  // ---- Titan
+  const ti = R.titan, c = P.capex;
+  const eur = num(ti.capexUsdM) / Math.max(0.01, num(ti.fxUsdPerEur));
+  const refT = num(t.netT) || 40000;
+  const scaled = eur * Math.pow(refT / (num(ti.capacityKt) * 1000), num(c.exponent));
+  $("titanEur").textContent = fmt(eur, 1);
+  $("titanPerKt").textContent = fmt(eur / num(ti.capacityKt), 2);
+  $("titanScaledLbl").textContent = `Scaled to ${fmt(refT / 1000)} kt (exp. ${num(c.exponent)}), €M`;
+  $("titanScaled").textContent = fmt(scaled, 1);
+  $("titanFactor").textContent = fmt(capT / scaled, 2) + "×";
+  $("titanScope").textContent = ti.scope;
+  $("titanHint").textContent = `For an India project, set CAPEX basis → location factor ≈ ${fmt(scaled / capT, 2)} against the TEPSA reference.`;
+
+  $("openQs").innerHTML = R.openQuestions.map((q) => `<li>${esc(q)}</li>`).join("");
+  $("decisions").innerHTML = `<tr><th>Date</th><th>Decision</th></tr>` + R.decisions.map((d) => `<tr><td class="lbl" style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.text)}</td></tr>`).join("");
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   CHARTS (inline SVG, hover tooltips)
+// ═══════════════════════════════════════════════════════════════
+const tip = $("tip");
+function showTip(e, html, host) {
+  tip.innerHTML = html; tip.style.display = "block";
+  const r = host.getBoundingClientRect();
+  let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+  host.appendChild(tip);
+  if (x + tip.offsetWidth > r.width) x = e.clientX - r.left - tip.offsetWidth - 10;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+// Axis ticks on a 1-2-2.5-5 step so labels are always round numbers.
+function niceTicks(v, n = 5) {
+  const raw = v / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * p).find((x) => x >= raw);
+  const top = Math.ceil(v / step - 1e-9) * step;
+  const ticks = []; for (let t = 0; t <= top + 1e-9; t += step) ticks.push(t);
+  return { top, ticks };
+}
+
+function drawInventory(sz) {
+  const host = $("invChart");
+  if (!(sz.parcel > 0) || !(sz.qAvg > 0)) { host.innerHTML = ""; return; }
+  const W = 820, H = 250, L = 64, R = 150, T = 12, B = 30;
+  const cycles = Math.max(2, Math.min(6, Math.ceil(90 / sz.intervalD)));
+  const days = cycles * sz.intervalD;
+  const safety = sz.safetyDays * sz.q;
+  const { top: yMax, ticks } = niceTicks(sz.net * 1.05);
+  const x = (d) => L + (d / days) * (W - L - R), y = (t) => T + (1 - t / yMax) * (H - T - B);
+  const pts = [];
+  for (let k = 0; k < cycles; k++) { const t0 = k * sz.intervalD; pts.push([t0, safety], [t0, safety + sz.parcel]); }
+  pts.push([days, safety]);
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+  const area = path + `L${x(days)},${y(0)}L${x(0)},${y(0)}Z`;
+  const dStep = days > 60 ? 14 : 7;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Working inventory over a nominal ship cycle">`;
+  svg += `<g class="axis">` + ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)" stroke-width="1"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${fmt(t / 1000, t % 1000 ? 1 : 0)}k</text>`).join("");
+  for (let d = 0; d <= days; d += dStep) svg += `<text x="${x(d)}" y="${H - 10}" text-anchor="middle">${d}d</text>`;
+  svg += `</g>`;
+  // ullage reserve band (between parcel top and net capacity)
+  svg += `<rect x="${L}" y="${y(sz.net)}" width="${W - L - R}" height="${Math.max(0, y(safety + sz.parcel) - y(sz.net))}" fill="var(--s2)" opacity="0.10"/>`;
+  svg += `<path d="${area}" fill="var(--s1)" opacity="0.10"/><path d="${path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const ref = (t, label) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--text3)" stroke-width="1"/><text class="lbl-txt" x="${W - R + 8}" y="${y(t) + 4}">${label}</text>`;
+  svg += ref(sz.net, `Net capacity ${fmt(sz.net / 1000, 1)}k t`);
+  if (safety > 0) svg += ref(safety, `Safety stock ${fmt(safety / 1000, 1)}k t`);
+  svg += `<text class="lbl-txt" x="${W - R + 8}" y="${(y(sz.net) + y(safety + sz.parcel)) / 2 + 4}">Ullage reserve</text>`;
+  svg += `<line id="invCross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--text3)" stroke-width="1" visibility="hidden"/><circle id="invDot" r="4.5" fill="var(--s1)" stroke="var(--bg2)" stroke-width="2" visibility="hidden"/>`;
+  svg += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="invHit"/></svg>`;
+  host.innerHTML = svg;
+  $("invSub").textContent = `${cycles} arrivals every ${fmt(sz.intervalD, 1)} d · tonnes above heel`;
+  $("invNote").textContent = `Stock falls at ${fmt(sz.qAvg)} t/d between arrivals and rises by ${fmt(sz.parcel)} t at each discharge. Safety stock covers late ships; the ullage reserve above the peak absorbs early ships and downstream outages.`;
+  const svgEl = host.querySelector("svg"), hit = $("invHit"), cross = $("invCross"), dot = $("invDot");
+  hit.addEventListener("mousemove", (e) => {
+    const r = svgEl.getBoundingClientRect();
+    const px = (e.clientX - r.left) * W / r.width;
+    const d = Math.max(0, Math.min(days, (px - L) / (W - L - R) * days));
+    const phase = d % sz.intervalD;
+    const stock = safety + sz.parcel - phase * sz.qAvg;
+    cross.setAttribute("x1", x(d)); cross.setAttribute("x2", x(d)); cross.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", x(d)); dot.setAttribute("cy", y(stock)); dot.setAttribute("visibility", "visible");
+    showTip(e, `Day <b>${fmt(d, 1)}</b><br/>Working stock <b>${fmt(stock)}</b> t<br/>Free space <b>${fmt(sz.net - stock)}</b> t`, host);
+  });
+  hit.addEventListener("mouseleave", () => { hideTip(); cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); });
+}
+
+function drawOptChart(data, best) {
+  const host = $("optChart");
+  const segs = [["storage", "Storage tariff", "var(--s1)"], ["util", "Utilities", "var(--s2)"], ["freight", "Freight", "var(--s3)"]];
+  $("optLegend").innerHTML = segs.map((s) => `<span><i style="background:${s[2]}"></i>${s[1]}</span>`).join("");
+  const W = 820, rowH = 40, barH = 22, L = 150, R = 70, T = 6;
+  const H = T + data.length * rowH + 24;
+  const { top: max, ticks } = niceTicks(Math.max(...data.map((d) => d.total).filter(Number.isFinite), 1));
+  const x = (v) => L + (v / max) * (W - L - R);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Landed cost per tonne by ship class">`;
+  svg += `<g class="axis">` + ticks.map((t) => `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - 22}" stroke="var(--grid)" stroke-width="1"/><text x="${x(t)}" y="${H - 6}" text-anchor="middle">€${fmt(t)}</text>`).join("") + `</g>`;
+  data.forEach((d, i) => {
+    const yy = T + i * rowH + (rowH - barH) / 2;
+    svg += `<text class="lbl-txt" x="${L - 10}" y="${yy + barH / 2 + 4}" text-anchor="end">${esc(shipName(d.k))}${d === best ? " ★" : ""}</text>`;
+    let acc = 0;
+    segs.forEach(([key, label, col], j) => {
+      const v = Math.max(0, d[key]); if (!(v > 0)) return;
+      const x0 = x(acc), x1 = x(acc + v); acc += v;
+      const gap = j > 0 ? 2 : 0; const last = segs.slice(j + 1).every(([k2]) => !(d[k2] > 0));
+      const w = Math.max(0, x1 - x0 - gap), rx = last ? 4 : 0;
+      svg += last
+        ? `<path d="M${x0 + gap},${yy}h${Math.max(0, w - rx)}a${rx},${rx} 0 0 1 ${rx},${rx}v${barH - 2 * rx}a${rx},${rx} 0 0 1 -${rx},${rx}h-${Math.max(0, w - rx)}z" fill="${col}" data-tip="${esc(shipName(d.k))} · ${label}: <b>€${fmt(v, 1)}/t</b>"/>`
+        : `<rect x="${x0 + gap}" y="${yy}" width="${w}" height="${barH}" fill="${col}" data-tip="${esc(shipName(d.k))} · ${label}: <b>€${fmt(v, 1)}/t</b>"/>`;
+    });
+    svg += `<text class="val-txt" x="${x(d.total) + 8}" y="${yy + barH / 2 + 4}">€${fmt(d.total, 1)}</text>`;
+  });
+  svg += `</svg>`;
+  host.innerHTML = svg;
+  host.querySelectorAll("[data-tip]").forEach((el) => {
+    el.addEventListener("mousemove", (e) => showTip(e, el.dataset.tip, host));
+    el.addEventListener("mouseleave", hideTip);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   PERSISTENCE, IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════════
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch (e) {} }
+function load() { try { const s = localStorage.getItem(STORE_KEY); if (s) P = deepMerge(DEFAULTS, JSON.parse(s)); } catch (e) { P = clone(DEFAULTS); } }
+function download(name, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+function slug() { return (P.project.name || "project").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project"; }
+
+$("btnExportJson").addEventListener("click", () => download(`${slug()}.storage.json`, new Blob([JSON.stringify(P, null, 2)], { type: "application/json" })));
+$("btnImport").addEventListener("click", () => $("fileInput").click());
+$("fileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  try { P = deepMerge(DEFAULTS, JSON.parse(await file.text())); syncInputs(); recalc(); }
+  catch (err) { alert("Could not read project file: " + err.message); }
+  e.target.value = "";
+});
+$("btnReset").addEventListener("click", () => { if (confirm("Reset all inputs and the register to defaults?")) { P = clone(DEFAULTS); syncInputs(); recalc(); } });
+$("btnPreset").addEventListener("click", () => {
+  Object.assign(P.demand, { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" });
+  P.product.density = 682; P.shipClass = "CUSTOM";
+  Object.assign(P.ships.CUSTOM, { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100 });
+  Object.assign(P.jetty, { unloadRateTph: 650 });
+  Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 });
+  Object.assign(P.geometry, { tanks: 1, innerHeightM: 29.3, heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5 });
+  syncInputs(); recalc();
+  document.querySelector('.tab[data-tab="sizing"]').click();
+});
+
+// Excel export: one workbook, one sheet per view.
+$("btnExcel").addEventListener("click", () => {
+  if (typeof XLSX === "undefined") { alert("Excel library failed to load (check network access to cdnjs.cloudflare.com)."); return; }
+  const sz = size(), cx = capexFor(sz), q = sz.thrT / 1000, f = cx.f, u = cx.util;
+  const wb = XLSX.utils.book_new();
+  const add = (name, aoa, widths) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = (widths || [40, 18, 18, 18, 18, 18, 18, 18, 18, 18]).map((w) => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws, name); };
+  const r1 = (v, d = 1) => (Number.isFinite(v) ? Math.round(v * Math.pow(10, d)) / Math.pow(10, d) : "");
+
+  // Inputs — flattened, excluding the register
+  const flat = [];
+  (function walk(o, pre) { for (const [k, v] of Object.entries(o)) { if (pre === "" && k === "register") continue; const p = pre ? pre + "." + k : k; if (v && typeof v === "object" && !Array.isArray(v)) walk(v, p); else flat.push([p, v]); } })(P, "");
+  add("Inputs", [["NH3 storage design — inputs"], ["Project", P.project.name], ["Exported", new Date().toISOString().slice(0, 10)], [], ["Parameter", "Value"], ...flat], [36, 30]);
+
+  add("Sizing", [
+    ["Tank sizing", shipName(sz.shipKey), sz.rule.name], [],
+    ["Item", "Value", "Unit"],
+    ["Throughput", q, "ktpa"], ["Daily send-out used", r1(sz.q, 0), "t/d"], ["Ship parcel", r1(sz.parcel, 0), "t"],
+    ["Buffer days counted", r1(sz.bufferDays, 2), "d"], ["Buffer tonnes", r1(sz.bufferT, 0), "t"],
+    ["Required net capacity", r1(sz.netReq, 0), "t"], ["Design net capacity", r1(sz.net, 0), "t"],
+    ["Number of tanks", sz.N, ""], ["Net per tank", r1(sz.perTankT, 0), "t"], ["Net volume per tank", r1(sz.perTankNetM3, 0), "m³"],
+    ["Nominal volume per tank", r1(sz.nominalM3, 0), "m³"], ["Net / nominal", r1(sz.netToNominal * 100, 1), "%"],
+    ["Inner diameter", r1(sz.D, 2), "m"], ["Outer diameter", r1(sz.OD, 2), "m"], ["Inner height", sz.H, "m"],
+    ["Ships per year", r1(sz.shipsYr, 1), ""], ["Ship interval", r1(sz.intervalD, 1), "d"], ["Berth time per call", r1(sz.callH, 1), "h"],
+    ["Jetty occupancy", r1(sz.jettyOcc * 100, 1), "%"], ["Stock cover", r1(sz.stockDays, 1), "d"], ["Boil-off (full tank)", r1(sz.bogTpd, 1), "t/d"],
+    ["Plot use", r1(sz.plotUse * 100, 0), "%"],
+  ], [34, 16, 12]);
+
+  add("CAPEX & Tariff", [
+    ["CAPEX & break-even tariff"], [],
+    ["Item", "Value", "Unit"],
+    ["Storage CAPEX", r1(cx.storage), "€M"], ["Jetty / marine", r1(cx.marine), "€M"], ["Other", r1(cx.other), "€M"],
+    ["Total before financing", r1(cx.total), "€M"], ["Accuracy low", r1(cx.low), "€M"], ["Accuracy high", r1(cx.high), "€M"],
+    ["CAPEX at start of operations", r1(cx.be.capexCod), "€M"],
+    ["Operator return", f.h * 100, "%"], ["CPI", f.cpi * 100, "%"], ["Tax", f.tax * 100, "%"], ["Tax depreciation", f.dep, "yrs"],
+    ["Fixed OPEX", f.opex * 100, "% CAPEX"], ["Contract term", f.term, "yrs"], ["Residual value", f.resid * 100, "%"],
+    ["Break-even storage tariff", r1(cx.be.eurT, 2), "€/t"], ["  low CAPEX", r1(cx.beLow, 2), "€/t"], ["  high CAPEX", r1(cx.beHigh, 2), "€/t"],
+    ["Utility fee", r1(u, 2), "€/t"], ["All-in tariff", r1(cx.allIn, 2), "€/t"], ["Year-1 revenue", r1(cx.be.revEurM, 2), "€M/yr"],
+  ], [32, 14, 10]);
+
+  const od = optimumData();
+  add("Ship Options", [
+    ["Ship class", "Capacity m³", "Fill %", "Parcel t", "Net tank t", "Inner Ø m", "Ships/yr", "Jetty occ %", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"],
+    ...od.map((d) => [shipName(d.k), num(P.ships[d.k].m3), num(P.ships[d.k].fillPct), r1(d.sz.parcel, 0), r1(d.sz.net, 0), r1(d.sz.D, 1), r1(d.sz.shipsYr, 1), r1(d.sz.jettyOcc * 100, 1), r1(d.cx.total), r1(d.storage, 2), r1(d.util, 2), r1(d.freight, 2), r1(d.total, 2)]),
+  ], [22, 12, 8, 11, 11, 10, 9, 11, 10, 11, 11, 11, 10]);
+
+  const R = P.register, v = R.vopak, t = R.tepsa, ti = R.titan;
+  const reg = [["Economics register — derived values use the current financial assumptions"], [], ["VOPAK", v.status], ["Scope", v.scope], [],
+    ["Tank", "Throughput ktpa", "Level", "Tariff €/t", "All-in €/t", "Revenue €M/yr", "CAPEX incl. fin. €M", "CAPEX before fin. €M"]];
+  for (const s of ["t40", "t60"]) for (const qk of ["q1", "q2"]) for (const lev of ["low", "mid", "high"]) {
+    const qKt = num(v[qk]); const tf = lev === "mid" ? (num(v[s][qk].low) + num(v[s][qk].high)) / 2 : num(v[s][qk][lev]);
+    const ic = impliedCapex(tf, qKt, f);
+    reg.push([s === "t40" ? "40 kt" : "60 kt", qKt, lev, tf, r1(tf + u, 2), r1(ic.revEurM, 2), r1(ic.cod), r1(ic.overnight)]);
+  }
+  const capT = num(t.storageEurM) + num(t.jettyEurM);
+  reg.push([], ["TEPSA", t.status], ["Scope", t.scope], ["Storage CAPEX €M", num(t.storageEurM)], ["Jetty CAPEX €M", num(t.jettyEurM)], ["Excess throughput fee €/t", num(t.excessFeeEurT)], ["Utility fee €/t", num(t.utilityFeeEurT)],
+    ["Throughput ktpa", "Fee €/t", "Revenue €M/yr", "Return (quote before fin.) %", "Return (quote incl. fin.) %", "Break-even fee €/t"]);
+  for (const fe of [t.fee1, t.fee2]) reg.push([num(fe.q), num(fe.eurT), r1(num(fe.eurT) * num(fe.q) / 1000, 2), r1(impliedIrr(num(fe.eurT), num(fe.q), capT, true) * 100, 2), r1(impliedIrr(num(fe.eurT), num(fe.q), capT, false) * 100, 2), r1(breakEvenTariff(capT, num(fe.q), f).eurT, 2)]);
+  const eur = num(ti.capexUsdM) / num(ti.fxUsdPerEur);
+  const scaled = eur * Math.pow((num(t.netT) || 40000) / (num(ti.capacityKt) * 1000), num(P.capex.exponent));
+  reg.push([], ["BENCHMARK", ti.name, ti.location], ["Scope", ti.scope], ["CAPEX USD M", num(ti.capexUsdM)], ["FX USD/EUR", num(ti.fxUsdPerEur)], ["CAPEX €M", r1(eur)], ["Capacity kt", num(ti.capacityKt)],
+    ["Scaled to TEPSA size €M", r1(scaled)], ["Europe/India factor", r1(capT / scaled, 2)], [], ["OPEN QUESTIONS"], ...R.openQuestions.map((x) => [x]), [], ["DECISIONS"], ...R.decisions.map((d) => [d.date, d.text]));
+  add("Register", reg, [26, 16, 12, 14, 12, 14, 18, 20]);
+
+  XLSX.writeFile(wb, `${slug()}-storage-design.xlsx`);
+});
+
+// Theme
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $("themeLabel").textContent = t === "light" ? "Light" : "Dark";
+  $("themeToggle").firstChild.textContent = t === "light" ? "☀️ " : "🌙 ";
+  try { localStorage.setItem("nh3StorageTheme", t); } catch (e) {}
+}
+$("themeToggle").addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
+
+// ═══════════════════════════════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════════════════════════════
+(function init() {
+  let t = "dark"; try { t = localStorage.getItem("nh3StorageTheme") || "dark"; } catch (e) {}
+  applyTheme(t);
+  load();
+  buildStaticTables();
+  syncInputs();
+  let tab = null; try { tab = localStorage.getItem("nh3StorageTab"); } catch (e) {}
+  const btn = tab && document.querySelector(`.tab[data-tab="${tab}"]`);
+  if (btn) btn.click(); else recalc();
+})();
+</script>
+</body>
+</html>

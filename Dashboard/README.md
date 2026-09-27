@@ -39,6 +39,7 @@ centralized auth, navigation, and a maintainable module registry
 | `gas-power-lcoe-calculator.html` | `/modules/gas-power-lcoe` |
 | `TCOE_Multigas Converter.html` | `/modules/multigas-converter` |
 | `pipeline-sizing-calculator.html` | `/modules/pipeline-sizing` (H2 & NH3 Pipeline Sizing Calculator) |
+| `nh3-storage-design.html` (new) | `/modules/nh3-storage-design` (NH₃ Storage Design — see [`docs/storage-economics.md`](./docs/storage-economics.md)) |
 
 New modules can be authored natively in React by adding an entry to
 `lib/modules.ts` and rendering a component instead of `<ModuleFrame>`.
