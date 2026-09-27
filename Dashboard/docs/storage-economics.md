@@ -26,9 +26,9 @@ separate module (or a terminal-type switch) rather than reusing the demand-drive
 
 | Tab | What it does |
 |---|---|
-| Tank sizing | Net working capacity from parcel + buffer rule, tank diameter/volumes, nominal inventory cycle, shipping and jetty checks |
+| Tank sizing | Required net from parcel + buffer rule, gross storage size rounded up or down, tank diameter/volumes, max fill vs net section to scale, throughput sensitivity of storage size (± 5 × 100 ktpa), nominal inventory cycle, shipping and jetty checks. Every panel folds from its header |
 | PGS 12 tank & levels | Section through a full-containment tank with the liquid levels to scale, level schedule per tank, live PGS 12 check of the design, open items and sources |
-| CAPEX & tariff | CAPEX from the reference cost curve, break-even storage tariff, market check against registered offers |
+| CAPEX & tariff | CAPEX from the reference cost curve, break-even storage tariff, throughput sensitivity of CAPEX and tariff (± 5 × 100 ktpa), market check against registered offers |
 | Optimum size | Repeats the sizing for MGC / LGC / VLAC / Other and picks the lowest storage + utilities + freight cost per tonne |
 | Economics register | Vopak tariffs, TEPSA quote, Project Titan benchmark, open questions, decision log — all editable, derived values live |
 
@@ -149,13 +149,14 @@ and port costs are placeholders.
 
 ## Excel export
 
-**⬇ Excel** writes a styled workbook with ExcelJS (cdnjs), in the module's colours (purple
+**⬇ Excel** offers *Results only* (Results + Sensitivity) or *Full workbook* (every sheet below). It writes a styled workbook with ExcelJS (cdnjs), in the module's colours (purple
 `#7030A0` headings, blue `#0070C0` key values, status colours from the PGS 12 checks), Arial
 throughout, gridlines off, frozen table headers and landscape/portrait print setup.
 
 | Sheet | Content |
 |---|---|
 | Results | Results only: headline (net capacity, tank size, plot, CAPEX, tariffs, landed cost) highlighted, then storage, levels, plot, shipping, economics, optimum ship class, PGS 12 check sorted worst-first, and the model's flags |
+| Sensitivity | Storage size, required gross and net working capacity, total CAPEX and break-even tariff at the current throughput ± 5 × 100 ktpa, as charts (images) with the data tables. Written in both export options |
 | Inputs | Every input grouped by section, with units and placeholder notes; ship classes |
 | Sizing | Capacity build-up, tank dimensions vs TEPSA, plot area, operations, voyage and freight |
 | PGS 12 Levels | Level schedule per tank and the full PGS 12 check with coloured status |

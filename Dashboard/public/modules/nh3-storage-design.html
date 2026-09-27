@@ -154,6 +154,12 @@
   .panel-h .t { font-size: 13px; font-weight: 700; color: var(--brand-ink); }
   .panel-h .s { font-size: 11.5px; color: var(--text3); margin-left: auto; }
   .panel-b { padding: 14px; }
+  .panel-h.coll { cursor: pointer; user-select: none; }
+  .panel-h .chev { display: inline-block; width: 12px; font-size: 11px; color: var(--text3); transition: transform .15s; }
+  .panel.collapsed > :not(.panel-h) { display: none !important; }
+  .panel.collapsed > .panel-h { border-bottom: none; }
+  .panel.collapsed > .panel-h .chev { transform: rotate(-90deg); }
+  .chart-t { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 4px; }
   .hero { background: var(--hero-grad); border-color: color-mix(in srgb, var(--brand) 30%, var(--border)); }
   .hero .panel-h { border-bottom-color: color-mix(in srgb, var(--brand) 18%, var(--border)); }
   .hero .panel-h .t { font-size: 14px; }
@@ -225,7 +231,7 @@
   .dt td.wrap { white-space: normal; }
   .section-svg text { font-family: var(--sans); }
   .section-svg .lv-lbl { cursor: default; }
-  .gap-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 20px; align-items: center; }
+  .gap-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 20px; align-items: center; }
   @media (max-width: 1100px) { .gap-grid { grid-template-columns: 1fr; } }
   .gap-sum h4 { font-family: var(--head); font-size: 14px; color: var(--brand-ink); margin-bottom: 2px; }
   .gap-sum .sub { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
@@ -251,8 +257,8 @@
     <div class="xl-wrap">
       <button class="icon-btn primary" id="btnExcel" aria-haspopup="menu" aria-expanded="false" aria-controls="xlMenu">⬇ Excel ▾</button>
       <div class="xl-menu hidden" id="xlMenu" role="menu">
-        <button role="menuitem" data-xl="results">Results only<span>One sheet: headline figures, storage, levels, shipping, economics, PGS 12 check, flags</span></button>
-        <button role="menuitem" data-xl="full">Full workbook<span>Results + Inputs, Sizing, PGS 12 Levels, CAPEX &amp; Tariff, Ship Options, Register</span></button>
+        <button role="menuitem" data-xl="results">Results only<span>Results + Sensitivity: headline figures, storage, levels, shipping, economics, PGS 12 check, flags, throughput charts</span></button>
+        <button role="menuitem" data-xl="full">Full workbook<span>Results, Sensitivity + Inputs, Sizing, PGS 12 Levels, CAPEX &amp; Tariff, Ship Options, Register</span></button>
       </div>
     </div>
     <button class="icon-btn" id="btnReset" title="Restore all defaults">Reset</button>
@@ -509,6 +515,12 @@
         </div>
       </div>
 
+      <div class="panel">
+        <div class="panel-h"><span class="t">Throughput sensitivity — storage size</span><span class="s" id="sensSub"></span></div>
+        <div class="panel-b"><div class="chart" id="sensChart"></div></div>
+        <div class="tbl-wrap"><table class="dt" id="sensTable"></table></div>
+      </div>
+
       <div class="two-col">
         <div class="panel">
           <div class="panel-h"><span class="t">Net working capacity build-up</span><span class="s" id="buildSub"></span></div>
@@ -590,6 +602,14 @@
       <div class="panel hero">
         <div class="panel-h"><span class="t">Estimated CAPEX &amp; break-even storage tariff</span><span class="s" id="capexHeroSub"></span></div>
         <div class="panel-b"><div class="kpis" id="capexKpis"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><span class="t">Throughput sensitivity — CAPEX &amp; break-even tariff</span><span class="s" id="capSensSub"></span></div>
+        <div class="panel-b two-col">
+          <div><div class="chart-t">Total CAPEX, €M before financing</div><div class="chart" id="capSensChart"></div></div>
+          <div><div class="chart-t">Break-even storage tariff, €/t</div><div class="chart" id="tarSensChart"></div></div>
+        </div>
+        <div class="tbl-wrap"><table class="dt" id="capSensTable"></table></div>
       </div>
       <div class="two-col">
         <div class="panel">
@@ -1142,6 +1162,7 @@ function recalc() {
   renderSizing(sz);
   renderPgs(sz);
   renderCapex(sz, cx);
+  renderSensitivity(sensitivityData());
   renderOptimum();
   renderRegister();
   save();
@@ -1456,7 +1477,7 @@ function drawGap(sz) {
   const per = sz.N > 1 ? " per tank" : "";
   $("gapSub").textContent = `per tank · Ø${fmt(sz.D, 1)} m · ${fmt(t(1))} t per metre of height`;
 
-  const W = 760, xT = 190, wT = 200, st = 46, Hp = 360, yb = st + Hp, Hh = yb + 46;
+  const W = 900, xT = 205, wT = 390, st = 44, Hp = 220, yb = st + Hp, Hh = yb + 44;
   const s = Hp / sz.H, y = (h) => yb - h * s, n = (v) => (+v).toFixed(1), xR = xT + wT;
   const T = (x, yy, txt, o = {}) => `<text x="${n(x)}" y="${n(yy)}" text-anchor="${o.a || "start"}" style="font-size:${o.fs || 11}px;font-weight:${o.w || 400};fill:${o.c || "var(--text2)"}">${txt}</text>`;
   const Ln = (x1, y1, x2, y2, o = {}) => `<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" style="stroke:${o.c || "var(--steel)"};stroke-width:${o.w || 1}${o.d ? ";stroke-dasharray:" + o.d : ""}"/>`;
@@ -1471,9 +1492,9 @@ function drawGap(sz) {
   S.push(Rc(xT, y(sz.H), wT, fbH * s, { f: "url(#gF)" }));
   // shell, floor and dome roof
   S.push(Ln(xT, y(sz.H), xT, yb, { w: 2 }), Ln(xR, y(sz.H), xR, yb, { w: 2 }), Ln(xT - 4, yb, xR + 4, yb, { w: 2.5 }));
-  S.push(`<path d="M${n(xT)} ${n(y(sz.H))} A ${n(wT / 2)} 26 0 0 1 ${n(xR)} ${n(y(sz.H))}" style="fill:none;stroke:var(--steel);stroke-width:2"/>`);
-  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 - 4, `${fmt(sz.perTankT)} t`, { a: "middle", fs: 24, w: 700, c: "var(--brand2-ink)" }));
-  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 + 14, "net working capacity", { a: "middle", fs: 12.5, c: "var(--brand2-ink)" }));
+  S.push(`<path d="M${n(xT)} ${n(y(sz.H))} A ${n(wT / 2)} 22 0 0 1 ${n(xR)} ${n(y(sz.H))}" style="fill:none;stroke:var(--steel);stroke-width:2"/>`);
+  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 - 2, `${fmt(sz.perTankT)} t`, { a: "middle", fs: 28, w: 700, c: "var(--brand2-ink)" }));
+  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 + 18, "net working capacity", { a: "middle", fs: 14, c: "var(--brand2-ink)" }));
 
   // left: level ticks, spread so they never overlap
   const lv = [["Shell top", sz.H, "var(--steel)"], ["MDLL · max fill", L.mdll, "var(--danger)"],
@@ -1485,9 +1506,9 @@ function drawGap(sz) {
     if (items.length && items[0].ly < lo) { const d = lo - items[0].ly; items.forEach((it) => { it.ly += d; }); }
     return items;
   };
-  spread(lv.map(([txt, h, c]) => ({ txt, h, c, y0: y(h) })), 17, 18, yb + 4).forEach((it) => {
+  spread(lv.map(([txt, h, c]) => ({ txt, h, c, y0: y(h) })), 19, 18, yb + 4).forEach((it) => {
     S.push(Ln(xT - 2, it.y0, xT - 12, it.y0, { c: it.c, w: 1.2 }), Ln(xT - 12, it.y0, xT - 20, it.ly - 4, { c: it.c, w: .7 }));
-    S.push(T(xT - 24, it.ly, `${it.txt} <tspan style="font-weight:700;fill:${it.c}">${fmt(it.h, 2)} m</tspan>`, { a: "end", fs: 12, c: "var(--text)" }));
+    S.push(T(xT - 24, it.ly, `${it.txt} <tspan style="font-weight:700;fill:${it.c}">${fmt(it.h, 2)} m</tspan>`, { a: "end", fs: 13.5, c: "var(--text)" }));
   });
 
   // right: one label per band (two lines), leaders from the band's mid-height
@@ -1500,17 +1521,17 @@ function drawGap(sz) {
       sub: sz.lumped ? `${fmt(botH, 2)} m lumped heel` : `${fmt(botH, 2)} m · pump heel ${fmt(heelT)} t + low alarm ${fmt(lowT)} t` },
   ];
   const lx = xR + 40;
-  spread(bands.map((b) => Object.assign(b, { y0: y((b.h0 + b.h1) / 2) })), 42, 18, yb - 14).forEach((b) => {
+  spread(bands.map((b) => Object.assign(b, { y0: y((b.h0 + b.h1) / 2) })), 46, 16, yb - 16).forEach((b) => {
     S.push(Ln(xR + 2, b.y0, xR + 14, b.y0, { c: b.c, w: 1.2 }), Ln(xR + 14, b.y0, lx - 6, b.ly - 4, { c: b.c, w: .7 }), `<circle cx="${n(xR + 2)}" cy="${n(b.y0)}" r="2.2" style="fill:${b.c}"/>`);
-    S.push(T(lx, b.ly, `${b.name}${b.val ? ` <tspan style="fill:${b.c}">${b.val}</tspan>` : ""}`, { fs: 13.5, w: 700, c: "var(--text)" }));
-    S.push(T(lx, b.ly + 16, b.sub, { fs: 12 }));
+    S.push(T(lx, b.ly, `${b.name}${b.val ? ` <tspan style="fill:${b.c}">${b.val}</tspan>` : ""}`, { fs: 15, w: 700, c: "var(--text)" }));
+    S.push(T(lx, b.ly + 18, b.sub, { fs: 13 }));
   });
-  S.push(T(xT + wT / 2, yb + 30, `inner Ø ${fmt(sz.D, 1)} m (diameter compressed)`, { a: "middle", fs: 12 }));
+  S.push(T(xT + wT / 2, yb + 30, `inner Ø ${fmt(sz.D, 1)} m (diameter compressed)`, { a: "middle", fs: 13 }));
   host.innerHTML = `<svg class="section-svg" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Tank section showing max fill at MDLL, net working capacity and the bands between them">${S.join("")}</svg>`;
 
   const p = (x) => pct(gapT > 0 ? x / gapT : 0, 0);
   const heelShare = botT > 0 ? heelT / botT : 0;
-  sum.innerHTML = `<h4>The ${fmt(gapT)} t gap${per}, in short</h4>
+  sum.innerHTML = `<h4>Unusable volume of ${fmt(gapT)} t${per} is due to:</h4>
     <div class="sub">Max fill at MDLL ${fmt(mdllT)} t − net working capacity ${fmt(sz.perTankT)} t</div>
     <ul>
       <li class="top"><b>Top: ${fmt(topT)} t (${p(topT)}).</b> ${sz.lumped
@@ -1813,6 +1834,134 @@ function showTip(e, html, host) {
   tip.style.left = x + "px"; tip.style.top = y + "px";
 }
 function hideTip() { tip.style.display = "none"; }
+// Throughput sensitivity: re-runs the full sizing and CAPEX at the base throughput ± 100 ktpa steps,
+// with the current rounding choice and every other input unchanged.
+const SENS_STEP = 100, SENS_N = 5;
+function sensitivityData() {
+  const saved = P.demand.throughputKtpa, base = num(saved), out = [];
+  try {
+    for (let i = -SENS_N; i <= SENS_N; i++) {
+      const t = base + i * SENS_STEP;
+      if (t <= 0) continue;
+      P.demand.throughputKtpa = t;
+      const sz = size();
+      out.push({ t, base: i === 0, sz, cx: capexFor(sz) });
+    }
+  } finally { P.demand.throughputKtpa = saved; }
+  return out;
+}
+// Colours for the sensitivity charts: CSS variables on screen, light-theme hex for the Excel images.
+const SENS_SCREEN = { grid: "var(--grid)", text: "var(--text)", text2: "var(--text2)", text3: "var(--text3)", bg: "var(--bg2)", s1: "var(--s1)", s2: "var(--s2)", font: "" };
+const SENS_PRINT = { grid: "#e9ebf1", text: "#1c1e26", text2: "#4a4f5c", text3: "#6b7180", bg: "#ffffff", s1: "#7030A0", s2: "#C55A11", font: "Arial, Helvetica, sans-serif" };
+function sensSeries(d) {
+  const dir = d.length ? d[0].sz.roundDir : "up", stepT = d.length ? d[0].sz.step : 0;
+  return {
+    storage: [
+      { name: stepT > 0 ? `Storage size (rounded ${dir})` : "Storage size", key: "gross", color: "s1", w: 2.5, marks: true, v: d.map((p) => p.sz.gross) },
+      { name: "Required gross (unrounded)", key: "req", color: "s1", w: 1.5, dash: "6 4", v: d.map((p) => p.sz.req.gross) },
+      { name: "Net working capacity", key: "net", color: "s2", w: 2, marks: true, v: d.map((p) => p.sz.net) },
+    ],
+    capex: [{ name: "Total CAPEX", color: "s1", w: 2.5, marks: true, v: d.map((p) => p.cx.total) }],
+    tariff: [{ name: "Break-even storage tariff", color: "s1", w: 2.5, marks: true, v: d.map((p) => p.cx.be.eurT) }],
+  };
+}
+// Line chart over throughput. One y-axis; ≥2 series get a legend plus direct end labels.
+function sensSvg(d, series, o, C) {
+  const W = o.w || 820, H = o.h || 290, multi = series.length > 1;
+  const L = 64, R = multi ? 190 : 24, T = multi ? 34 : 16, B = 44;
+  const xs = d.map((p) => p.t), x0 = xs[0], x1 = xs[xs.length - 1];
+  const all = series.flatMap((s) => s.v).filter(Number.isFinite);
+  if (!all.length) return "";
+  let mn = Math.min(...all), mx = Math.max(...all);
+  if (mx - mn < 1e-9) { mn -= 1; mx += 1; }
+  const raw = (mx - mn) / 5, p10 = Math.pow(10, Math.floor(Math.log10(raw)));
+  const stp = [1, 2, 2.5, 5, 10].map((m) => m * p10).find((v) => v >= raw);
+  const lo = Math.max(0, Math.floor(mn / stp) * stp), hi = Math.ceil(mx / stp) * stp;
+  const x = (t) => L + (x1 > x0 ? (t - x0) / (x1 - x0) : 0.5) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const ff = C.font ? ` font-family="${C.font}"` : "";
+  const txt = (xx, yy, t, a = {}) => `<text x="${xx.toFixed(1)}" y="${yy.toFixed(1)}" text-anchor="${a.anchor || "start"}" font-size="${a.fs || 11}" font-weight="${a.w || 400}" style="fill:${a.c || C.text3}"${ff}>${t}</text>`;
+  let g = `<rect x="0" y="0" width="${W}" height="${H}" style="fill:${C.bg}"/>`;
+  for (let v = lo; v <= hi + 1e-9; v += stp) {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" style="stroke:${C.grid};stroke-width:1"/>`;
+    g += txt(L - 8, y(v) + 4, o.yFmt(v), { anchor: "end" });
+  }
+  d.forEach((p) => { g += txt(x(p.t), H - B + 18, fmt(p.t), { anchor: "middle", w: p.base ? 700 : 400, c: p.base ? C.text : C.text3 }); });
+  g += txt((L + W - R) / 2, H - 6, "Throughput, ktpa", { anchor: "middle", c: C.text2 });
+  const b = d.find((p) => p.base);
+  if (b) {
+    g += `<line x1="${x(b.t).toFixed(1)}" x2="${x(b.t).toFixed(1)}" y1="${T}" y2="${H - B}" style="stroke:${C.text3};stroke-width:1;stroke-dasharray:3 3"/>`;
+    g += txt(x(b.t) + 5, T + 11, "current", { c: C.text2, fs: 10.5 });
+  }
+  series.forEach((s) => {
+    const pts = d.map((p, i) => [x(p.t), y(s.v[i])]).filter((q) => Number.isFinite(q[1]));
+    g += `<path d="${pts.map((q, i) => `${i ? "L" : "M"}${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(" ")}" style="fill:none;stroke:${C[s.color]};stroke-width:${s.w || 2};stroke-linejoin:round;stroke-linecap:round${s.dash ? ";stroke-dasharray:" + s.dash : ""}"/>`;
+    if (s.marks) pts.forEach((q) => { g += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4" style="fill:${C[s.color]};stroke:${C.bg};stroke-width:2"/>`; });
+  });
+  if (multi) {
+    // legend (top) and direct end labels (right), spread so they never overlap
+    let lx = L;
+    series.forEach((s) => {
+      g += `<line x1="${lx}" x2="${lx + 22}" y1="12" y2="12" style="stroke:${C[s.color]};stroke-width:${s.w || 2}${s.dash ? ";stroke-dasharray:" + s.dash : ""}"/>`;
+      g += txt(lx + 28, 16, s.name, { c: C.text2 });
+      lx += 40 + s.name.length * 6.2;
+    });
+    const ends = series.map((s) => ({ s, y0: y(s.v[s.v.length - 1]) })).sort((a, c) => a.y0 - c.y0);
+    let prev = -Infinity; ends.forEach((e) => { e.ly = Math.max(e.y0, prev + 15); prev = e.ly; });
+    ends.forEach((e) => {
+      const xe = x(x1);
+      g += `<line x1="${(xe + 6).toFixed(1)}" x2="${(xe + 14).toFixed(1)}" y1="${e.y0.toFixed(1)}" y2="${(e.ly - 4).toFixed(1)}" style="stroke:${C[e.s.color]};stroke-width:1"/>`;
+      g += txt(xe + 18, e.ly, e.s.name.replace(/ \(.*\)$/, ""), { c: C.text2, fs: 11 });
+    });
+  }
+  if (o.hover) d.forEach((p, i) => {
+    const xa = i ? (x(d[i - 1].t) + x(p.t)) / 2 : L, xb = i < d.length - 1 ? (x(p.t) + x(d[i + 1].t)) / 2 : W - R;
+    const tipHtml = `<b>${fmt(p.t)} ktpa</b>${p.base ? " (current)" : ""}<br/>` + series.map((s) => `${esc(s.name)}: <b>${o.tipFmt(s.v[i])}</b>`).join("<br/>");
+    g += `<rect x="${xa.toFixed(1)}" y="${T}" width="${(xb - xa).toFixed(1)}" height="${H - T - B}" style="fill:transparent" data-tip="${esc(tipHtml)}"/>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(o.label)}">${g}</svg>`;
+}
+function mountChart(id, svg) {
+  const host = $(id); host.innerHTML = svg;
+  host.querySelectorAll("[data-tip]").forEach((el) => {
+    el.addEventListener("mousemove", (e) => showTip(e, el.dataset.tip, host));
+    el.addEventListener("mouseleave", hideTip);
+  });
+}
+const SENS_FMT = {
+  storage: { yFmt: (v) => `${fmt(v / 1000)}k t`, tipFmt: (v) => `${fmt(v)} t` },
+  capex: { yFmt: (v) => `€${fmt(v)}M`, tipFmt: (v) => `€${fmt(v, 1)}M` },
+  tariff: { yFmt: (v) => `€${fmt(v, v % 1 ? 1 : 0)}`, tipFmt: (v) => `€${fmt(v, 2)}/t` },
+};
+function renderSensitivity(d) {
+  const ser = sensSeries(d), sz0 = (d.find((p) => p.base) || d[0] || {}).sz;
+  const sub = sz0 ? `±${SENS_N} × ${SENS_STEP} ktpa · ${sz0.step > 0 ? `rounded ${sz0.roundDir} to ${fmt(sz0.step)} t` : "no rounding"} · other inputs unchanged` : "";
+  $("sensSub").textContent = sub; $("capSensSub").textContent = sub;
+  mountChart("sensChart", sensSvg(d, ser.storage, Object.assign({ hover: true, label: "Storage size versus throughput" }, SENS_FMT.storage), SENS_SCREEN));
+  mountChart("capSensChart", sensSvg(d, ser.capex, Object.assign({ hover: true, w: 560, h: 280, label: "Total CAPEX versus throughput" }, SENS_FMT.capex), SENS_SCREEN));
+  mountChart("tarSensChart", sensSvg(d, ser.tariff, Object.assign({ hover: true, w: 560, h: 280, label: "Break-even storage tariff versus throughput" }, SENS_FMT.tariff), SENS_SCREEN));
+  const row = (p, cells) => ({ cls: p.base ? "total" : "", cells });
+  $("sensTable").innerHTML = rows([
+    { head: ["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Net working, t", "Inner Ø, m", "Stock cover, d"] },
+    ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.netReq), fmt(p.sz.req.gross), fmt(p.sz.gross), fmt(p.sz.net), fmt(p.sz.D, 1), fmt(p.sz.stockDays, 1)])),
+  ]);
+  $("capSensTable").innerHTML = rows([
+    { head: ["Throughput, ktpa", "Storage size, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range, €M", "Break-even tariff, €/t", "All-in tariff, €/t"] },
+    ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.gross), fmt(p.cx.storage, 1), fmt(p.cx.total, 1), `${fmt(p.cx.low)}–${fmt(p.cx.high)}`, fmt(p.cx.be.eurT, 2), fmt(p.cx.allIn, 2)])),
+  ]);
+}
+// SVG → PNG data URL (2× for print sharpness) for the Excel images.
+async function svgToPng(svg, w, h) {
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2;
+    const g = c.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/png");
+  } finally { URL.revokeObjectURL(url); }
+}
+
 // Axis ticks on a 1-2-2.5-5 step so labels are always round numbers.
 function niceTicks(v, n = 5) {
   const raw = v / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
@@ -2093,7 +2242,7 @@ function msgRows() {
   return out.sort((a, b) => ["bad", "warn", "ok", "info"].indexOf(a[0]) - ["bad", "warn", "ok", "info"].indexOf(b[0]));
 }
 
-// Excel menu: "Results only" writes the Results sheet; "Full workbook" adds every other sheet.
+// Excel menu: "Results only" writes the Results and Sensitivity sheets; "Full workbook" adds every other sheet.
 function closeXlMenu() { $("xlMenu").classList.add("hidden"); $("btnExcel").setAttribute("aria-expanded", "false"); }
 $("btnExcel").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -2213,6 +2362,33 @@ async function exportExcel(full) {
     }
     S.ws.addRow([]);
     S.note("Placeholders: voyage distance, charter hire, fuel and port costs; level response times (overfill trip, alarms) and the pump heel — PGS 12 requires the functions but sets no values. The plot area scales linearly from the reference, which also scales the fixed jetty and jetty-to-tank corridor. Tabel 9's 80 vol% fill limit is not applied (pressurized storage, M109); the refrigerated-tank freeboard rule is used instead.");
+  }
+
+  // ── SENSITIVITY ────────────────────────────────────────────
+  {
+    const d = sensitivityData(), ser = sensSeries(d), sz0 = (d.find((p) => p.base) || d[0]).sz;
+    const S = xSheet(wb, "Sensitivity", [18, 16, 16, 16, 16, 16, 16], { tab: XC.brand2 });
+    S.title("Throughput sensitivity", `${subtitle} · ±${SENS_N} × ${SENS_STEP} ktpa around ${fmt(q)} ktpa · ${sz0.step > 0 ? `storage size rounded ${sz0.roundDir} to ${fmt(sz0.step)} t` : "no rounding"} · other inputs unchanged`);
+    const img = async (svg, w, h) => {
+      const id = wb.addImage({ base64: await svgToPng(svg, w, h), extension: "png" });
+      S.ws.addImage(id, { tl: { col: 0, row: S.ws.rowCount }, ext: { width: w, height: h } });
+      for (let i = 0; i < Math.ceil(h / 20) + 1; i++) S.ws.addRow([]);
+    };
+    const bold = (p, s) => (p.base ? "total" : s);
+    S.section("Storage size vs throughput");
+    await img(sensSvg(d, ser.storage, Object.assign({ w: 820, h: 300, label: "Storage size versus throughput" }, SENS_FMT.storage), SENS_PRINT), 820, 300);
+    S.header(["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Net working, t", "Inner Ø, m", "Stock cover, d"]);
+    d.forEach((p) => S.row([p.t, p.sz.netReq, p.sz.req.gross, p.sz.gross, p.sz.net, p.sz.D, p.sz.stockDays], { kind: bold(p), fmt: [XF.int, XF.int, XF.int, XF.int, XF.int, XF.d1, XF.d1] }));
+    S.section("CAPEX & break-even tariff vs throughput");
+    const cap = (t) => { S.ws.addRow([t]).getCell(1).font = xfont({ size: 10, bold: true, color: XC.text2 }); };
+    cap("Total CAPEX, €M before financing");
+    await img(sensSvg(d, ser.capex, Object.assign({ w: 820, h: 280, label: "Total CAPEX versus throughput" }, SENS_FMT.capex), SENS_PRINT), 820, 280);
+    cap("Break-even storage tariff, €/t");
+    await img(sensSvg(d, ser.tariff, Object.assign({ w: 820, h: 280, label: "Break-even storage tariff versus throughput" }, SENS_FMT.tariff), SENS_PRINT), 820, 280);
+    S.header(["Throughput, ktpa", "Storage size, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range low, €M", "Range high, €M", "Break-even tariff, €/t"]);
+    d.forEach((p) => S.row([p.t, p.sz.gross, p.cx.storage, p.cx.total, p.cx.low, p.cx.high, p.cx.be.eurT], { kind: bold(p), fmt: [XF.int, XF.int, XF.d1, XF.d1, XF.int, XF.int, XF.d2] }));
+    S.ws.addRow([]);
+    S.note("Each row re-runs the full sizing (required net → required gross → rounded storage size → net working capacity) and the CAPEX and tariff model at that throughput, with every other input as in this workbook. The current case is highlighted.");
   }
 
   if (full) {
@@ -2436,6 +2612,27 @@ async function exportExcel(full) {
   const buf = await wb.xlsx.writeBuffer();
   download(`${slug()}-storage-${full ? "design" : "results"}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
 }
+
+// Collapsible panels: click (or Enter / Space on) a panel header to fold its body. The folded set is a
+// per-viewer convenience kept in this browser.
+const COLL_KEY = "nh3StorageCollapsed";
+let collapsedPanels = {};
+try { collapsedPanels = JSON.parse(localStorage.getItem(COLL_KEY) || "{}") || {}; } catch (e) { collapsedPanels = {}; }
+document.querySelectorAll(".panel > .panel-h").forEach((h, i) => {
+  const panel = h.parentElement, t = h.querySelector(".t");
+  const key = `${(panel.closest(".tabpane") || {}).id || "main"}:${t ? t.textContent : i}`;
+  h.classList.add("coll"); h.setAttribute("role", "button"); h.tabIndex = 0;
+  h.insertAdjacentHTML("afterbegin", '<span class="chev" aria-hidden="true">▾</span>');
+  const set = (c) => { panel.classList.toggle("collapsed", c); h.setAttribute("aria-expanded", String(!c)); };
+  set(!!collapsedPanels[key]);
+  const toggle = () => {
+    const c = !panel.classList.contains("collapsed"); set(c);
+    if (c) collapsedPanels[key] = true; else delete collapsedPanels[key];
+    try { localStorage.setItem(COLL_KEY, JSON.stringify(collapsedPanels)); } catch (e) {}
+  };
+  h.addEventListener("click", (e) => { if (e.target.closest("button, a, input, select, label")) return; toggle(); });
+  h.addEventListener("keydown", (e) => { if (e.target === h && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(); } });
+});
 
 // Theme
 function applyTheme(t) {
