@@ -57,7 +57,7 @@ export const MODULES: ModuleDefinition[] = [
     slug: "nh3-storage-design",
     title: "NH₃ Storage Design",
     description:
-      "Refrigerated ammonia tank sizing from throughput, ship class and buffer rules — tank dimensions, CAPEX, break-even storage tariff, optimum ship/tank size, and a register of terminal operator offers. Excel and project-file export.",
+      "Refrigerated ammonia tank sizing from throughput, ship class and buffer rules — PGS 12 liquid levels and compliance check, tank dimensions, CAPEX, break-even storage tariff, optimum ship/tank size, and a register of terminal operator offers. Excel and project-file export.",
     category: "Storage Design",
     htmlPath: "/modules/nh3-storage-design.html",
     icon: "tank",

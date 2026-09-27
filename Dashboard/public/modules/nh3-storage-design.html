@@ -44,6 +44,10 @@
     --s2: #C55A11;  /* utilities */
     --s3: #0070C0;  /* freight / ullage reserve */
     --grid: #e9ebf1;
+    /* tank section drawing (PGS 12 tab) */
+    --cryo: #12708f; --cryo-fill: #cbe6ef; --cryo-deep: #9fcfdf;
+    --concrete: #8a6f4c; --concrete-fill: #e9e0d0;
+    --steel: #575070; --ink-line: #9aa0ae;
   }
   :root[data-theme="dark"] {
     --brand:     #8a4cc0;
@@ -76,6 +80,9 @@
     --s2: #D9733A;
     --s3: #2E8FD6;
     --grid: #262937;
+    --cryo: #5cc3e2; --cryo-fill: #12333f; --cryo-deep: #1b4a5a;
+    --concrete: #cda878; --concrete-fill: #2e271c;
+    --steel: #a49ac0; --ink-line: #5a5f70;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; min-height: 100vh; font-variant-numeric: tabular-nums; }
@@ -194,6 +201,23 @@
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 1250px) { .two-col { grid-template-columns: 1fr; } }
   .hidden { display: none !important; }
+  input:disabled { background: var(--bg4); color: var(--text2); cursor: not-allowed; }
+
+  /* Status badges (PGS 12 checks) */
+  .st { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; white-space: nowrap; border: 1px solid; }
+  .st-ok   { color: var(--success); border-color: var(--success); background: var(--success-bg); }
+  .st-warn { color: var(--warn);    border-color: var(--warn);    background: var(--warn-bg); }
+  .st-bad  { color: var(--danger);  border-color: var(--danger);  background: var(--danger-bg); }
+  .st-info { color: var(--info);    border-color: var(--info);    background: var(--info-bg); }
+  .st-gap  { color: var(--text2);   border-color: var(--border-hi); background: var(--bg4); }
+  .dt td.basis { font-size: 11.5px; color: var(--text2); line-height: 1.45; min-width: 220px; }
+  .dt td.basis b { color: var(--text); }
+  .dt tr.lvl-key td { background: color-mix(in srgb, var(--brand2) 6%, transparent); }
+  .dt td.wrap { white-space: normal; }
+  .section-svg text { font-family: var(--sans); }
+  .section-svg .lv-lbl { cursor: default; }
+  ol.gaps { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text2); }
+  ol.gaps b { color: var(--text); }
 </style>
 </head>
 <body>
@@ -202,7 +226,7 @@
   <span class="header-badge">Storage Design</span>
   <h1>NH₃ Refrigerated Storage — Tank Sizing, CAPEX &amp; Tariff</h1>
   <div class="header-actions">
-    <button class="icon-btn" id="btnPreset" title="Load the TEPSA Scenario D inputs used to validate the sizing rule">Load TEPSA check case</button>
+    <button class="icon-btn" id="btnPreset" title="Load the TEPSA Scenario D inputs used to validate the sizing rule (switches to the lumped level basis and 682 kg/m³)">Load TEPSA check case</button>
     <button class="icon-btn" id="btnImport" title="Load a project file (.json)">Import project</button>
     <button class="icon-btn" id="btnExportJson" title="Save all inputs and the economics register as a project file">Export project</button>
     <button class="icon-btn primary" id="btnExcel">⬇ Excel</button>
@@ -243,11 +267,18 @@
     <details class="grp" open>
       <summary>Product</summary>
       <div class="grp-body">
-        <div class="row3">
-          <div class="field"><label>Density <span class="hint">kg/m³</span></label><input type="number" step="0.5" data-path="product.density"/></div>
-          <div class="field"><label>Temp <span class="hint">°C</span></label><input type="number" step="0.5" data-path="product.tempC"/></div>
-          <div class="field"><label>Pressure <span class="hint">mbarg</span></label><input type="text" data-path="product.pressure"/></div>
+        <div class="field"><label>Liquid density basis</label>
+          <select data-path="product.densityBasis">
+            <option value="pgs12">PGS 12:2025 Tabel 7 at storage temperature</option>
+            <option value="manual">Manual entry</option>
+          </select>
         </div>
+        <div class="row3">
+          <div class="field"><label>Temp <span class="hint">°C</span></label><input type="number" step="0.1" data-path="product.tempC"/></div>
+          <div class="field"><label>Density <span class="hint">kg/m³</span></label><input type="number" step="0.1" data-path="product.density"/></div>
+          <div class="field"><label>Design P <span class="hint">mbarg</span></label><input type="text" data-path="product.pressure"/></div>
+        </div>
+        <p class="note" id="productNote"></p>
       </div>
     </details>
 
@@ -330,19 +361,40 @@
     </details>
 
     <details class="grp" open>
-      <summary>Tank geometry<span class="sum-note" id="sumGeom"></span></summary>
+      <summary>Tank geometry &amp; levels<span class="sum-note" id="sumGeom"></span></summary>
       <div class="grp-body">
         <div class="row2">
           <div class="field"><label>Number of tanks</label><input type="number" step="1" min="1" max="6" data-path="geometry.tanks"/></div>
-          <div class="field"><label>Inner tank height <span class="hint">m</span></label><input type="number" step="0.1" min="5" data-path="geometry.innerHeightM"/></div>
+          <div class="field"><label>Inner tank shell height <span class="hint">m</span></label><input type="number" step="0.1" min="5" data-path="geometry.innerHeightM"/></div>
+        </div>
+        <div class="field"><label>Liquid level basis</label>
+          <select data-path="geometry.levelBasis">
+            <option value="pgs12">PGS 12 level stack — freeboard, overfill trip, alarms, pump heel</option>
+            <option value="lumped">Lumped margins — heel + top margin (TEPSA calibration)</option>
+          </select>
+        </div>
+        <div id="pgsLevelFields">
+          <div class="row2">
+            <div class="field"><label>Freeboard <span class="hint">m, shell top → max design level</span></label><input type="number" step="0.05" min="0" data-path="levels.freeboardM"/></div>
+            <div class="field"><label>Extra freeboard <span class="hint">m, e.g. seismic slosh</span></label><input type="number" step="0.1" min="0" data-path="levels.extraFreeboardM"/></div>
+            <div class="field"><label>Overfill trip → valve shut <span class="hint">min at unloading rate</span></label><input type="number" step="1" min="0" data-path="levels.tripMin"/></div>
+            <div class="field"><label>High alarm → operator action <span class="hint">min at unloading rate</span></label><input type="number" step="1" min="0" data-path="levels.alarmMin"/></div>
+            <div class="field"><label>Pump low-low trip (heel) <span class="hint">m above floor</span></label><input type="number" step="0.1" min="0" data-path="levels.lallM"/></div>
+            <div class="field"><label>Low alarm → action <span class="hint">min at send-out rate</span></label><input type="number" step="1" min="0" data-path="levels.lowAlarmMin"/></div>
+          </div>
+          <p class="note"><b>PGS 12:</b> max fill ≥ 0.5 m below the top of the shell (1999 §6.4.1.6); separate high-level protection and independent overfill trip (2025 M17/M18); in-tank pumps, no connections below liquid level (M10/M30), so the heel is set by pump submergence. <b>Response times and the heel are placeholders</b> — PGS 12 sets no values; take them from the HAZOP/SIL study and the pump vendor.</p>
+        </div>
+        <div id="lumpedLevelFields" class="row2">
           <div class="field"><label>Bottom heel <span class="hint">m, unusable</span></label><input type="number" step="0.1" min="0" data-path="geometry.heelM"/></div>
           <div class="field"><label>Top margin <span class="hint">m, unusable</span></label><input type="number" step="0.1" min="0" data-path="geometry.topMarginM"/></div>
+        </div>
+        <p class="note hidden" id="lumpedNote">Heel 1.5 m + top margin 3.1 m reproduce TEPSA's net/nominal ratio (84.3 %). The split is a calibration, not a disclosed level schedule.</p>
+        <div class="row2">
           <div class="field"><label>Inner→outer gap <span class="hint">m, radial</span></label><input type="number" step="0.1" min="0" data-path="geometry.annularGapM"/></div>
           <div class="field"><label>Max inner diameter <span class="hint">m</span></label><input type="number" step="1" min="5" data-path="geometry.maxDiameterM"/></div>
           <div class="field"><label>Clearance ring <span class="hint">m, per tank</span></label><input type="number" step="1" min="0" data-path="geometry.clearanceM"/></div>
           <div class="field"><label>Available plot <span class="hint">ha</span></label><input type="number" step="0.1" min="0" data-path="geometry.plotHa"/></div>
         </div>
-        <p class="note">Heel 1.5 m + top margin 3.1 m reproduce TEPSA's net/nominal ratio (84.3 %).</p>
       </div>
     </details>
 
@@ -397,6 +449,7 @@
   <div class="content">
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="sizing">Tank sizing</button>
+      <button class="tab" data-tab="pgs">PGS 12 tank &amp; levels</button>
       <button class="tab" data-tab="capex">CAPEX &amp; tariff</button>
       <button class="tab" data-tab="optimum">Optimum size</button>
       <button class="tab" data-tab="register">Economics register</button>
@@ -443,6 +496,41 @@
       <div class="panel">
         <div class="panel-h"><span class="t">Shipping &amp; operations</span></div>
         <div class="tbl-wrap"><table class="dt" id="opsTable"></table></div>
+      </div>
+    </div>
+
+    <!-- ---------- PGS 12 TANK & LEVELS ---------- -->
+    <div class="tabpane" id="pane-pgs">
+      <div class="panel hero">
+        <div class="panel-h"><span class="t">Liquid levels per PGS 12</span><span class="s" id="pgsSub"></span></div>
+        <div class="panel-b"><div class="kpis" id="pgsKpis"></div></div>
+      </div>
+      <div id="pgsMsgs"></div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Section through the tank — levels to scale</span><span class="s">wall build-up not to scale · adapted from the PGS 12 Tank Anatomy sheet</span></div>
+        <div class="panel-b"><div class="chart" id="secChart"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Level schedule, per tank</span><span class="s" id="lvlSub"></span></div>
+        <div class="tbl-wrap"><table class="dt" id="lvlTable"></table></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">PGS 12 check of this design</span><span class="s">live — re-evaluated on every input</span></div>
+        <div class="tbl-wrap"><table class="dt" id="pgsCheckTable"></table></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-h"><span class="t">Open items (GAP)</span></div>
+          <div class="panel-b"><ol class="gaps" id="pgsGaps"></ol></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><span class="t">Sources</span></div>
+          <div class="panel-b"><ul class="plain" id="pgsSources"></ul></div>
+        </div>
       </div>
     </div>
 
@@ -551,7 +639,7 @@ const SCHEMA_VERSION = 1;
 const DEFAULTS = {
   schemaVersion: SCHEMA_VERSION,
   project: { name: "HAROPA NH₃ import terminal", location: "HAROPA Port, Le Havre (FR)" },
-  product: { name: "Ammonia", density: 682, tempC: -33, pressure: "100–150" },
+  product: { name: "Ammonia", densityBasis: "pgs12", density: 681.6, tempC: -33, pressure: "100–150" },
   demand: { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" },
   shipClass: "CUSTOM",
   ships: {
@@ -563,7 +651,10 @@ const DEFAULTS = {
   voyage: { distanceNm: 5000, seaMarginPct: 5, loadPortDays: 1.5, canalWaitDays: 0, offHireDays: 10, bunkerUsdT: 600, fxUsdPerEur: 1.10, freightMethod: "voyage", charterBasis: "share" },
   jetty: { unloadRateTph: 650, berthHours: 12 },
   buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 },
-  geometry: { tanks: 1, innerHeightM: 29.3, heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
+  geometry: { tanks: 1, innerHeightM: 29.3, levelBasis: "pgs12", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
+  // PGS 12 level stack. Freeboard 0.5 m is PGS 12 (1999) §6.4.1.6; the response times and the
+  // pump heel are PLACEHOLDERS — PGS 12 sets no value (HAZOP/SIL study and pump vendor do).
+  levels: { freeboardM: 0.5, extraFreeboardM: 0, tripMin: 5, alarmMin: 30, lallM: 1.5, lowAlarmMin: 30 },
   utilities: { powerKWhPerT: 10.3, powerPriceEurMWh: 150, markupPct: 10, bogPctPerDay: 0.04 },
   capex: { refStorageEurM: 185, refNetT: 40000, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
   fin: { hurdlePct: 9, cpiPct: 2.5, taxPct: 25, depYears: 20, opexPct: 2.5, termYears: 15, residualPct: 0, buildYears: 3, spendProfile: "30/40/30" },
@@ -595,6 +686,10 @@ const DEFAULTS = {
       "Titan: year of estimate; dredging / marine civil scope",
       "Supply load port and distance to Le Havre (default 5,000 nm placeholder)",
       "Charter hire, fuel consumption and port costs by ship class (placeholders)",
+      "TEPSA: level set-point schedule (max design level, overfill trip, high/low alarms, pump trip) behind the 3.1 m top / 1.5 m heel calibration",
+      "Pump vendor: minimum submergence of the in-tank pumps — sets the unusable heel (PGS 12 M10/M30)",
+      "HAZOP/SIL: overfill-trip and alarm response times at 650 t/h (PGS 12 M17/M18 set no value)",
+      "NEN-EN 14620-1 (not held): freeboard / seismic slosh allowance and allowable shell stress",
     ],
     decisions: [
       { date: "2026-09-27", text: "Base assumptions: 9 % return, 2.5 % CPI, 25 % tax / 20-yr SL, 2.5 % OPEX, 15-yr full recovery" },
@@ -603,9 +698,42 @@ const DEFAULTS = {
       { date: "2026-09-27", text: "Project Titan USD 87M is full-terminal scope; FX 1.10 USD/EUR" },
       { date: "2026-09-27", text: "Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t)" },
       { date: "2026-09-27", text: "Freight calculated from voyage (distance, speed, hire, fuel, port costs); fleet sized from round trip vs arrival interval" },
+      { date: "2026-09-27", text: "Tank levels follow PGS 12: max design level ≥ 0.5 m below shell top, then independent overfill trip, high alarm, low alarm and pump heel; density from PGS 12:2025 Tabel 7" },
     ],
   },
 };
+
+// ═══════════════════════════════════════════════════════════════
+//   PGS 12 REFERENCE VALUES — each carries its source. PGS 12:2025 v1.1 (April 2026) unless
+//   marked 1999 (CPR 13-1, 1999/2005 edition, superseded — used only where 2025 is silent).
+// ═══════════════════════════════════════════════════════════════
+const PGS12 = {
+  // Tabel 7 — liquid density vs temperature, kg/m³ (PGS 12:2025 Bijlage, "Dampspanning en dichtheden")
+  rho: [[-40, 690.0], [-35, 684.0], [-33.4, 682.1], [-33.2, 681.8], [-33.0, 681.6], [-32.8, 681.3], [-32.6, 681.1], [-32.4, 680.8],
+        [-32.2, 680.6], [-32.0, 680.3], [-30, 677.9], [-25, 671.6], [-20, 665.3], [-15, 658.8], [-10, 652.2], [-5, 645.6], [0, 638.8], [5, 631.9]],
+  freeboardMinM: 0.5,        // 1999 §6.4.1.6: max fill height ≥ 500 mm below top of the cylindrical shell
+  bandLoT: 60000, bandHiT: 70000, // §1 Scope, Opmerking 2: no upper limit, NEN-EN 14620-1 walls → ≈60–70 kt in practice
+  inTempLo: -33.0, inTempHi: -32.0, // §7.6.2 toelichting / M96: incoming ammonia −33.0 to −32.0 °C
+  designPLo: 100, designPHi: 500, designPPractical: 250, // §7.6.2 toelichting: design pressure 100–500 mbar, ≈250 practical
+  minRefrigM3: 6000,         // 1999 §6.4.1.4: refrigerated storage practical from 6,000 m³
+  spacingFrac: 0.5,          // 1999 §6.2.4: refrigerated tanks ≥ ½ × diameter of the larger tank apart
+  designLifeYr: 50,          // design principle (Afbeelding 2): minimum design life 50 years
+  plateLimitMm: 40,          // NEN-EN 14620-2 §4.3.1.2.3 via §1 Opmerking 2: >40 mm needs brittle-fracture substantiation
+  sigmaIll: (2 / 3) * 355e6, // ILLUSTRATIVE only: 1999 §6.4.1.7 proof-stress branch on P355NL2 (M11) 355 MPa; NEN-EN 14620-1 governs
+  roofRise: 10.63 / 57.6,    // drawing only: T-101 roof 10.63 m at Ø57.6 m (KBR 59999-KBR-P-LST-001)
+};
+function rhoPGS(tC) {
+  const t = PGS12.rho;
+  if (tC <= t[0][0]) return t[0][1];
+  if (tC >= t[t.length - 1][0]) return t[t.length - 1][1];
+  for (let i = 1; i < t.length; i++) if (tC <= t[i][0]) {
+    const [t0, r0] = t[i - 1], [t1, r1] = t[i];
+    return r0 + (r1 - r0) * (tC - t0) / (t1 - t0);
+  }
+  return NaN;
+}
+// Design pressure field is free text ("100–150"); pull out every number in it.
+function pressureNums(txt) { return (String(txt).match(/\d+(\.\d+)?/g) || []).map(Number); }
 
 const SHIP_KEYS = ["MGC", "LGC", "VLAC", "CUSTOM"];
 const STORE_KEY = "nh3StorageProject.v1";
@@ -735,15 +863,41 @@ function size(shipKey = P.shipClass) {
   const net = step > 0 ? Math.ceil(netReq / step - 1e-9) * step : netReq;
   const g = P.geometry;
   const N = Math.max(1, Math.round(num(g.tanks, 1)));
-  const H = num(g.innerHeightM), heel = num(g.heelM), top = num(g.topMarginM);
-  const workH = H - heel - top;
+  const H = num(g.innerHeightM);
   const perTankT = net / N;
   const perTankNetM3 = perTankT * 1000 / dens;
-  const area = workH > 0 ? perTankNetM3 / workH : NaN;
+  // Level stack. Inflow = full unloading rate into the tank being filled; outflow = full send-out
+  // from the tank in service (both conservative for N > 1).
+  const qInM3h = num(P.jetty.unloadRateTph) * 1000 / dens, qOutM3h = q / 24 * 1000 / dens;
+  const lumped = g.levelBasis === "lumped";
+  let area, L;
+  if (!lumped) {
+    const lv = P.levels, z = (x) => Math.max(0, num(x));
+    const fb = z(lv.freeboardM), ex = z(lv.extraFreeboardM), lall = z(lv.lallM);
+    const tTrip = z(lv.tripMin) / 60, tAl = z(lv.alarmMin) / 60, tLow = z(lv.lowAlarmMin) / 60;
+    // Working volume + time-based margins must fit between the pump trip and the max design level:
+    // A·(H − fb − ex − LALL) = V_net + Q_in·(t_trip + t_alarm) + Q_out·t_low
+    const vMargin = qInM3h * (tTrip + tAl) + qOutM3h * tLow;
+    const avail = H - fb - ex - lall;
+    area = avail > 0 ? (perTankNetM3 + vMargin) / avail : NaN;
+    const mdll = H - fb - ex, lahh = mdll - qInM3h * tTrip / area, lah = lahh - qInM3h * tAl / area;
+    const lal = lall + qOutM3h * tLow / area;
+    L = { lumped, top: H, fb, ex, mdll, lahh, lah, lal, lall, tTrip, tAl, tLow };
+  } else {
+    const heel = num(g.heelM), topM = num(g.topMarginM);
+    area = H - heel - topM > 0 ? perTankNetM3 / (H - heel - topM) : NaN;
+    // Lumped: TEPSA does not split its top margin, so the max design level is taken at the
+    // PGS 12 limit (shell top − 0.5 m) for the capacity checks — the largest mass the shell may hold.
+    L = { lumped, top: H, fb: PGS12.freeboardMinM, ex: 0, mdll: H - PGS12.freeboardMinM, lahh: NaN, lah: H - topM, lal: heel, lall: heel, topMargin: topM };
+  }
+  const workH = L.lah - L.lal;
   const D = Math.sqrt(4 * area / Math.PI);
   const OD = D + 2 * num(g.annularGapM);
   const nominalM3 = area * H;
-  const heelM3 = area * heel;
+  const heelM3 = area * L.lal;
+  const t = (h) => area * h * dens / 1000;
+  const grossMdllT = t(L.mdll), lallT = t(L.lall);
+  const riseMh = qInM3h / area, fallMh = qOutM3h / area;
   const footM2 = Math.PI / 4 * Math.pow(OD + 2 * num(g.clearanceM), 2) * N;
   const unloadH = parcel / Math.max(1, num(P.jetty.unloadRateTph));
   const callH = unloadH + num(P.jetty.berthHours);
@@ -752,7 +906,8 @@ function size(shipKey = P.shipClass) {
   return {
     shipKey, dens, thrT, qAvg, qOp, q, parcel, parcelM3: num(ship.m3) * num(ship.fillPct) / 100,
     rule, bufferDays, safetyDays, ullageDays: bufferDays - safetyDays, bufferT: bufferDays * q,
-    netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3,
+    netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3, L, lumped,
+    qInM3h, qOutM3h, riseMh, fallMh, grossMdllT, lallT, levelT: t,
     netToNominal: perTankNetM3 / nominalM3, heelT: heelM3 * dens / 1000,
     footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
     unloadH, callH, shipsYr, shipsMonth: shipsYr / 12, intervalD, jettyOcc: shipsYr * callH / 8760,
@@ -883,11 +1038,18 @@ function rows(list, textCols = []) {
   }).join("");
 }
 
+// Density follows the storage temperature through PGS 12 Tabel 7 unless entered manually.
+function applyDerived() {
+  if (P.product.densityBasis !== "manual") P.product.density = Math.round(rhoPGS(num(P.product.tempC, -33)) * 10) / 10;
+}
+
 function recalc() {
+  applyDerived();
   const sz = size();
   const cx = capexFor(sz);
   renderSummaries(sz, cx);
   renderSizing(sz);
+  renderPgs(sz);
   renderCapex(sz, cx);
   renderOptimum();
   renderRegister();
@@ -902,7 +1064,19 @@ function renderSummaries(sz, cx) {
   $("voyageCostFields").classList.toggle("hidden", vy.manual);
   $("manualFreightField").classList.toggle("hidden", !vy.manual);
   $("sumBuffer").textContent = `${fmt(sz.bufferDays, 1)} d`;
-  $("sumGeom").textContent = `Ø${fmt(sz.D, 1)} m`;
+  $("sumGeom").textContent = `Ø${fmt(sz.D, 1)} m · ${sz.lumped ? "lumped" : "PGS 12"}`;
+  $("pgsLevelFields").classList.toggle("hidden", sz.lumped);
+  $("lumpedLevelFields").classList.toggle("hidden", !sz.lumped);
+  $("lumpedNote").classList.toggle("hidden", !sz.lumped);
+  const dEl = document.querySelector('[data-path="product.density"]');
+  const auto = P.product.densityBasis !== "manual";
+  dEl.disabled = auto;
+  if (auto && document.activeElement !== dEl) dEl.value = P.product.density;
+  const tC = num(P.product.tempC);
+  $("productNote").innerHTML = (auto
+    ? `Density ${fmt(sz.dens, 1)} kg/m³ at ${fmt(tC, 1)} °C — PGS 12:2025 Tabel 7${PGS12.rho.some((r) => r[0] === tC) ? "" : ", interpolated"}.`
+    : `Manual density. PGS 12 Tabel 7 gives ${fmt(rhoPGS(tC), 1)} kg/m³ at ${fmt(tC, 1)} °C.`) +
+    ` Operating ΔP 20–55 mbar, ≤ 70 mbar while filling (M86); design P 100–500 mbar, ≈250 practical.`;
   $("sumUtil").textContent = `€${fmt(cx.util, 2)}/t`;
   $("sumCapex").textContent = `€${fmt(cx.total)}M`;
   $("sumFin").textContent = `${fmt(cx.f.h * 100, 1)} % · ${cx.f.term} yr`;
@@ -920,7 +1094,11 @@ function renderSizing(sz) {
     kpi("Stock cover", fmt(sz.stockDays, 1), "days", `${fmt(sz.turns, 1)} turns / yr`);
 
   const m = [];
-  if (!(sz.workH > 0)) m.push(["err", "Heel + top margin exceed the tank height — increase height or reduce the margins."]);
+  if (!(sz.workH > 0)) m.push(["err", sz.lumped ? "Heel + top margin exceed the tank height — increase height or reduce the margins."
+    : "Freeboard + pump heel + alarm margins leave no working range — increase the shell height or review the level inputs."]);
+  if (sz.grossMdllT > PGS12.bandHiT) m.push(["err", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — above the ≈70 kt that PGS 12 (§1, Opmerking 2) says NEN-EN 14620 tanks reach even with >40 mm plate. Add a tank.`]);
+  else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — inside PGS 12's ≈60–70 kt practical ceiling. Shell plate near the 40 mm limit; see the PGS 12 tab.`]);
+  if (!sz.lumped && sz.workH > 0) m.push(["info", `PGS 12 level stack: ${fmt(sz.H - sz.L.lah, 2)} m unusable at the top and ${fmt(sz.L.lal, 2)} m at the bottom, per tank. See the <b>PGS 12 tank &amp; levels</b> tab.`]);
   if (sz.D > num(P.geometry.maxDiameterM)) m.push(["warn", `Inner diameter ${fmt(sz.D, 1)} m exceeds the ${fmt(num(P.geometry.maxDiameterM))} m limit. Add a tank, raise the height, or use a smaller ship.`]);
   if (sz.plotUse > 1) m.push(["warn", `Tank footprint incl. clearance (${fmt(sz.footHa, 2)} ha) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha plot.`]);
   if (sz.intervalD * 24 < sz.callH) m.push(["err", `Ships would arrive every ${fmt(sz.intervalD, 1)} days but each call takes ${fmt(sz.callH)} h — jetty cannot keep up.`]);
@@ -928,7 +1106,7 @@ function renderSizing(sz) {
   const vy0 = voyage(sz);
   m.push(["info", `One vessel needs <b>${fmt(vy0.rt, 1)} days</b> per round trip, but the terminal needs a cargo every <b>${fmt(sz.intervalD, 1)} days</b> → <b>${vy0.fleet} vessel${vy0.fleet > 1 ? "s" : ""}</b> (${fmt(vy0.fleetExact, 2)} exact, ${pct(vy0.fleetUse, 0)} utilised).`]);
   if (sz.intervalD < sz.bufferDays) m.push(["info", `Ship interval (${fmt(sz.intervalD, 1)} d) is shorter than the buffer (${fmt(sz.bufferDays, 1)} d): consecutive ship delays would overlap.`]);
-  const isTepsa = Math.abs(sz.net - 40000) < 1 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
+  const isTepsa = sz.lumped && Math.abs(sz.net - 40000) < 1 && sz.N === 1 && Math.abs(sz.D - 55) < 0.5 && Math.abs(sz.parcel - 30000) < 300 && P.buffer.rule === "tepsa";
   if (isTepsa) m.push(["ok", `<b>TEPSA check:</b> 40,000 t net · Ø${fmt(sz.D, 1)} m · ${fmt(sz.nominalM3)} m³ nominal — matches the Scenario D datasheet (40,000 t · Ø55.0 m · 69,557 m³).`]);
   $("sizingMsgs").innerHTML = m.map(([k, t]) => `<div class="msg msg-${k}">${t}</div>`).join("");
 
@@ -954,11 +1132,15 @@ function renderSizing(sz) {
     { cells: ["Nominal volume, m³", fmt(sz.nominalM3), "69,557"] },
     { cells: ["Inner diameter, m", fmt(sz.D, 1), "55.0"] },
     { cells: ["Outer diameter, m", fmt(sz.OD, 1), "58.0"] },
-    { cells: ["Inner height, m", fmt(sz.H, 1), "29.3"] },
-    { cells: ["Working level range, m", fmt(sz.workH, 2), "—"] },
-    { cells: ["Heel (unusable), t", fmt(sz.heelT), "—"] },
+    { cells: ["Inner shell height, m", fmt(sz.H, 1), "29.3"] },
+    { cells: [sz.lumped ? "Max design liquid level, m (PGS 12 limit)" : "Max design liquid level, m", fmt(sz.L.mdll, 2), "—"] },
+    { cells: ["Max working level (high alarm), m", fmt(sz.L.lah, 2), "26.2*"] },
+    { cells: ["Min working level (low alarm), m", fmt(sz.L.lal, 2), "1.5*"] },
+    { cells: ["Working level range, m", fmt(sz.workH, 2), "24.7*"] },
+    { cells: ["Below min working level, t", fmt(sz.heelT), "—"] },
+    { cells: ["Stored at max design level, t", fmt(sz.grossMdllT), "—"] },
     { cells: ["Footprint incl. clearance, ha", fmt(sz.footHa / sz.N, 2), "—"] },
-  ]);
+  ]) + `<tr><td colspan="3" class="lbl" style="font-size:10.5px;color:var(--text3)">* TEPSA levels are the 1.5 m heel / 3.1 m top-margin calibration to its 84.3 % net/nominal ratio, not a disclosed level schedule.</td></tr>`;
 
   $("opsTable").innerHTML = rows([
     { head: ["Item", "Value", "Note"] },
@@ -969,6 +1151,7 @@ function renderSizing(sz) {
     { cells: ["Jetty occupancy", pct(sz.jettyOcc), sz.jettyOcc > 0.5 ? "high" : "OK"] },
     { cells: ["Average / operating-day send-out", `${fmt(sz.qAvg)} / ${fmt(sz.qOp)} t/d`, `${fmt(num(P.demand.operatingDays))} operating days`] },
     { cells: ["Boil-off (full tank)", fmt(sz.bogTpd, 1) + " t/d", `${fmt(num(P.utilities.bogPctPerDay), 3)} %/day`] },
+    { cells: ["Level rise while unloading", fmt(sz.riseMh, 2) + " m/h", `${fmt(sz.qInM3h)} m³/h into one tank`] },
     { cells: ["Plot use (tanks + clearance)", pct(sz.plotUse, 0), `${fmt(sz.footHa, 2)} of ${fmt(num(P.geometry.plotHa), 1)} ha`] },
   ], [2]);
   renderVoyage(sz);
@@ -1000,6 +1183,256 @@ function renderVoyage(sz) {
     { cls: !vy.manual && v.charterBasis === "dedicated" ? "total" : "", cells: [`Dedicated fleet (${vy.fleet} vessel${vy.fleet > 1 ? "s" : ""} × 365 d hire)`, fmt(vy.dedicatedUsdYr / 1e6, 1) + " M/yr", fmt(vy.dedicatedEurT, 1)] },
     { cls: vy.manual ? "total" : "", cells: ["Manual freight input", "", fmt(num(s.freightEurT), 1)] },
   ]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   PGS 12 TANK & LEVELS
+// ═══════════════════════════════════════════════════════════════
+const ST = { ok: ["ok", "OK"], warn: ["warn", "Check"], bad: ["bad", "Fail"], info: ["info", "Info"], req: ["info", "Required"], gap: ["gap", "GAP"], risk: ["bad", "Risk"] };
+function stBadge(k) { const [c, t] = ST[k] || ST.info; return `<span class="st st-${c}">${t}</span>`; }
+
+// Level schedule per tank, top to bottom. basis = where the level comes from; tag = CLAUDE.md-style status.
+function levelRows(sz) {
+  const L = sz.L, r = (x) => fmt(x, 2);
+  if (sz.lumped) return [
+    { k: "top", name: "Top of inner shell", h: L.top, basis: "Input (TEPSA Scenario D: 29.3 m).", tag: "Input" },
+    { k: "mdll", name: "Max design liquid level — PGS 12 limit", h: L.mdll, basis: `Shell top − ${r(PGS12.freeboardMinM)} m, the most PGS 12 (1999) §6.4.1.6 allows. TEPSA's level schedule is not disclosed, so this is used only for the capacity checks.`, tag: "Calculated" },
+    { k: "lah", name: "Max working level (top margin)", h: L.lah, basis: `Shell top − ${r(L.topMargin)} m lumped top margin — covers freeboard, overfill trip and alarms without splitting them.`, tag: "Calibration" },
+    { k: "lal", name: "Min working level (heel)", h: L.lal, basis: "Lumped heel — calibrated with the top margin to TEPSA's 84.3 % net/nominal ratio.", tag: "Calibration" },
+    { k: "floor", name: "Tank floor", h: 0, basis: "", tag: "" },
+  ];
+  return [
+    { k: "top", name: "Top of inner shell", h: L.top, basis: "Input (TEPSA Scenario D: 29.3 m).", tag: "Input" },
+    { k: "mdll", name: "Max design liquid level (MDLL)", h: L.mdll,
+      basis: `Shell top − ${r(L.fb)} m freeboard${L.ex > 0 ? ` − ${r(L.ex)} m extra` : ""}. <b>PGS 12 (1999) §6.4.1.6</b>: inner tank designed for filling to 500 mm below the top of the cylindrical wall; the max fill height lies at or below it. Not restated in the 2025 edition — NEN-EN 14620 (M9) governs and is not held.`,
+      tag: L.fb >= PGS12.freeboardMinM ? "Confirmed (1999) · GAP (2025)" : "Risk — below 0.5 m" },
+    { k: "lahh", name: "LAHH — independent overfill trip", h: L.lahh,
+      basis: `MDLL − ${fmt(L.tTrip * 60)} min × ${r(sz.riseMh)} m/h. <b>PGS 12:2025 M18</b>: independent overfill protection, SIL-classified; <b>1999 §6.5.4.1</b>: two level meters on their own connections, each with a high-level switch that shuts the automatic inlet valve. Trip-to-shut time is a placeholder.`,
+      tag: "Calculated · GAP (time)" },
+    { k: "lah", name: "LAH — high-level alarm = max working level", h: L.lah,
+      basis: `LAHH − ${fmt(L.tAl * 60)} min × ${r(sz.riseMh)} m/h. <b>M17</b> high-level protection; <b>1999 §6.5.4.1</b>: independent high-level alarm with a pre-alarm at a level that still leaves time to intervene. PGS 12 gives no time — placeholder.`,
+      tag: "Calculated · GAP (time)" },
+    { k: "lal", name: "LAL — low-level alarm = min working level", h: L.lal,
+      basis: `LALL + ${fmt(L.tLow * 60)} min × ${r(sz.fallMh)} m/h draw-down at send-out. Operating margin, not a PGS 12 requirement — placeholder.`,
+      tag: "Calculated · GAP (time)" },
+    { k: "lall", name: "LALL — pump low-low trip (heel)", h: L.lall,
+      basis: "<b>M10</b> in-tank pumps with internal motor, <b>M30</b> no connections below the liquid level — so the heel is what the submerged pumps need. PGS 12 sets no value; pump-vendor minimum submergence. Placeholder.",
+      tag: "GAP" },
+    { k: "floor", name: "Tank floor", h: 0, basis: "", tag: "" },
+  ];
+}
+
+function pgsChecks(sz) {
+  const L = sz.L, out = [], add = (item, req, val, st) => out.push({ item, req, val, st });
+  const tC = num(P.product.tempC), pn = pressureNums(P.product.pressure);
+  add("Construction form", "Full containment: primary + secondary steel inside a concrete protective outer wall — <b>M10, M12</b>. Perlite in the annulus not allowed.",
+    "Assumed. Vopak scope reads steel/steel/concrete; confirm TEPSA itemises the M12 concrete wall.", "req");
+  add("Design code", "NEN-EN 14620-1 for new atmospheric tanks — <b>M9</b>.", "Not testable in this model; NEN-EN 14620-1 not held.", "gap");
+  add("Capacity per tank", "No upper limit in PGS 12, but NEN-EN 14620-1 wall thicknesses give ≈60–70 kt in practice; >40 mm plate with brittle-fracture substantiation reaches ≈70 kt — <b>§1 Scope, Opmerking 2</b>.",
+    `${fmt(sz.grossMdllT)} t at max design level`, sz.grossMdllT > PGS12.bandHiT ? "bad" : sz.grossMdllT > PGS12.bandLoT ? "warn" : "ok");
+  const tIll = sz.dens * 9.81 * L.mdll * sz.D / (2 * PGS12.sigmaIll) * 1000;
+  add("Shell plate at the bottom course (illustrative)", "40 mm limit, NEN-EN 14620-2 §4.3.1.2.3 via §1 Opmerking 2. Hoop stress t = ρ·g·h·D ÷ 2σ with σ = ⅔ × 355 MPa (1999 §6.4.1.7, P355NL2 per M11) — <b>illustrative only</b>; excludes hydrotest, corrosion allowance and the tensile branch.",
+    `${fmt(tIll, 1)} mm (Ø${fmt(sz.D, 1)} m, ${fmt(L.mdll, 2)} m liquid)`, tIll > PGS12.plateLimitMm ? "warn" : "ok");
+  add("Freeboard above max design level", "Max fill ≥ 500 mm below the top of the cylindrical shell — <b>1999 §6.4.1.6</b> (not restated in 2025; NEN-EN 14620).",
+    sz.lumped ? `${fmt(L.topMargin, 2)} m lumped top margin — freeboard not split out` : `${fmt(L.fb + L.ex, 2)} m`,
+    sz.lumped ? (L.topMargin >= PGS12.freeboardMinM ? "gap" : "bad") : (L.fb >= PGS12.freeboardMinM ? "ok" : "bad"));
+  add("Fill degree", "Tabel 9's 80 vol% at −33 °C is a <b>pressurized-storage</b> limit (M109) — it does not apply to an atmospheric tank.",
+    `Max design level = ${pct(L.mdll / sz.H)} of shell height; max working level = ${pct(L.lah / sz.H)}`, "info");
+  add("High-level protection and overfill trip", "Separate high-level protection (<b>M17</b>) and independent overfill protection with SIL classification (<b>M18</b>); no overflow on the tank (1999 §6.5.4.1).",
+    sz.lumped ? "Not split — lumped top margin" : `LAHH ${fmt(L.lahh, 2)} m · LAH ${fmt(L.lah, 2)} m`, sz.lumped ? "warn" : "ok");
+  add("Level measurement", "Continuous, dual and independent level measurement on two principles; temperature incl. the feed line; pressure; vapour O₂ — <b>M16</b>.", "Design deliverable", "req");
+  add("Pump heel", "In-tank pumps with internal motor (<b>M10</b>); no connections below the max liquid level (<b>M30</b>).",
+    `${fmt(L.lall, 2)} m = ${fmt(sz.lallT)} t unpumpable per tank (placeholder)`, "gap");
+  add("Density basis", "Liquid density from <b>Tabel 7</b> (681.6 kg/m³ at −33.0 °C).",
+    `${fmt(sz.dens, 1)} kg/m³${P.product.densityBasis === "manual" ? ` manual (Tabel 7: ${fmt(rhoPGS(tC), 1)})` : ""}`,
+    P.product.densityBasis !== "manual" || Math.abs(sz.dens - rhoPGS(tC)) <= 0.5 ? "ok" : "warn");
+  add("Incoming ammonia temperature", "−33.0 to −32.0 °C, fixed in the terminal specification — <b>§7.6.2 toelichting, M95/M96</b>.",
+    `${fmt(tC, 1)} °C`, tC >= PGS12.inTempLo - 1e-9 && tC <= PGS12.inTempHi + 1e-9 ? "ok" : "warn");
+  add("Design pressure", "100–500 mbar, ≈250 mbar the practical constructive maximum — <b>§7.6.2 toelichting</b>. Operating ΔP 20–55 mbar, ≤70 mbar while filling (<b>M86</b>).",
+    pn.length ? `${esc(P.product.pressure)} mbarg` : "Not entered",
+    !pn.length ? "gap" : pn.some((x) => x < PGS12.designPLo || x > PGS12.designPHi) ? "bad" : pn.some((x) => x > PGS12.designPPractical) ? "warn" : "ok");
+  add("Minimum refrigerated size", "Refrigerated storage practical from 6,000 m³ — 1999 §6.4.1.4.", `${fmt(sz.nominalM3)} m³ nominal`, sz.nominalM3 >= PGS12.minRefrigM3 ? "ok" : "warn");
+  const gap2 = 2 * num(P.geometry.clearanceM), need = PGS12.spacingFrac * sz.OD;
+  add("Tank spacing", "Refrigerated tanks ≥ ½ × diameter of the larger tank apart — 1999 §6.2.4. The 2025 edition uses the M6 radiation contour and M8 internal distances instead.",
+    sz.N > 1 ? `${fmt(gap2, 1)} m between outer walls vs ${fmt(need, 1)} m` : "Single tank", sz.N > 1 ? (gap2 >= need ? "ok" : "warn") : "info");
+  add("Design life and inspection", `Minimum ${PGS12.designLifeYr}-yr design life; aim is never to take the tank out of service. In-service inspection at 6 and 12 years, then RBI at ≤12 years (<b>M116</b>).`,
+    `${num(P.fin.termYears)}-yr contract vs ${PGS12.designLifeYr}-yr life${sz.N === 1 ? ". One tank: any out-of-service inspection stops send-out, and the buffer rule does not cover it" : ""}`, sz.N === 1 ? "risk" : "info");
+  const cyc = sz.shipsYr, swing = sz.parcelM3 / (sz.N * sz.area);
+  add("Low-cycle fatigue", "Named in the toelichting for import terminals that fill and empty often. Allowable cycles sit in NEN-EN 14620 (not held).",
+    `${fmt(cyc, 1)} fills/yr → ${fmt(cyc * PGS12.designLifeYr)} over ${PGS12.designLifeYr} yr; ${fmt(swing, 1)} m level swing per parcel`, "gap");
+  add("Boil-off handling", "BOG compression with capacity and redundancy (<b>M27</b>) and emergency power (<b>M28</b>); relief to flare (<b>M19</b>).", `${fmt(sz.bogTpd, 1)} t/d at full tank`, "req");
+  add("Oxygen and water control", "Vapour-space O₂ capped (<b>M89</b>), water content controlled (<b>M88</b>). PGS 12 does not size the N₂ system.", "N₂ sizing not in this model", "gap");
+  add("Setbacks", "Heat-radiation contour (<b>M6</b>) and internal distances (<b>M8</b>) replace fixed distances — site-specific.",
+    `Plot use ${pct(sz.plotUse, 0)} with a ${fmt(num(P.geometry.clearanceM))} m clearance ring (not a PGS 12 distance)`, "gap");
+  return out;
+}
+
+function renderPgs(sz) {
+  const L = sz.L;
+  $("pgsSub").textContent = `${sz.lumped ? "Lumped margins" : "PGS 12 level stack"} · ${sz.N} tank${sz.N > 1 ? "s" : ""} · Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)} m`;
+  $("pgsKpis").innerHTML =
+    kpi("Max design liquid level", fmt(L.mdll, 2), "m", `${fmt(sz.H - L.mdll, 2)} m below the shell top`, true) +
+    kpi("Overfill trip (LAHH)", sz.lumped ? "—" : fmt(L.lahh, 2), "m", sz.lumped ? "not split" : `${fmt(L.tTrip * 60)} min at ${fmt(sz.riseMh, 2)} m/h`) +
+    kpi("Max working level", fmt(L.lah, 2), "m", sz.lumped ? "top margin" : "high-level alarm (LAH)") +
+    kpi("Min working level", fmt(L.lal, 2), "m", sz.lumped ? "heel" : `low alarm · pump trip ${fmt(L.lall, 2)} m`) +
+    kpi("Working range", fmt(sz.workH, 2), "m", `${pct(sz.workH / sz.H)} of shell height`) +
+    kpi("At max design level", fmt(sz.grossMdllT), "t", `per tank · practical ceiling ≈${fmt(PGS12.bandLoT / 1000)}–${fmt(PGS12.bandHiT / 1000)} kt`);
+
+  const m = [];
+  if (sz.lumped) m.push(["warn", `<b>Lumped basis.</b> The ${fmt(L.topMargin, 2)} m top margin is not split into freeboard, overfill trip and alarms, so PGS 12 compliance of the levels cannot be shown. Switch <b>Liquid level basis</b> to PGS 12 to size to the guideline.`]);
+  else {
+    const tepsaTop = 3.1;
+    const topNow = sz.H - L.lah;
+    m.push(["info", `Top of working range sits <b>${fmt(topNow, 2)} m</b> below the shell top (freeboard ${fmt(L.fb + L.ex, 2)} m + overfill trip ${fmt(L.mdll - L.lahh, 2)} m + alarm ${fmt(L.lahh - L.lah, 2)} m). TEPSA's calibrated top margin is ${fmt(tepsaTop, 1)} m — ${topNow < tepsaTop ? `${fmt(tepsaTop - topNow, 2)} m more than this stack needs at the current response times. Ask TEPSA what the rest covers.` : "less than this stack."}`]);
+  }
+  if (sz.grossMdllT > PGS12.bandHiT) m.push(["err", `${fmt(sz.grossMdllT)} t per tank is beyond the ≈70 kt PGS 12 expects any NEN-EN 14620 tank to reach. Add a tank.`]);
+  else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `${fmt(sz.grossMdllT)} t per tank is inside the ≈60–70 kt practical ceiling — expect plate at or above 40 mm and a brittle-fracture substantiation package.`]);
+  $("pgsMsgs").innerHTML = m.map(([k, t]) => `<div class="msg msg-${k}">${t}</div>`).join("");
+
+  const lr = levelRows(sz);
+  $("lvlSub").textContent = `ρ ${fmt(sz.dens, 1)} kg/m³ · area ${fmt(sz.area)} m² · 1 m = ${fmt(sz.area * sz.dens / 1000)} t`;
+  const keyRows = new Set(["mdll", "lah", "lal"]);
+  $("lvlTable").innerHTML = `<tr><th>Level</th><th class="num">Height m</th><th class="num">Volume m³</th><th class="num">Mass t</th><th>Basis</th><th>Status</th></tr>` +
+    lr.map((x) => `<tr class="${keyRows.has(x.k) ? "lvl-key" : ""}"><td class="lbl" style="white-space:nowrap">${x.name}</td><td class="num">${fmt(x.h, 2)}</td><td class="num">${fmt(x.h * sz.area)}</td><td class="num">${fmt(sz.levelT(x.h))}</td><td class="basis">${x.basis}</td><td>${x.tag ? `<span class="tag">${x.tag}</span>` : ""}</td></tr>`).join("") +
+    `<tr class="total"><td class="lbl">Working range (max − min working level)</td><td class="num">${fmt(sz.workH, 2)}</td><td class="num">${fmt(sz.workH * sz.area)}</td><td class="num">${fmt(sz.levelT(sz.workH))}</td><td class="basis">= net working capacity per tank (${fmt(sz.perTankT)} t)</td><td></td></tr>` +
+    `<tr><td class="lbl">Unusable above max working level</td><td class="num">${fmt(sz.H - L.lah, 2)}</td><td class="num">${fmt((sz.H - L.lah) * sz.area)}</td><td class="num">${fmt(sz.levelT(sz.H - L.lah))}</td><td class="basis">shell volume kept empty</td><td></td></tr>` +
+    `<tr><td class="lbl">Unusable below min working level</td><td class="num">${fmt(L.lal, 2)}</td><td class="num">${fmt(L.lal * sz.area)}</td><td class="num">${fmt(sz.levelT(L.lal))}</td><td class="basis">never sent out — keeps the tank cold (PGS 12 prefers never emptying it)</td><td></td></tr>` +
+    `<tr><td class="lbl">Level rise / fall rate</td><td class="num">${fmt(sz.riseMh, 2)} / ${fmt(sz.fallMh, 3)}</td><td></td><td></td><td class="basis">m/h at ${fmt(num(P.jetty.unloadRateTph))} t/h unloading into one tank / ${fmt(sz.q)} t/d send-out</td><td></td></tr>`;
+
+  $("pgsCheckTable").innerHTML = `<tr><th>Item</th><th>PGS 12 requirement and source</th><th>This design</th><th>Status</th></tr>` +
+    pgsChecks(sz).map((c) => `<tr><td class="lbl" style="white-space:nowrap">${c.item}</td><td class="basis">${c.req}</td><td class="wrap">${c.val}</td><td>${stBadge(c.st)}</td></tr>`).join("");
+
+  const gaps = [
+    `<b>Level response times</b> — overfill trip ${fmt(num(P.levels.tripMin))} min, high alarm ${fmt(num(P.levels.alarmMin))} min, low alarm ${fmt(num(P.levels.lowAlarmMin))} min are placeholders. PGS 12 requires the functions (M17, M18) but sets no times. Source: HAZOP / SIL study.`,
+    `<b>Pump heel</b> — ${fmt(num(P.levels.lallM), 2)} m is carried from the TEPSA calibration. Source: in-tank pump vendor, minimum submergence and NPSHr.`,
+    "<b>TEPSA level schedule</b> — the 3.1 m top margin and 1.5 m heel only reproduce TEPSA's 84.3 % net/nominal ratio. Ask TEPSA for the MDLL, LAHH, LAH, LAL and LALL set-points.",
+    "<b>NEN-EN 14620-1 not held</b> — freeboard in the 2025 regime, seismic slosh allowance, allowable shell stress and the 40 mm plate rule all live there (taurusgentari gap G-10).",
+    "<b>M17 / M18 measure bodies not held</b> — only the headings and change-table rows are in our conversion of PGS 12:2025 (taurusgentari gap G-2).",
+    "<b>PGS 12 at a French site</b> — PGS 12 is Dutch. At Le Havre it applies only if adopted contractually or accepted by DREAL as the design basis (taurusgentari gap G-8).",
+  ];
+  $("pgsGaps").innerHTML = gaps.map((g) => `<li>${g}</li>`).join("");
+  $("pgsSources").innerHTML = [
+    "PGS 12:2025 v1.1 (April 2026) — Tabel 7; §1 Scope Opmerking 2; §7.6 and §7.6.2 toelichting; M9–M30, M86, M96, M116 (taurusgentari <code>PGS-12/sources/PGS12_2025_raw.md</code>)",
+    "PGS 12 1999/2005 (CPR 13-1), superseded — §6.2.4, §6.4.1.4, §6.4.1.6, §6.4.1.7, §6.5.4.1; used only where 2025 is silent (<code>PGS12_1999_ammoniak-opslag-en-verlading.md</code>)",
+    "PGS 12 Tank Anatomy sheet — section drawing, capacity band, corrections to our own PGS 12 files (<code>PGS-12/pgs12-tank-anatomy.html</code>)",
+    "KBR 59999-KBR-P-LST-001 — T-101 roof rise 10.63 m at Ø57.6 m, used only to draw the roof",
+    "TEPSA Scenario D datasheet — 40,000 t net, Ø55.0 × 29.3 m, 69,557 m³ nominal (lumped-basis calibration)",
+  ].map((x) => `<li>${x}</li>`).join("");
+  drawSection(sz);
+}
+
+// Section through a full-containment tank (after the PGS 12 Tank Anatomy sheet). Tank height and
+// diameter are to scale; the wall build-up is not. Level labels are spread so they never overlap.
+function drawSection(sz) {
+  const host = $("secChart"), L = sz.L;
+  if (!(sz.D > 0) || !(sz.H > 0) || !(sz.workH > 0)) { host.innerHTML = `<div class="msg msg-err">No valid geometry to draw.</div>`; return; }
+  const W = 1080, xL = 310, xR = 730;                       // left labels | tank | right labels
+  const wPri = 4, wAnn = 9, wSec = 4, wIns = 7, wVoid = 11, wConc = 14;
+  const fixed = wPri + wAnn + wSec + wIns + wVoid + wConc;
+  const s = (xR - xL - 2 * fixed) / sz.D;                   // px per metre
+  const roofH = sz.D * PGS12.roofRise;
+  const top = 70, tb = top + (sz.H + roofH) * s, gy = tb + 30, Hh = gy + 62;
+  const cx = (xL + xR) / 2, rIn = sz.D / 2 * s;
+  const a0 = cx - rIn, b0 = cx + rIn, a1 = a0 - wPri, b1 = b0 + wPri, a2 = a1 - wAnn, b2 = b1 + wAnn;
+  const a3 = a2 - wSec, b3 = b2 + wSec, a4 = a3 - wIns, b4 = b3 + wIns, a5 = a4 - wVoid, b5 = b4 + wVoid, a6 = a5 - wConc, b6 = b5 + wConc;
+  const y = (h) => tb - h * s, st = y(sz.H), ry = roofH * s;
+  const n = (v) => (+v).toFixed(1);
+  const roofY = (x, rx, r) => st - r * Math.sqrt(Math.max(0, 1 - Math.pow((x - cx) / rx, 2)));
+  const T = (x, yy, t, o = {}) => `<text x="${n(x)}" y="${n(yy)}" text-anchor="${o.a || "start"}" style="font-size:${o.fs || 11}px;font-weight:${o.w || 400};fill:${o.c || "var(--text2)"}">${t}</text>`;
+  const Ln = (x1, y1, x2, y2, o = {}) => `<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" style="stroke:${o.c || "var(--steel)"};stroke-width:${o.w || 1}${o.d ? ";stroke-dasharray:" + o.d : ""}"/>`;
+  const Rc = (x, yy, w, h, o = {}) => `<rect x="${n(x)}" y="${n(yy)}" width="${n(Math.max(0, w))}" height="${n(Math.max(0, h))}" style="fill:${o.f || "none"};stroke:${o.c || "none"};stroke-width:${o.w || 1}${o.d ? ";stroke-dasharray:" + o.d : ""}"/>`;
+  const dome = (x1, x2, r, o) => `<path d="M${n(x1)} ${n(st)} A ${n((x2 - x1) / 2)} ${n(r)} 0 0 1 ${n(x2)} ${n(st)}" style="fill:none;stroke:${o.c};stroke-width:${o.w || 1.4}${o.d ? ";stroke-dasharray:" + o.d : ""}"/>`;
+  const S = [];
+  S.push(`<defs>
+    <pattern id="hC" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--concrete);stroke-width:1.5;opacity:.6"/></pattern>
+    <pattern id="hI" width="5" height="5" patternTransform="rotate(-45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--steel);stroke-width:1;opacity:.5"/></pattern>
+    <pattern id="hG" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" style="stroke:var(--text3);stroke-width:.8;opacity:.35"/></pattern>
+    <pattern id="hH" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--cryo);stroke-width:1;opacity:.45"/></pattern></defs>`);
+  // ground + piles
+  S.push(Rc(xL - 20, gy, xR - xL + 40, 14, { f: "url(#hG)" }), Ln(xL - 20, gy, xR + 20, gy, { c: "var(--text3)", w: 1.2 }));
+  S.push(Rc(a3, tb + 8, b3 - a3, 6, { f: "var(--concrete-fill)", c: "var(--concrete)" }));
+  for (let i = 0; i <= 10; i++) { const x = a3 + 6 + (b3 - a3 - 12) * i / 10; S.push(Ln(x, tb + 14, x, gy, { c: "var(--concrete)", w: 2 })); }
+  // concrete outer wall + rain roof
+  const cTop = st - 8;
+  S.push(Rc(a6, cTop, wConc, gy - cTop, { f: "url(#hC)", c: "var(--concrete)", w: 1.2 }), Rc(b5, cTop, wConc, gy - cTop, { f: "url(#hC)", c: "var(--concrete)", w: 1.2 }));
+  const rx3 = (b3 - a3) / 2, rrL = cx - rx3 * 0.7, rrR = cx + rx3 * 0.7;
+  S.push(Ln(a6 - 2, cTop, rrL, roofY(rrL, rx3, ry + 4) - 4, { c: "var(--concrete)", w: 1.6 }), Ln(b6 + 2, cTop, rrR, roofY(rrR, rx3, ry + 4) - 4, { c: "var(--concrete)", w: 1.6 }));
+  // insulation, secondary steel + dome, annulus
+  S.push(Rc(a4, st, wIns, tb - st + 8, { f: "url(#hI)", c: "var(--steel)", w: .8 }), Rc(b3, st, wIns, tb - st + 8, { f: "url(#hI)", c: "var(--steel)", w: .8 }));
+  S.push(Rc(a3, st, wSec, tb - st + 8, { f: "var(--steel)" }), Rc(b2, st, wSec, tb - st + 8, { f: "var(--steel)" }), Rc(a3, tb + 4, b3 - a3, 4, { f: "var(--steel)" }));
+  S.push(dome(a3, b3, ry + 4, { c: "var(--steel)", w: 2 }));
+  S.push(Rc(a2, st, wAnn, tb - st + 4, { c: "var(--ink-line)", w: .7, d: "2 3" }), Rc(b1, st, wAnn, tb - st + 4, { c: "var(--ink-line)", w: .7, d: "2 3" }));
+  // liquid: working inventory to LAH, unusable heel below LAL
+  S.push(Rc(a0, y(L.lah), b0 - a0, y(L.lal) - y(L.lah), { f: "var(--cryo-fill)" }));
+  S.push(Rc(a0, y(L.lal), b0 - a0, tb - y(L.lal), { f: "var(--cryo-deep)" }), Rc(a0, y(L.lal), b0 - a0, tb - y(L.lal), { f: "url(#hH)" }));
+  // primary tank
+  S.push(Rc(a1, st, wPri, tb - st, { f: "var(--cryo)" }), Rc(b0, st, wPri, tb - st, { f: "var(--cryo)" }), Rc(a1, tb, b1 - a1, 4, { f: "var(--cryo)" }));
+  // suspended deck + hangers
+  S.push(Ln(a0, st + 1, b0, st + 1, { c: "var(--steel)", w: 1.6 }));
+  for (let i = 1; i < 8; i++) { const x = a0 + (b0 - a0) * i / 8; S.push(Ln(x, st + 1, x, roofY(x, rx3, ry + 4) + 2, { c: "var(--steel)", w: .5, d: "2 3" })); }
+  // in-tank pumps (M10) through roof (M30)
+  [cx - rIn * 0.5, cx - rIn * 0.22].forEach((px) => {
+    const t0 = roofY(px, rx3, ry + 4) - 16;
+    S.push(Rc(px - 3, t0, 6, tb - 6 - t0, { f: "var(--bg2)", c: "var(--cryo)", w: 1.1 }), Rc(px - 6, tb - 20, 12, 14, { f: "var(--cryo-fill)", c: "var(--cryo)", w: 1.1 }));
+  });
+  // fill line to the bottom (cold fill)
+  const fx = cx - rIn * 0.78;
+  S.push(Ln(fx, roofY(fx, rx3, ry + 4) - 14, fx, tb - 10, { c: "var(--brand2)", w: 1.4, d: "5 4" }));
+  // instrument nozzle
+  const ix = cx + rIn * 0.45;
+  S.push(Ln(ix, roofY(ix, rx3, ry + 4), ix, roofY(ix, rx3, ry + 4) - 16, { c: "var(--success)", w: 1.4 }), Rc(ix - 30, roofY(ix, rx3, ry + 4) - 32, 60, 16, { f: "var(--bg2)", c: "var(--success)", w: 1.1 }));
+  S.push(T(ix, roofY(ix, rx3, ry + 4) - 20, "LT × 2 · LSHH", { a: "middle", fs: 9.5, c: "var(--success)", w: 700 }));
+  S.push(T(cx - rIn * 0.2, st - ry - 40, "all connections through the roof · M30", { a: "middle", fs: 10.5, c: "var(--text2)", w: 700 }));
+
+  // left-hand component labels with leaders
+  const comps = [
+    ["Concrete outer wall + rain roof · M12", a6 + wConc / 2, cTop + 18],
+    ["Outside insulation, vapour barrier · M10", a4 + wIns / 2, st + (tb - st) * 0.22],
+    ["Secondary steel tank · M10", a3 + wSec / 2, st + (tb - st) * 0.38],
+    ["Annular space — no perlite · M10", a2 + wAnn / 2, st + (tb - st) * 0.54],
+    ["Primary steel P275NL2 / P355NL2 · M11", a1 + wPri / 2, st + (tb - st) * 0.70],
+    ["Cold fill line to the bottom", fx, st + (tb - st) * 0.86],
+    ["In-tank pumps, no wall nozzles · M10", cx - rIn * 0.5, tb - 14],
+    ["Piled foundation, air gap · M13", a3 + 20, tb + 22],
+  ];
+  const yTop = st - 4, yBot = gy - 4, step = (yBot - yTop) / (comps.length - 1);
+  comps.forEach(([t, ax, ay], i) => {
+    const ly = yTop + i * step;
+    S.push(Ln(xL - 58, ly - 3, ax, ay, { c: "var(--ink-line)", w: .7, d: "3 3" }), `<circle cx="${n(ax)}" cy="${n(ay)}" r="2" style="fill:var(--brand2)"/>`);
+    S.push(T(xL - 62, ly, t, { a: "end", fs: 10.5 }));
+  });
+
+  // level lines + right-hand labels (spread apart)
+  const lv = sz.lumped
+    ? [["Top of shell", L.top, "var(--steel)", ""], ["Max design level (PGS 12 limit)", L.mdll, "var(--danger)", "5 3"],
+       ["Max working level (top margin)", L.lah, "var(--warn)", ""], ["Min working level (heel)", L.lal, "var(--cryo)", ""]]
+    : [["Top of shell", L.top, "var(--steel)", ""], ["MDLL — max design level", L.mdll, "var(--danger)", "5 3"],
+       ["LAHH — overfill trip · M18", L.lahh, "var(--danger)", ""], ["LAH — high alarm · M17 = max working", L.lah, "var(--warn)", ""],
+       ["LAL — low alarm = min working", L.lal, "var(--brand2)", ""], ["LALL — pump trip / heel · M10", L.lall, "var(--cryo)", "4 3"]];
+  const lx = b6 + 26;
+  let prev = -Infinity;
+  const placed = lv.map(([t, h, c, d]) => { const ly0 = y(h); const ly = Math.max(ly0, prev + 16); prev = ly; return [t, h, c, d, ly0, ly]; });
+  const over = placed.length ? placed[placed.length - 1][5] - (tb - 2) : 0;
+  if (over > 0) placed.forEach((p) => { p[5] -= over; });
+  placed.forEach(([t, h, c, d, ly0, ly]) => {
+    S.push(Ln(a0, ly0, b1, ly0, { c, w: 1.4, d }));
+    S.push(Ln(b1, ly0, b6 + 8, ly0, { c, w: .7, d: "2 2" }), Ln(b6 + 8, ly0, lx - 4, ly - 4, { c, w: .7 }));
+    S.push(`<g class="lv-lbl" data-tip="${esc(t)}: <b>${fmt(h, 2)} m</b> · ${fmt(sz.levelT(h))} t">` + T(lx, ly, `${t}`, { fs: 11, c: "var(--text)", w: 700 }) + T(W - 6, ly, `${fmt(h, 2)} m`, { a: "end", fs: 11, c, w: 700 }) + `</g>`);
+  });
+  // dimensions: working range, diameter
+  const dx = b0 - 16;
+  S.push(Ln(dx, y(L.lah), dx, y(L.lal), { c: "var(--brand-ink)", w: 1.2 }), Ln(dx - 5, y(L.lah), dx + 5, y(L.lah), { c: "var(--brand-ink)", w: 1.2 }), Ln(dx - 5, y(L.lal), dx + 5, y(L.lal), { c: "var(--brand-ink)", w: 1.2 }));
+  const my = (y(L.lah) + y(L.lal)) / 2;
+  S.push(`<text x="${n(dx - 10)}" y="${n(my)}" text-anchor="end" style="font-size:11px;font-weight:700;fill:var(--brand-ink)">working ${fmt(sz.workH, 2)} m · ${fmt(sz.perTankT)} t</text>`);
+  S.push(T(b0 - 8, y(L.lal) - 6, `below LAL: ${fmt(sz.heelT)} t`, { a: "end", fs: 10, c: "var(--cryo)", w: 700 }));
+  S.push(Ln(a0, gy + 34, b0, gy + 34, { c: "var(--text2)", w: 1 }), Ln(a0, tb, a0, gy + 40, { c: "var(--ink-line)", w: .6, d: "3 3" }), Ln(b0, tb, b0, gy + 40, { c: "var(--ink-line)", w: .6, d: "3 3" }));
+  S.push(Rc(cx - 50, gy + 26, 100, 16, { f: "var(--bg2)" }), T(cx, gy + 38, `inner Ø ${fmt(sz.D, 1)} m`, { a: "middle", fs: 11, c: "var(--text)", w: 700 }));
+  S.push(T(xR + 20, gy + 38, `shell ${fmt(sz.H, 2)} m · outer Ø ${fmt(sz.OD, 1)} m`, { a: "start", fs: 10.5 }));
+  host.innerHTML = `<svg class="section-svg" viewBox="0 0 ${W} ${n(Hh)}" role="img" aria-label="Section through a full-containment ammonia tank with the PGS 12 liquid levels">${S.join("")}</svg>`;
+  host.querySelectorAll("[data-tip]").forEach((el) => {
+    el.addEventListener("mousemove", (e) => showTip(e, el.dataset.tip, host));
+    el.addEventListener("mouseleave", hideTip);
+  });
 }
 
 function renderCapex(sz, cx) {
@@ -1053,7 +1486,7 @@ function optimumData() {
 }
 function renderOptimum() {
   const data = optimumData();
-  const valid = data.filter((d) => Number.isFinite(d.total) && d.sz.intervalD * 24 >= d.sz.callH && d.sz.D <= num(P.geometry.maxDiameterM));
+  const valid = data.filter((d) => Number.isFinite(d.total) && d.sz.intervalD * 24 >= d.sz.callH && d.sz.D <= num(P.geometry.maxDiameterM) && d.sz.grossMdllT <= PGS12.bandHiT);
   const best = (valid.length ? valid : data).reduce((a, b) => (b.total < a.total ? b : a));
   const q = best.sz.thrT / 1000;
   $("optSub").textContent = `${fmt(q)} ktpa · ${best.sz.rule.name}`;
@@ -1071,7 +1504,7 @@ function renderOptimum() {
     ...data.map((d) => ({
       cls: d === best ? "best" : "",
       cells: [shipName(d.k) + (d === best ? '<span class="tag best">lowest</span>' : "") + (d.k === P.shipClass ? '<span class="tag">selected</span>' : ""),
-        fmt(d.sz.parcel), fmt(d.sz.net), fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), fmt(d.vy.rt, 1), `${fmt(d.vy.fleetExact, 2)} → ${d.vy.fleet}`,
+        fmt(d.sz.parcel), fmt(d.sz.net) + (d.sz.grossMdllT > PGS12.bandHiT ? ' <span title="Above the ≈70 kt per tank PGS 12 expects (§1 Opmerking 2)">⚠</span>' : ""), fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), fmt(d.vy.rt, 1), `${fmt(d.vy.fleetExact, 2)} → ${d.vy.fleet}`,
         fmt(d.cx.total), fmt(d.storage, 1), fmt(d.freight, 1), fmt(d.total, 1)],
     })),
   ]);
@@ -1283,11 +1716,11 @@ $("fileInput").addEventListener("change", async (e) => {
 $("btnReset").addEventListener("click", () => { if (confirm("Reset all inputs and the register to defaults?")) { P = clone(DEFAULTS); syncInputs(); recalc(); } });
 $("btnPreset").addEventListener("click", () => {
   Object.assign(P.demand, { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" });
-  P.product.density = 682; P.shipClass = "CUSTOM";
+  Object.assign(P.product, { densityBasis: "manual", density: 682, tempC: -33 }); P.shipClass = "CUSTOM";
   Object.assign(P.ships.CUSTOM, { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100 });
   Object.assign(P.jetty, { unloadRateTph: 650 });
   Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 });
-  Object.assign(P.geometry, { tanks: 1, innerHeightM: 29.3, heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5 });
+  Object.assign(P.geometry, { tanks: 1, innerHeightM: 29.3, levelBasis: "lumped", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5 });
   syncInputs(); recalc();
   document.querySelector('.tab[data-tab="sizing"]').click();
 });
@@ -1317,6 +1750,9 @@ $("btnExcel").addEventListener("click", () => {
     ["Ships per year", r1(sz.shipsYr, 1), ""], ["Ship interval", r1(sz.intervalD, 1), "d"], ["Berth time per call", r1(sz.callH, 1), "h"],
     ["Jetty occupancy", r1(sz.jettyOcc * 100, 1), "%"], ["Stock cover", r1(sz.stockDays, 1), "d"], ["Boil-off (full tank)", r1(sz.bogTpd, 1), "t/d"],
     ["Plot use", r1(sz.plotUse * 100, 0), "%"],
+    ["Level basis", sz.lumped ? "Lumped margins (TEPSA calibration)" : "PGS 12 level stack", ""],
+    ["Max design liquid level", r1(sz.L.mdll, 2), "m"], ["Max working level", r1(sz.L.lah, 2), "m"], ["Min working level", r1(sz.L.lal, 2), "m"],
+    ["Stored at max design level, per tank", r1(sz.grossMdllT, 0), "t"],
     [], ["Voyage & fleet"],
     ["Distance (one way)", num(P.voyage.distanceNm), "nm"], ["Service speed", num(P.ships[sz.shipKey].speedKn), "kn"],
     ["Sea days (round trip, incl. margin)", r1(vy.seaDays, 2), "d"], ["Round trip per vessel", r1(vy.rt, 2), "d"],
@@ -1324,6 +1760,17 @@ $("btnExcel").addEventListener("click", () => {
     ["Hire per voyage", r1(vy.hireUsd / 1000, 1), "USD k"], ["Fuel per voyage", r1(vy.fuelUsd / 1000, 1), "USD k"], ["Port costs per voyage", r1(vy.portUsd / 1000, 1), "USD k"],
     ["Freight — voyage share", r1(vy.shareEurT, 2), "€/t"], ["Freight — dedicated fleet", r1(vy.dedicatedEurT, 2), "€/t"], ["Freight used", r1(vy.freight, 2), "€/t"],
   ], [34, 16, 12]);
+
+  const lvAoa = levelRows(sz).map((x) => [x.name, r1(x.h, 2), r1(x.h * sz.area, 0), r1(sz.levelT(x.h), 0), x.basis.replace(/<[^>]+>/g, ""), x.tag]);
+  const strip = (h) => String(h).replace(/<[^>]+>/g, "");
+  add("PGS 12 Levels", [
+    ["PGS 12 tank levels, per tank", sz.lumped ? "Lumped margins (TEPSA calibration)" : "PGS 12 level stack"],
+    ["Inner Ø m", r1(sz.D, 2), "Shell height m", sz.H, "Density kg/m³", sz.dens], [],
+    ["Level", "Height m", "Volume m³", "Mass t", "Basis", "Status"], ...lvAoa,
+    ["Working range", r1(sz.workH, 2), r1(sz.workH * sz.area, 0), r1(sz.levelT(sz.workH), 0), "= net working capacity per tank", ""],
+    [], ["PGS 12 check of this design"], ["Item", "Requirement and source", "This design", "Status"],
+    ...pgsChecks(sz).map((c) => [c.item, strip(c.req), strip(c.val), (ST[c.st] || ST.info)[1]]),
+  ], [40, 12, 12, 12, 90, 22]);
 
   add("CAPEX & Tariff", [
     ["CAPEX & break-even tariff"], [],
