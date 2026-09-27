@@ -454,14 +454,14 @@
       <div class="grp-body">
         <div class="row2">
           <div class="field"><label>Reference storage CAPEX <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.refStorageEurM"/></div>
-          <div class="field"><label>At reference net size <span class="hint">t</span></label><input type="number" step="1000" min="1" data-path="capex.refNetT"/></div>
+          <div class="field"><label>At reference storage size <span class="hint">t gross, to shell top</span></label><input type="number" step="1000" min="1" data-path="capex.refGrossT"/></div>
           <div class="field"><label>Scale exponent</label><input type="number" step="0.05" min="0" max="1.2" data-path="capex.exponent"/></div>
           <div class="field"><label>Location factor <span class="hint">× reference</span></label><input type="number" step="0.05" min="0" data-path="capex.locationFactor"/></div>
           <div class="field"><label>Jetty / marine <span class="hint">€M fixed</span></label><input type="number" step="1" min="0" data-path="capex.marineEurM"/></div>
           <div class="field"><label>Dredging, pipeline, other <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.otherEurM"/></div>
         </div>
         <div class="field"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="capex.accuracyPct"/></div>
-        <p class="note">Default reference = TEPSA quote: €185M storage for 40,000 t net + €20M jetty (HAROPA, Le Havre). Scaling: CAPEX ∝ size<sup>exponent</sup>.</p>
+        <p class="note">Default reference = TEPSA quote: €185M storage + €20M jetty (HAROPA, Le Havre) for a 40,000 t net tank = 69,557 m³ nominal × 682 kg/m³ = 47,438 t gross. Scaling: CAPEX ∝ storage size (gross)<sup>exponent</sup>.</p>
       </div>
     </details>
 
@@ -608,7 +608,8 @@
       <div class="panel">
         <div class="panel-h"><span class="t">Method</span></div>
         <div class="panel-b">
-          <div class="formula">Storage CAPEX = tanks × Ref CAPEX × (net per tank ÷ Ref size)^exponent × location factor
+          <div class="formula">Storage CAPEX = tanks × Ref CAPEX × (storage size per tank ÷ Ref size)^exponent × location factor
+  (storage size = gross, to shell top: the rounded size chosen under Required storage)
 Total CAPEX = storage + (jetty/marine + ship-class marine adder + other) × location factor
 Break-even tariff: NPV = 0 at the operator return, over the contract term —
   revenue (CPI-indexed) − fixed OPEX (CPI-indexed) − tax on (revenue − OPEX − depreciation)
@@ -709,7 +710,8 @@ const DEFAULTS = {
   // pump heel are PLACEHOLDERS — PGS 12 sets no value (HAZOP/SIL study and pump vendor do).
   levels: { freeboardM: 0.5, extraFreeboardM: 0, tripMin: 5, alarmMin: 30, lallM: 1.5, lowAlarmMin: 30 },
   utilities: { powerKWhPerT: 10.3, powerPriceEurMWh: 150, markupPct: 10, bogPctPerDay: 0.04 },
-  capex: { refStorageEurM: 185, refNetT: 40000, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
+  // refGrossT: TEPSA Scenario D, 69,557 m³ nominal × 682 kg/m³ (its 40,000 t net tank), to shell top.
+  capex: { refStorageEurM: 185, refGrossT: 47438, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
   fin: { hurdlePct: 9, cpiPct: 2.5, taxPct: 25, depYears: 20, opexPct: 2.5, termYears: 15, residualPct: 0, buildYears: 3, spendProfile: "30/40/30" },
   register: {
     vopak: {
@@ -989,7 +991,7 @@ function size(shipKey = P.shipClass) {
     shipKey, dens, thrT, qAvg, qOp, q, parcel, parcelM3: num(ship.m3) * num(ship.fillPct) / 100,
     rule, bufferDays, safetyDays, ullageDays: bufferDays - safetyDays, bufferT: bufferDays * q,
     netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3, L, lumped,
-    req, step, grossLo, grossHi, gross, roundDir, bufferEffDays: (net - parcel) / q,
+    req, step, grossLo, grossHi, gross, perTankGrossT: gross / N, roundDir, bufferEffDays: (net - parcel) / q,
     qInM3h, qOutM3h, riseMh, fallMh, grossMdllT, lallT, levelT: t,
     netToNominal: perTankNetM3 / nominalM3, heelT: heelM3 * dens / 1000,
     plot: plotReq(net), footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
@@ -1003,8 +1005,8 @@ function size(shipKey = P.shipClass) {
 
 function capexFor(sz) {
   const c = P.capex, LF = num(c.locationFactor, 1);
-  const refT = Math.max(1, num(c.refNetT));
-  const storage = sz.N * num(c.refStorageEurM) * Math.pow(sz.perTankT / refT, num(c.exponent)) * LF;
+  const refT = Math.max(1, num(c.refGrossT));
+  const storage = sz.N * num(c.refStorageEurM) * Math.pow(sz.perTankGrossT / refT, num(c.exponent)) * LF;
   const marine = (num(c.marineEurM) + num(P.ships[sz.shipKey].marineAdderEurM)) * LF;
   const other = num(c.otherEurM) * LF;
   const total = storage + marine + other;
@@ -1183,10 +1185,10 @@ function renderSizing(sz) {
          `<button type="button" role="radio" aria-checked="${sz.roundDir === d}" data-dir="${d}" class="${sz.roundDir === d ? "active" : ""}"${d === "down" && !(sz.grossLo > 0) ? " disabled" : ""}>${fmt(v)} t<small>${t}</small></button>`).join("")}</div>`
     : `<span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>${sz.step > 0 ? ` (exactly on the ${fmt(sz.step)} t step)` : " · no rounding"}.</span>`;
   $("heroKpis").innerHTML =
-    kpi("Max fill at MDLL", fmt(sz.grossMdllT * sz.N), "t",
-      `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.grossMdllT)} t · ` : ""}${fmt(sz.area * sz.L.mdll * sz.N)} m³ · ${fmt(sz.H - sz.L.mdll, 2)} m freeboard above`, true) +
+    kpi("Storage size", fmt(sz.gross), "t",
+      `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankGrossT)} t · ` : ""}gross to shell top · ${sz.step > 0 ? `rounded ${sz.roundDir} from ${fmt(sz.req.gross)} t` : "no rounding"} · basis for CAPEX`, true) +
     kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · ${short > 0.5 ? `<b style="color:var(--danger)">${fmt(short)} t short</b>` : short < -0.5 ? `${fmt(-short)} t spare` : "matches required"}`, true) +
-    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `${fmt(sz.gross)} t gross${sz.step > 0 ? ` (rounded ${sz.roundDir})` : ""} · net = ${pct(sz.netToNominal)} of nominal`) +
+    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
     kpi("Stock cover", fmt(sz.stockDays, 1), "days", `full tank at ${fmt(sz.qOp)} t/d (${fmt(num(P.demand.operatingDays))} op. days) · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`) +
     kpi("Plot required, incl. jetty", fmt(sz.plot.ha, 2), "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres`);
@@ -1637,7 +1639,7 @@ function drawSection(sz) {
 
 function renderCapex(sz, cx) {
   const q = sz.thrT / 1000;
-  $("capexHeroSub").textContent = `${fmt(sz.net)} t net · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
+  $("capexHeroSub").textContent = `${fmt(sz.gross)} t storage size · ${fmt(sz.net)} t net · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
   $("capexKpis").innerHTML =
     kpi("Total CAPEX", "€" + fmt(cx.total), "M", `range €${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %)`, true) +
     kpi("Incl. financing", "€" + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
@@ -1647,7 +1649,7 @@ function renderCapex(sz, cx) {
   const c = P.capex;
   $("capexTable").innerHTML = rows([
     { head: ["Item", "€M", "Basis"] },
-    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankT)} t)`, fmt(cx.storage, 1), `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)}/${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`] },
+    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankGrossT)} t gross)`, fmt(cx.storage, 1), `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankGrossT)}/${fmt(num(c.refGrossT))})^${num(c.exponent)} × ${num(c.locationFactor)}`] },
     { cells: ["Jetty / marine", fmt(cx.marine, 1), `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder €${fmt(num(P.ships[sz.shipKey].marineAdderEurM))}M`] },
     { cells: ["Dredging, pipeline, other", fmt(cx.other, 1), ""] },
     { cls: "total", cells: ["Total, before financing", fmt(cx.total, 1), `±${fmt(cx.acc * 100)} %`] },
@@ -2072,7 +2074,7 @@ const INPUT_GROUPS = [
     ["levels.lallM", "Pump low-low trip (heel)", "m", "placeholder — pump vendor (M10/M30)"], ["levels.lowAlarmMin", "Low alarm → action", "min", "placeholder"]]],
   ["Plot area reference", [["site.refPlotHa", "Reference plot, incl. jetty", "ha", "user-supplied"], ["site.refTankT", "At tank size", "t"], ["site.jettyToTankM", "Jetty → tank distance", "m"]]],
   ["Utilities & boil-off", [["utilities.powerKWhPerT", "Power", "kWh/t"], ["utilities.powerPriceEurMWh", "Power price", "€/MWh"], ["utilities.markupPct", "Admin mark-up", "%"], ["utilities.bogPctPerDay", "Boil-off rate", "% of full tank / d"]]],
-  ["CAPEX basis", [["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refNetT", "At reference net size", "t"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
+  ["CAPEX basis", [["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refGrossT", "At reference storage size", "t gross", "TEPSA 69,557 m³ × 682 kg/m³"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
     ["capex.marineEurM", "Jetty / marine", "€M"], ["capex.otherEurM", "Dredging, pipeline, other", "€M"], ["capex.accuracyPct", "Estimate accuracy", "± %"]]],
   ["Financial assumptions", [["fin.hurdlePct", "Operator return", "% nominal, post-tax"], ["fin.cpiPct", "CPI indexation", "%/yr"], ["fin.taxPct", "Corporate tax", "%"], ["fin.depYears", "Tax depreciation", "yrs, SL"],
     ["fin.opexPct", "Fixed OPEX", "% CAPEX/yr"], ["fin.termYears", "Contract term", "yrs"], ["fin.residualPct", "Residual value", "% CAPEX"], ["fin.buildYears", "Build period", "yrs"], ["fin.spendProfile", "Spend profile", "% per build year"]]],
@@ -2127,6 +2129,7 @@ async function exportExcel(full) {
     const R = (label, v, unit, note, kind, fmt) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fmt || XF.int] });
     S.section("Headline");
     S.header(["Result", "Value", "Unit", "Basis"], [0, 2, 3]);
+    R("Storage size (gross, to shell top)", sz.gross, "t", `${sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t from ${fmt(sz.req.gross)} t required` : "no rounding"} · basis for CAPEX`, "key");
     R("Design net working capacity", sz.net, "t", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankT)} t · ${sz.rule.name.toLowerCase()}`, "key");
     R("Inner diameter × shell height", sz.D, "m", `× ${fmt(sz.H, 1)} m shell · outer Ø ${fmt(sz.OD, 1)} m`, "key", XF.d1);
     R("Plot required, incl. jetty", sz.plot.ha, "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres · linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t`, "key", XF.d2);
@@ -2178,7 +2181,7 @@ async function exportExcel(full) {
 
     S.section("Economics");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    R("Storage CAPEX", cx.storage, "€M", `${sz.N} × ${fmt(sz.perTankT)} t on the reference curve`, null, XF.d1);
+    R("Storage CAPEX", cx.storage, "€M", `${sz.N} × ${fmt(sz.perTankGrossT)} t gross on the reference curve`, null, XF.d1);
     R("Jetty / marine", cx.marine, "€M", "", null, XF.d1);
     R("Dredging, pipeline, other", cx.other, "€M", "", null, XF.d1);
     R("Total CAPEX, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} %`, "key", XF.d1);
@@ -2342,7 +2345,7 @@ async function exportExcel(full) {
       const c = P.capex;
       S.section("CAPEX", "€M, before financing");
       S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
-      R(`Storage (${sz.N} × ${fmt(sz.perTankT)} t)`, cx.storage, "€M", `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)} ÷ ${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`);
+      R(`Storage (${sz.N} × ${fmt(sz.perTankGrossT)} t gross)`, cx.storage, "€M", `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankGrossT)} ÷ ${fmt(num(c.refGrossT))})^${num(c.exponent)} × ${num(c.locationFactor)}`);
       R("Jetty / marine", cx.marine, "€M", `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder`);
       R("Dredging, pipeline, other", cx.other, "€M");
       R("Total, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} % → €${fmt(cx.low)}–${fmt(cx.high)}M`, "key");

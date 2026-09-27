@@ -137,9 +137,11 @@ and port costs are placeholders.
 
 ## Economics method
 
-- **CAPEX** = tanks × reference storage CAPEX × (net per tank ÷ reference size)^exponent ×
-  location factor + (jetty/marine + ship-class adder + other) × location factor.
-  Default reference: TEPSA €185M storage at 40,000 t + €20M jetty.
+- **CAPEX** = tanks × reference storage CAPEX × (storage size per tank ÷ reference size)^exponent ×
+  location factor + (jetty/marine + ship-class adder + other) × location factor. Storage size is
+  the gross tank size to shell top, as rounded up or down under Required storage.
+  Default reference: TEPSA €185M storage + €20M jetty for its 40,000 t net tank, taken on the same
+  gross basis: 69,557 m³ nominal × 682 kg/m³ = 47,438 t.
 - **Break-even tariff**: post-tax NPV = 0 at the operator return over the contract term;
   CPI-indexed revenue and fixed OPEX, straight-line tax depreciation, optional residual value;
   CAPEX capitalised to start of operations over the build spend profile.
