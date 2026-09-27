@@ -8,6 +8,20 @@ is editable and every output recalculates live. The default project is the
 HAROPA Port, Le Havre case: 40 kt net tank, validated against TEPSA's Scenario D
 datasheet. All registered figures are indicative and non-binding.
 
+## Scope — receiving (import) terminal only
+
+This calculator models an **import / receiving terminal**: ships arrive, discharge into the
+tank, and the tank is drawn down by **downstream demand** (send-out to the consumer, e.g. the
+cracker). Buffer days, send-out rate, ship interval and the low-alarm margin are all driven
+by demand.
+
+**Not yet built: an export terminal** fed by a **production plant**. There the tank fills
+continuously at the plant's production rate and empties in batches when ships load, so the
+sizing logic inverts: buffer for plant output while no ship is alongside (ship late, port
+closure), loading rate instead of unloading rate, the level rise driven by production and the
+fall by ship loading, and the plant — not the consumer — as the outage case. Build it as a
+separate module (or a terminal-type switch) rather than reusing the demand-driven formulas.
+
 ## Tabs
 
 | Tab | What it does |
