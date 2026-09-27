@@ -137,6 +137,22 @@ and port costs are placeholders.
   CAPEX capitalised to start of operations over the build spend profile.
 - **Vopak** implied CAPEX and **TEPSA** implied return use the same model.
 
+## Excel export
+
+**⬇ Excel** writes a styled workbook with ExcelJS (cdnjs), in the module's colours (purple
+`#7030A0` headings, blue `#0070C0` key values, status colours from the PGS 12 checks), Arial
+throughout, gridlines off, frozen table headers and landscape/portrait print setup.
+
+| Sheet | Content |
+|---|---|
+| Results | Results only: headline (net capacity, tank size, plot, CAPEX, tariffs, landed cost) highlighted, then storage, levels, plot, shipping, economics, optimum ship class, PGS 12 check sorted worst-first, and the model's flags |
+| Inputs | Every input grouped by section, with units and placeholder notes; ship classes |
+| Sizing | Capacity build-up, tank dimensions vs TEPSA, plot area, operations, voyage and freight |
+| PGS 12 Levels | Level schedule per tank and the full PGS 12 check with coloured status |
+| CAPEX & Tariff | CAPEX, tariff build-up, financial assumptions, market check |
+| Ship Options | All ship classes; lowest-cost row in green |
+| Register | Vopak, TEPSA, Titan benchmark, open questions, decision log |
+
 ## Reusing for a new project
 
 1. Copy `nh3-storage-design.html` into the new repo (it has no dependencies beyond the
