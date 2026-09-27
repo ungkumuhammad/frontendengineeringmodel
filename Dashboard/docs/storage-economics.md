@@ -59,6 +59,19 @@ no values. Take them from the HAZOP / SIL study and the pump vendor.
 reproduce TEPSA's 84.3 % net/nominal ratio; the split is a calibration, not a disclosed
 level schedule. **Load TEPSA check case** switches to this basis and to 682 kg/m³.
 
+### Plot area
+
+```
+plot required (ha) = reference plot × design net capacity ÷ reference tank size
+reference          = 3.7 ha for a 60 kt tank, including the jetty; jetty 500 m from the tank
+units              = ha, m², sq ft (1 ft = 0.3048 m), acres (1 acre = 4,046.8564224 m²)
+```
+
+Shown on the Tank sizing tab (KPI + plot table), the PGS 12 tab and the Optimum size tab,
+and exported to Excel. The scaling is linear by instruction, so it also scales the jetty and
+the 500 m jetty-to-tank corridor, which do not grow with tank size. Whether the 60 kt
+reference is net or gross is not stated.
+
 ### PGS 12 checks
 
 Evaluated live on the PGS 12 tab and exported to Excel: construction form (M10/M12), design
@@ -125,6 +138,7 @@ and port costs are placeholders.
 | 2026-09-27 | Reference tank 40 kt net; reference throughputs 300 and 550 ktpa |
 | 2026-09-27 | Vopak utilities = TEPSA basis: €1.7/t (pass-through, +10 % admin, €150/MWh) |
 | 2026-09-27 | Project Titan USD 87M is full-terminal scope; FX 1.10 USD/EUR |
+| 2026-09-27 | Plot required scales linearly from 3.7 ha at 60 kt (incl. jetty, jetty 500 m from tank), shown in ha, m², sq ft and acres |
 | 2026-09-27 | Tank levels follow PGS 12 (freeboard ≥ 0.5 m, overfill trip, alarms, pump heel); density from PGS 12:2025 Tabel 7 |
 | 2026-09-27 | Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t) |
 | 2026-09-27 | Freight calculated from voyage; fleet sized from round trip vs arrival interval |

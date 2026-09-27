@@ -398,6 +398,18 @@
       </div>
     </details>
 
+    <details class="grp" open>
+      <summary>Plot area reference<span class="sum-note" id="sumPlot"></span></summary>
+      <div class="grp-body">
+        <div class="row3">
+          <div class="field"><label>Reference plot <span class="hint">ha, incl. jetty</span></label><input type="number" step="0.1" min="0" data-path="site.refPlotHa"/></div>
+          <div class="field"><label>At tank size <span class="hint">t</span></label><input type="number" step="1000" min="1" data-path="site.refTankT"/></div>
+          <div class="field"><label>Jetty → tank <span class="hint">m</span></label><input type="number" step="10" min="0" data-path="site.jettyToTankM"/></div>
+        </div>
+        <p class="note">Plot required = reference plot × design net capacity ÷ reference tank size (linear). Reference: 3.7 ha for a 60 kt tank including the jetty, with the jetty 500 m from the tank.</p>
+      </div>
+    </details>
+
     <details class="grp">
       <summary>Utilities &amp; boil-off<span class="sum-note" id="sumUtil"></span></summary>
       <div class="grp-body">
@@ -491,6 +503,11 @@
           <div class="panel-h"><span class="t">Freight per voyage</span><span class="s" id="frtSub"></span></div>
           <div class="tbl-wrap"><table class="dt" id="frtTable"></table></div>
         </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Plot area</span><span class="s" id="plotSub"></span></div>
+        <div class="tbl-wrap"><table class="dt" id="plotTable"></table></div>
       </div>
 
       <div class="panel">
@@ -652,6 +669,8 @@ const DEFAULTS = {
   jetty: { unloadRateTph: 650, berthHours: 12 },
   buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000 },
   geometry: { tanks: 1, innerHeightM: 29.3, levelBasis: "pgs12", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
+  // Plot reference (user-supplied, 2026-09-27): 3.7 ha for a 60 kt tank incl. jetty; jetty 500 m from the tank.
+  site: { refPlotHa: 3.7, refTankT: 60000, jettyToTankM: 500 },
   // PGS 12 level stack. Freeboard 0.5 m is PGS 12 (1999) §6.4.1.6; the response times and the
   // pump heel are PLACEHOLDERS — PGS 12 sets no value (HAZOP/SIL study and pump vendor do).
   levels: { freeboardM: 0.5, extraFreeboardM: 0, tripMin: 5, alarmMin: 30, lallM: 1.5, lowAlarmMin: 30 },
@@ -690,6 +709,7 @@ const DEFAULTS = {
       "Pump vendor: minimum submergence of the in-tank pumps — sets the unusable heel (PGS 12 M10/M30)",
       "HAZOP/SIL: overfill-trip and alarm response times at 650 t/h (PGS 12 M17/M18 set no value)",
       "NEN-EN 14620-1 (not held): freeboard / seismic slosh allowance and allowable shell stress",
+      "Plot reference: is the 60 kt behind the 3.7 ha net or gross? Linear scaling also scales the jetty and the 500 m corridor, which do not grow with the tank",
     ],
     decisions: [
       { date: "2026-09-27", text: "Base assumptions: 9 % return, 2.5 % CPI, 25 % tax / 20-yr SL, 2.5 % OPEX, 15-yr full recovery" },
@@ -698,6 +718,7 @@ const DEFAULTS = {
       { date: "2026-09-27", text: "Project Titan USD 87M is full-terminal scope; FX 1.10 USD/EUR" },
       { date: "2026-09-27", text: "Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t)" },
       { date: "2026-09-27", text: "Freight calculated from voyage (distance, speed, hire, fuel, port costs); fleet sized from round trip vs arrival interval" },
+      { date: "2026-09-27", text: "Plot required scales linearly from 3.7 ha at 60 kt (incl. jetty, jetty 500 m from tank); shown in ha, m², sq ft and acres" },
       { date: "2026-09-27", text: "Tank levels follow PGS 12: max design level ≥ 0.5 m below shell top, then independent overfill trip, high alarm, low alarm and pump heel; density from PGS 12:2025 Tabel 7" },
     ],
   },
@@ -734,6 +755,12 @@ function rhoPGS(tC) {
 }
 // Design pressure field is free text ("100–150"); pull out every number in it.
 function pressureNums(txt) { return (String(txt).match(/\d+(\.\d+)?/g) || []).map(Number); }
+
+// Area units: 1 ft = 0.3048 m and 1 acre = 4,046.8564224 m² (exact international definitions).
+const SQFT_PER_M2 = 1 / (0.3048 * 0.3048), M2_PER_ACRE = 4046.8564224;
+function areaUnits(ha) { const m2 = ha * 1e4; return { ha, m2, sqft: m2 * SQFT_PER_M2, acre: m2 / M2_PER_ACRE }; }
+// Plot required, scaled linearly on design net capacity from the reference plot (incl. jetty).
+function plotReq(netT) { const S = P.site; return areaUnits(num(S.refPlotHa) * netT / Math.max(1, num(S.refTankT))); }
 
 const SHIP_KEYS = ["MGC", "LGC", "VLAC", "CUSTOM"];
 const STORE_KEY = "nh3StorageProject.v1";
@@ -909,7 +936,7 @@ function size(shipKey = P.shipClass) {
     netReq, net, N, perTankT, perTankNetM3, H, workH, area, D, OD, nominalM3, heelM3, L, lumped,
     qInM3h, qOutM3h, riseMh, fallMh, grossMdllT, lallT, levelT: t,
     netToNominal: perTankNetM3 / nominalM3, heelT: heelM3 * dens / 1000,
-    footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
+    plot: plotReq(net), footHa: footM2 / 1e4, plotUse: num(g.plotHa) > 0 ? footM2 / 1e4 / num(g.plotHa) : NaN,
     unloadH, callH, shipsYr, shipsMonth: shipsYr / 12, intervalD, jettyOcc: shipsYr * callH / 8760,
     turns: thrT / net, stockDays: net / qAvg,
     bogTpd: net * num(P.utilities.bogPctPerDay) / 100,
@@ -1079,6 +1106,7 @@ function renderSummaries(sz, cx) {
     ` Operating ΔP 20–55 mbar, ≤ 70 mbar while filling (M86); design P 100–500 mbar, ≈250 practical.`;
   $("sumUtil").textContent = `€${fmt(cx.util, 2)}/t`;
   $("sumCapex").textContent = `€${fmt(cx.total)}M`;
+  $("sumPlot").textContent = `${fmt(sz.plot.ha, 2)} ha`;
   $("sumFin").textContent = `${fmt(cx.f.h * 100, 1)} % · ${cx.f.term} yr`;
   $("ruleNote").textContent = sz.rule.note;
   $("parcelNote").innerHTML = `Parcel = <b>${fmt(sz.parcelM3)} m³ × ${fmt(sz.dens)} kg/m³ = ${fmt(sz.parcel)} t</b> (${shipName(P.shipClass)}).`;
@@ -1091,7 +1119,8 @@ function renderSizing(sz) {
     kpi("Net volume", fmt(sz.perTankNetM3 * sz.N), "m³", sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³` : "") +
     kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
-    kpi("Stock cover", fmt(sz.stockDays, 1), "days", `${fmt(sz.turns, 1)} turns / yr`);
+    kpi("Stock cover", fmt(sz.stockDays, 1), "days", `${fmt(sz.turns, 1)} turns / yr`) +
+    kpi("Plot required, incl. jetty", fmt(sz.plot.ha, 2), "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres`);
 
   const m = [];
   if (!(sz.workH > 0)) m.push(["err", sz.lumped ? "Heel + top margin exceed the tank height — increase height or reduce the margins."
@@ -1100,6 +1129,7 @@ function renderSizing(sz) {
   else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — inside PGS 12's ≈60–70 kt practical ceiling. Shell plate near the 40 mm limit; see the PGS 12 tab.`]);
   if (!sz.lumped && sz.workH > 0) m.push(["info", `PGS 12 level stack: ${fmt(sz.H - sz.L.lah, 2)} m unusable at the top and ${fmt(sz.L.lal, 2)} m at the bottom, per tank. See the <b>PGS 12 tank &amp; levels</b> tab.`]);
   if (sz.D > num(P.geometry.maxDiameterM)) m.push(["warn", `Inner diameter ${fmt(sz.D, 1)} m exceeds the ${fmt(num(P.geometry.maxDiameterM))} m limit. Add a tank, raise the height, or use a smaller ship.`]);
+  if (sz.plot.ha > num(P.geometry.plotHa)) m.push(["warn", `Plot required ${fmt(sz.plot.ha, 2)} ha (linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha available.`]);
   if (sz.plotUse > 1) m.push(["warn", `Tank footprint incl. clearance (${fmt(sz.footHa, 2)} ha) exceeds the ${fmt(num(P.geometry.plotHa), 1)} ha plot.`]);
   if (sz.intervalD * 24 < sz.callH) m.push(["err", `Ships would arrive every ${fmt(sz.intervalD, 1)} days but each call takes ${fmt(sz.callH)} h — jetty cannot keep up.`]);
   else if (sz.jettyOcc > 0.5) m.push(["warn", `Jetty occupancy ${pct(sz.jettyOcc, 0)} — high; queueing and demurrage likely.`]);
@@ -1154,8 +1184,22 @@ function renderSizing(sz) {
     { cells: ["Level rise while unloading", fmt(sz.riseMh, 2) + " m/h", `${fmt(sz.qInM3h)} m³/h into one tank`] },
     { cells: ["Plot use (tanks + clearance)", pct(sz.plotUse, 0), `${fmt(sz.footHa, 2)} of ${fmt(num(P.geometry.plotHa), 1)} ha`] },
   ], [2]);
+  renderPlot(sz);
   renderVoyage(sz);
   drawInventory(sz);
+}
+
+function renderPlot(sz) {
+  const S = P.site, ref = areaUnits(num(S.refPlotHa)), avail = areaUnits(num(P.geometry.plotHa)), foot = areaUnits(sz.footHa);
+  const row = (label, a, basis, cls) => ({ cls, cells: [label, fmt(a.ha, 2), fmt(a.m2), fmt(a.sqft), fmt(a.acre, 2), basis] });
+  $("plotSub").textContent = `linear on net capacity · jetty ${fmt(num(S.jettyToTankM))} m from tank`;
+  $("plotTable").innerHTML = rows([
+    { head: ["Area", "ha", "m²", "sq ft", "acres", "Basis"] },
+    row(`Reference — ${fmt(num(S.refTankT))} t tank incl. jetty`, ref, `user-supplied; jetty ${fmt(num(S.jettyToTankM))} m from the tank`),
+    row(`Plot required — ${fmt(sz.net)} t net`, sz.plot, `${fmt(num(S.refPlotHa), 2)} ha × ${fmt(sz.net)} ÷ ${fmt(num(S.refTankT))} t`, "total"),
+    row("Available plot", avail, "input (HAROPA plot)"),
+    row(`Tank footprint incl. ${fmt(num(P.geometry.clearanceM))} m clearance`, foot, `${sz.N} tank${sz.N > 1 ? "s" : ""}, outer Ø${fmt(sz.OD, 1)} m — tanks only, no jetty`),
+  ], [5]) + `<tr><td colspan="6" class="lbl" style="font-size:10.5px;color:var(--text3)">Linear scaling also scales the jetty and the ${fmt(num(S.jettyToTankM))} m jetty-to-tank corridor, which do not grow with tank size. 1 ha = 10,000 m² = ${fmt(1e4 * SQFT_PER_M2)} sq ft = ${fmt(1e4 / M2_PER_ACRE, 3)} acres.</td></tr>`;
 }
 
 function renderVoyage(sz) {
@@ -1276,6 +1320,7 @@ function renderPgs(sz) {
     kpi("Max working level", fmt(L.lah, 2), "m", sz.lumped ? "top margin" : "high-level alarm (LAH)") +
     kpi("Min working level", fmt(L.lal, 2), "m", sz.lumped ? "heel" : `low alarm · pump trip ${fmt(L.lall, 2)} m`) +
     kpi("Working range", fmt(sz.workH, 2), "m", `${pct(sz.workH / sz.H)} of shell height`) +
+    kpi("Plot required", fmt(sz.plot.ha, 2), "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres · incl. jetty`) +
     kpi("At max design level", fmt(sz.grossMdllT), "t", `per tank · practical ceiling ≈${fmt(PGS12.bandLoT / 1000)}–${fmt(PGS12.bandHiT / 1000)} kt`);
 
   const m = [];
@@ -1493,6 +1538,7 @@ function renderOptimum() {
   $("optKpis").innerHTML =
     kpi("Best ship class", shipName(best.k), "", `${fmt(best.sz.parcel)} t parcel`, true) +
     kpi("Optimum tank (net)", fmt(best.sz.net), "t", `Ø${fmt(best.sz.D, 1)} × ${fmt(best.sz.H, 1)} m · ${best.sz.N} tank(s)`) +
+    kpi("Plot required", fmt(best.sz.plot.ha, 2), "ha", `${fmt(best.sz.plot.sqft)} sq ft · ${fmt(best.sz.plot.acre, 2)} acres`) +
     kpi("CAPEX", "€" + fmt(best.cx.total), "M", "before financing") +
     kpi("Landed logistics cost", "€" + fmt(best.total, 1), "/t", `storage + utilities + freight (${best.vy.manual ? "manual" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share"})`) +
     kpi("Annual logistics cost", "€" + fmt(best.total * q / 1000, 1), "M/yr", `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`);
@@ -1500,11 +1546,11 @@ function renderOptimum() {
   data.forEach((d) => { $("parcel-" + d.k).textContent = fmt(d.sz.parcel); $("frtcalc-" + d.k).textContent = fmt(d.vy.calcEurT, 1); });
 
   $("optTable").innerHTML = rows([
-    { head: ["Ship class", "Parcel t", "Net tank t", "Inner Ø m", "Ships / yr", "Round trip d", "Vessels", "CAPEX €M", "Storage €/t", "Freight €/t", "Total €/t"] },
+    { head: ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Inner Ø m", "Ships / yr", "Round trip d", "Vessels", "CAPEX €M", "Storage €/t", "Freight €/t", "Total €/t"] },
     ...data.map((d) => ({
       cls: d === best ? "best" : "",
       cells: [shipName(d.k) + (d === best ? '<span class="tag best">lowest</span>' : "") + (d.k === P.shipClass ? '<span class="tag">selected</span>' : ""),
-        fmt(d.sz.parcel), fmt(d.sz.net) + (d.sz.grossMdllT > PGS12.bandHiT ? ' <span title="Above the ≈70 kt per tank PGS 12 expects (§1 Opmerking 2)">⚠</span>' : ""), fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), fmt(d.vy.rt, 1), `${fmt(d.vy.fleetExact, 2)} → ${d.vy.fleet}`,
+        fmt(d.sz.parcel), fmt(d.sz.net) + (d.sz.grossMdllT > PGS12.bandHiT ? ' <span title="Above the ≈70 kt per tank PGS 12 expects (§1 Opmerking 2)">⚠</span>' : ""), `<span title="${fmt(d.sz.plot.sqft)} sq ft · ${fmt(d.sz.plot.acre, 2)} acres">${fmt(d.sz.plot.ha, 2)}</span>`, fmt(d.sz.D, 1) + (d.sz.D > num(P.geometry.maxDiameterM) ? " ⚠" : ""), fmt(d.sz.shipsYr, 1), fmt(d.vy.rt, 1), `${fmt(d.vy.fleetExact, 2)} → ${d.vy.fleet}`,
         fmt(d.cx.total), fmt(d.storage, 1), fmt(d.freight, 1), fmt(d.total, 1)],
     })),
   ]);
@@ -1750,6 +1796,8 @@ $("btnExcel").addEventListener("click", () => {
     ["Ships per year", r1(sz.shipsYr, 1), ""], ["Ship interval", r1(sz.intervalD, 1), "d"], ["Berth time per call", r1(sz.callH, 1), "h"],
     ["Jetty occupancy", r1(sz.jettyOcc * 100, 1), "%"], ["Stock cover", r1(sz.stockDays, 1), "d"], ["Boil-off (full tank)", r1(sz.bogTpd, 1), "t/d"],
     ["Plot use", r1(sz.plotUse * 100, 0), "%"],
+    ["Plot required incl. jetty (linear)", r1(sz.plot.ha, 2), "ha"], ["", r1(sz.plot.m2, 0), "m²"], ["", r1(sz.plot.sqft, 0), "sq ft"], ["", r1(sz.plot.acre, 2), "acres"],
+    ["Plot reference", `${num(P.site.refPlotHa)} ha at ${num(P.site.refTankT)} t incl. jetty; jetty ${num(P.site.jettyToTankM)} m from tank`, ""],
     ["Level basis", sz.lumped ? "Lumped margins (TEPSA calibration)" : "PGS 12 level stack", ""],
     ["Max design liquid level", r1(sz.L.mdll, 2), "m"], ["Max working level", r1(sz.L.lah, 2), "m"], ["Min working level", r1(sz.L.lal, 2), "m"],
     ["Stored at max design level, per tank", r1(sz.grossMdllT, 0), "t"],
@@ -1786,10 +1834,10 @@ $("btnExcel").addEventListener("click", () => {
 
   const od = optimumData();
   add("Ship Options", [
-    ["Ship class", "Capacity m³", "Fill %", "Parcel t", "Net tank t", "Inner Ø m", "Ships/yr", "Jetty occ %", "Speed kn", "Round trip d", "Vessels (exact)", "Vessels", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"],
-    ...od.map((d) => [shipName(d.k), num(P.ships[d.k].m3), num(P.ships[d.k].fillPct), r1(d.sz.parcel, 0), r1(d.sz.net, 0), r1(d.sz.D, 1), r1(d.sz.shipsYr, 1), r1(d.sz.jettyOcc * 100, 1), num(P.ships[d.k].speedKn), r1(d.vy.rt, 1), r1(d.vy.fleetExact, 2), d.vy.fleet, r1(d.cx.total), r1(d.storage, 2), r1(d.util, 2), r1(d.freight, 2), r1(d.total, 2)]),
+    ["Ship class", "Capacity m³", "Fill %", "Parcel t", "Net tank t", "Plot ha", "Plot sq ft", "Plot acres", "Inner Ø m", "Ships/yr", "Jetty occ %", "Speed kn", "Round trip d", "Vessels (exact)", "Vessels", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"],
+    ...od.map((d) => [shipName(d.k), num(P.ships[d.k].m3), num(P.ships[d.k].fillPct), r1(d.sz.parcel, 0), r1(d.sz.net, 0), r1(d.sz.plot.ha, 2), r1(d.sz.plot.sqft, 0), r1(d.sz.plot.acre, 2), r1(d.sz.D, 1), r1(d.sz.shipsYr, 1), r1(d.sz.jettyOcc * 100, 1), num(P.ships[d.k].speedKn), r1(d.vy.rt, 1), r1(d.vy.fleetExact, 2), d.vy.fleet, r1(d.cx.total), r1(d.storage, 2), r1(d.util, 2), r1(d.freight, 2), r1(d.total, 2)]),
     [], [`Freight basis: ${P.voyage.freightMethod === "manual" ? "manual €/t" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet (whole vessels)" : "voyage share (COA / spot)"}; distance ${num(P.voyage.distanceNm)} nm`],
-  ], [22, 12, 8, 11, 11, 10, 9, 11, 9, 11, 13, 9, 10, 11, 11, 11, 10]);
+  ], [22, 12, 8, 11, 11, 9, 12, 10, 10, 9, 11, 9, 11, 13, 9, 10, 11, 11, 11, 10]);
 
   const R = P.register, v = R.vopak, t = R.tepsa, ti = R.titan;
   const reg = [["Economics register — derived values use the current financial assumptions"], [], ["VOPAK", v.status], ["Scope", v.scope], [],
