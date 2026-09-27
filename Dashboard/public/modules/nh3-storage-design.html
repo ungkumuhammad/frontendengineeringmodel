@@ -161,6 +161,8 @@
   .kpi .v .u { font-size: 11.5px; color: var(--text2); margin-left: 4px; font-weight: 400; }
   .kpi .n { font-size: 11px; color: var(--text3); margin-top: 3px; }
   .kpi.big { border-top: 3px solid var(--brand); }
+  .kpi .v2 { font-size: 14px; font-weight: 700; color: var(--text2); margin-top: 1px; }
+  .kpi .v2 .u { font-size: 11px; font-weight: 400; margin-left: 4px; }
   .kpi.big .v { font-size: 30px; color: var(--brand2-ink); }
   .kpi.big .v.txt { font-size: 20px; }
 
@@ -1066,9 +1068,11 @@ $("tabs").addEventListener("click", (e) => {
 // ═══════════════════════════════════════════════════════════════
 //   RENDER
 // ═══════════════════════════════════════════════════════════════
-function kpi(label, value, unit, note, big) {
+// extra: optional second value line under the main value, e.g. ["73,314", "m³ usable volume"].
+function kpi(label, value, unit, note, big, extra) {
   const txt = /[a-z]{3}/i.test(String(value).replace(/Ø/g, "")) ? " txt" : "";
-  return `<div class="kpi${big ? " big" : ""}"><div class="l">${label}</div><div class="v${txt}">${value}<span class="u">${unit || ""}</span></div>${note ? `<div class="n">${note}</div>` : ""}</div>`;
+  const v2 = extra ? `<div class="v2">${extra[0]}<span class="u">${extra[1]}</span></div>` : "";
+  return `<div class="kpi${big ? " big" : ""}"><div class="l">${label}</div><div class="v${txt}">${value}<span class="u">${unit || ""}</span></div>${v2}${note ? `<div class="n">${note}</div>` : ""}</div>`;
 }
 // textCols: column indexes rendered as left-aligned prose instead of right-aligned numbers.
 function rows(list, textCols = []) {
@@ -1129,7 +1133,8 @@ function renderSummaries(sz, cx) {
 function renderSizing(sz) {
   $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
   $("heroKpis").innerHTML =
-    kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · rounded to ${fmt(num(P.buffer.roundStepT))} t`, true) +
+    kpi("Net working capacity", fmt(sz.net), "t", `volume at ${fmt(sz.dens, 1)} kg/m³ · required ${fmt(sz.netReq)} t · rounded to ${fmt(num(P.buffer.roundStepT))} t`, true,
+      [fmt(sz.perTankNetM3 * sz.N), "m³ usable"]) +
     kpi("Net volume", fmt(sz.perTankNetM3 * sz.N), "m³", sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankNetM3)} m³` : "") +
     kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
@@ -1986,6 +1991,7 @@ async function exportExcel(full) {
     S.section("Headline");
     S.header(["Result", "Value", "Unit", "Basis"], [0, 2, 3]);
     R("Design net working capacity", sz.net, "t", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankT)} t · ${sz.rule.name.toLowerCase()}`, "key");
+    R("Usable volume (net working)", sz.perTankNetM3 * sz.N, "m³", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankNetM3)} m³ at ${fmt(sz.dens, 1)} kg/m³ · between min and max working level`, "key");
     R("Inner diameter × shell height", sz.D, "m", `× ${fmt(sz.H, 1)} m shell · outer Ø ${fmt(sz.OD, 1)} m`, "key", XF.d1);
     R("Plot required, incl. jetty", sz.plot.ha, "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres · linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t`, "key", XF.d2);
     R("Total CAPEX, before financing", cx.total, "€M", `range €${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %)`, "key");
@@ -2106,6 +2112,7 @@ async function exportExcel(full) {
       R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t at ${fmt(sz.q)} t/d`, null, XF.d1);
       R("Required net capacity", sz.netReq, "t", "");
       R("Design net working capacity", sz.net, "t", `rounded up to ${fmt(num(b.roundStepT))} t`, "key");
+      R("Usable volume (net working)", sz.perTankNetM3 * sz.N, "m³", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankNetM3)} m³ at ${fmt(sz.dens, 1)} kg/m³`, "key");
 
       S.section("Tank dimensions, per tank", "vs TEPSA Scenario D datasheet");
       S.header(["Item", "This design", "TEPSA D", "Note"], [0, 3]);
