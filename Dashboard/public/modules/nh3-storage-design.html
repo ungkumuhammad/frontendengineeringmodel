@@ -175,6 +175,18 @@
   .kpi.big { border-top: 3px solid var(--brand); }
   .kpi.big .v { font-size: 30px; color: var(--brand2-ink); }
   .kpi.big .v.txt { font-size: 20px; }
+  /* low / mid / high estimate strip inside a KPI card */
+  .kpi .rng { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .kpi .rng > div { text-align: center; padding: 4px 2px; border-radius: 4px; }
+  .kpi .rng .rl { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .kpi .rng .rv { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .kpi .rng .mid { background: var(--brand-bg); }
+  .kpi .rng .mid .rl, .kpi .rng .mid .rv { color: var(--brand-ink); }
+  .kpi:has(.rng) { container-type: inline-size; }
+  @container (max-width: 150px) {
+    .kpi .rng { grid-template-columns: 1fr; gap: 2px; }
+    .kpi .rng > div { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 6px; text-align: left; }
+  }
 
   .tbl-wrap { overflow-x: auto; }
   table.dt { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -1675,11 +1687,17 @@ function drawSection(sz) {
   });
 }
 
+// Low / mid / high strip for the Total CAPEX card: mid is the point estimate, low and high apply
+// the estimate accuracy (Estimate accuracy, ± %).
+function capexRange(cx) {
+  const cell = (label, v, cls) => `<div class="${cls || ""}"><div class="rl">${label}</div><div class="rv">€${fmt(v)}M</div></div>`;
+  return `<div class="rng" role="group" aria-label="Total CAPEX range">${cell("Low", cx.low)}${cell("Mid", cx.total, "mid")}${cell("High", cx.high)}</div>`;
+}
 function renderCapex(sz, cx) {
   const q = sz.thrT / 1000;
   $("capexHeroSub").textContent = `${fmt(sz.gross)} t storage size · ${fmt(sz.net)} t net · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
   $("capexKpis").innerHTML =
-    kpi("Total CAPEX", "€" + fmt(cx.total), "M", `range €${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %)`, true) +
+    kpi("Total CAPEX", "€" + fmt(cx.total), "M", `estimate accuracy ±${fmt(cx.acc * 100)} %` + capexRange(cx), true) +
     kpi("Incl. financing", "€" + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
     kpi("Break-even storage tariff", "€" + fmt(cx.be.eurT, 1), "/t", `range €${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`) +
     kpi("All-in incl. utilities", "€" + fmt(cx.allIn, 1), "/t", `+ €${fmt(cx.util, 2)}/t utility fee`) +
