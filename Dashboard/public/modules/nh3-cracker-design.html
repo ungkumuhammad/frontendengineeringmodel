@@ -91,6 +91,19 @@
   .link-box .txt { flex: 1; min-width: 260px; font-size: 13px; color: var(--text2); }
   .link-box .txt b { color: var(--text); }
   .hidden { display: none !important; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tab { background: none; border: none; border-bottom: 3px solid transparent; color: var(--text2); font-family: var(--head); font-size: 13px; font-weight: 600; padding: 9px 14px; cursor: pointer; margin-bottom: -1px; }
+  .tab:hover { color: var(--brand2-ink); }
+  .tab.active { color: var(--brand-ink); border-bottom-color: var(--brand); font-weight: 700; }
+  .tab:focus-visible { outline: 2px solid var(--brand2); outline-offset: 2px; }
+  .tabpane { display: none; flex-direction: column; gap: 18px; }
+  .tabpane.active { display: flex; }
+  .panel-h.coll { cursor: pointer; user-select: none; }
+  .panel-h.coll:focus-visible { outline: 2px solid var(--brand2); outline-offset: -2px; }
+  .panel-h .chev { display: inline-block; width: 12px; font-size: 11px; color: var(--text3); transition: transform .15s; }
+  .panel.collapsed > :not(.panel-h) { display: none !important; }
+  .panel.collapsed > .panel-h { border-bottom: none; }
+  .panel.collapsed > .panel-h .chev { transform: rotate(-90deg); }
   .src { font-size: 11px; color: var(--text3); }
   a { color: var(--brand2-ink); }
   .seg { display: inline-flex; border: 1px solid var(--border-hi); border-radius: 7px; padding: 2px; gap: 2px; flex-wrap: wrap; }
@@ -154,58 +167,6 @@
 
 <div class="wrap">
 
-  <div class="panel intro">
-    <div class="panel-h"><span class="t">What this tool models</span></div>
-    <div class="panel-b">
-      <p>An ammonia cracker converts NH₃ back into hydrogen via the endothermic decomposition
-      <b>2NH₃ → N₂ + 3H₂</b> (ΔH ≈ +92.4 kJ/mol at reaction conditions, or the ΔH⁰ ≈ 46 kJ/mol NH₃
-      basis Casale quotes; the two bases are not interchangeable). The cracked gas is purified by
-      ammonia recovery and PSA to 99.5–99.999 %wt H₂.</p>
-      <p>Enter the <b>H₂ capacity you need</b>, pick a technology basis and fuel mode, and the model
-      returns the technical sizing (ammonia, fuel, power, CO₂) plus CAPEX from power-law curves
-      fitted to the licensor data, and OPEX and LCOH from your ammonia, electricity and gas prices.
-      The required NH₃ feed is the <b>demand on the receiving terminal</b>. Use
-      <b>“🔗 Link model to storage”</b> to send it to the <a href="nh3-storage-design.html">NH₃ Storage Design</a> module.</p>
-      <div class="cards">
-        <div class="card">
-          <h3>KBR — H2ACT®</h3>
-          <ul>
-            <li>Down-fired, primary-reformer-derived furnace; Ni catalyst</li>
-            <li>Data at 12 / 24 / 68 / 80 ktpa H₂; 100 % NG, 50/50 and 100 % clean fuel</li>
-            <li>ISBL CAPEX 78–209 MM$ (Class V ±50 %, Q3 2025); OPEX &amp; LCOH at 3 NH₃ prices</li>
-            <li class="src">Licensor/kbr/kbr-johor-hub.md and I.E Feed &amp; Product sheet, Rev 0, 23 Dec 2025</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3>Duiker — AHC</h3>
-          <ul>
-            <li>SCO combustor + convective cracking reactor + PSA; no steam system</li>
-            <li>Single data point: 12 ktpa H₂; NH₃-fired 7.03 t/t, NG-fired 6.83 t/t</li>
-            <li>€47M lump-sum turnkey (±40 %), incl. construction licence fee; €8.50/t H₂ operation fee</li>
-            <li class="src">Licensor/duiker/duiker-johor-hub.md, Budgetary Proposal 122380, 05 Dec 2025</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3>Custom pathways</h3>
-          <ul>
-            <li>Gentari mass-balance basis: 5.66 kg NH₃ → 1 kg H₂; 1.54 kg NH₃-eq of firing</li>
-            <li>100 % clean fuel 7.2 · natural gas 6.5 · maximum natural gas 5.7 t/t</li>
-            <li>Maximum NG needs a double PSA; CAPEX uplift is an input</li>
-            <li class="src">Process description supplied by Gentari, Sep 2026</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3>Not in the cost model</h3>
-          <ul>
-            <li>Casale MACH2™: technical proposal only, no CAPEX/OPEX (Rev.00, 05 Dec 2025)</li>
-            <li>Technip Energies / Nippon Sanso: tolling offer, see the Tolling route</li>
-            <li class="src">Licensor/Casale, Licensor/technip</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="panel">
     <div class="panel-h"><span class="t">Cracker sizing inputs</span></div>
     <div class="panel-b">
@@ -262,6 +223,12 @@
 
   <!-- ================= OWN & OPERATE ================= -->
   <div id="ownPanels" style="display:grid;gap:18px">
+    <div class="tabs" role="tablist" aria-label="Cracker results">
+      <button type="button" class="tab active" role="tab" data-tab="tech" aria-selected="true">Technical &amp; process</button>
+      <button type="button" class="tab" role="tab" data-tab="capex" aria-selected="false">CAPEX</button>
+      <button type="button" class="tab" role="tab" data-tab="opex" aria-selected="false">OPEX &amp; LCOH</button>
+    </div>
+    <div class="tabpane active" id="pane-tech" role="tabpanel">
 
     <div class="panel">
       <div class="panel-h"><span class="t">Technical sizing</span><span class="s" id="techSub"></span></div>
@@ -414,6 +381,8 @@
       </div>
     </div>
 
+    </div>
+    <div class="tabpane" id="pane-capex" role="tabpanel">
     <div class="panel">
       <div class="panel-h"><span class="t">CAPEX</span><span class="s" id="capexSub"></span></div>
       <div class="panel-b">
@@ -437,6 +406,8 @@
       </div>
     </div>
 
+    </div>
+    <div class="tabpane" id="pane-opex" role="tabpanel">
     <div class="panel">
       <div class="panel-h"><span class="t">OPEX &amp; LCOH</span><span class="s" id="opexSub"></span></div>
       <div class="panel-b">
@@ -445,6 +416,7 @@
         <div id="checkBox"></div>
         <p class="note" id="opexNote"></p>
       </div>
+    </div>
     </div>
   </div>
 
@@ -490,6 +462,58 @@
     </div>
   </div>
 
+  <div class="panel intro">
+    <div class="panel-h"><span class="t">What this tool models</span></div>
+    <div class="panel-b">
+      <p>An ammonia cracker converts NH₃ back into hydrogen via the endothermic decomposition
+      <b>2NH₃ → N₂ + 3H₂</b> (ΔH ≈ +92.4 kJ/mol at reaction conditions, or the ΔH⁰ ≈ 46 kJ/mol NH₃
+      basis Casale quotes; the two bases are not interchangeable). The cracked gas is purified by
+      ammonia recovery and PSA to 99.5–99.999 %wt H₂.</p>
+      <p>Enter the <b>H₂ capacity you need</b>, pick a technology basis and fuel mode, and the model
+      returns the technical sizing (ammonia, fuel, power, CO₂) plus CAPEX from power-law curves
+      fitted to the licensor data, and OPEX and LCOH from your ammonia, electricity and gas prices.
+      The required NH₃ feed is the <b>demand on the receiving terminal</b>. Use
+      <b>“🔗 Link model to storage”</b> to send it to the <a href="nh3-storage-design.html">NH₃ Storage Design</a> module.</p>
+      <div class="cards">
+        <div class="card">
+          <h3>KBR — H2ACT®</h3>
+          <ul>
+            <li>Down-fired, primary-reformer-derived furnace; Ni catalyst</li>
+            <li>Data at 12 / 24 / 68 / 80 ktpa H₂; 100 % NG, 50/50 and 100 % clean fuel</li>
+            <li>ISBL CAPEX 78–209 MM$ (Class V ±50 %, Q3 2025); OPEX &amp; LCOH at 3 NH₃ prices</li>
+            <li class="src">Licensor/kbr/kbr-johor-hub.md and I.E Feed &amp; Product sheet, Rev 0, 23 Dec 2025</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Duiker — AHC</h3>
+          <ul>
+            <li>SCO combustor + convective cracking reactor + PSA; no steam system</li>
+            <li>Single data point: 12 ktpa H₂; NH₃-fired 7.03 t/t, NG-fired 6.83 t/t</li>
+            <li>€47M lump-sum turnkey (±40 %), incl. construction licence fee; €8.50/t H₂ operation fee</li>
+            <li class="src">Licensor/duiker/duiker-johor-hub.md, Budgetary Proposal 122380, 05 Dec 2025</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Custom pathways</h3>
+          <ul>
+            <li>Gentari mass-balance basis: 5.66 kg NH₃ → 1 kg H₂; 1.54 kg NH₃-eq of firing</li>
+            <li>100 % clean fuel 7.2 · natural gas 6.5 · maximum natural gas 5.7 t/t</li>
+            <li>Maximum NG needs a double PSA; CAPEX uplift is an input</li>
+            <li class="src">Process description supplied by Gentari, Sep 2026</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Not in the cost model</h3>
+          <ul>
+            <li>Casale MACH2™: technical proposal only, no CAPEX/OPEX (Rev.00, 05 Dec 2025)</li>
+            <li>Technip Energies / Nippon Sanso: tolling offer, see the Tolling route</li>
+            <li class="src">Licensor/Casale, Licensor/technip</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -498,7 +522,8 @@
 // ═══════════════════════════════════════════════════════════════
 const LHV = { nh3: 18.529, h2: 119.42, ng: 49.56 };         // MJ/kg, KBR I.E Feed & Product sheet
 const CO2_PER_KG_NG = 1150 / 417.9;                         // kg CO2 / kg NG, KBR I.E 12 ktpa NG100
-const STOICH = 5.66;                                        // kg NH3 / kg H2, Gentari basis
+const STOICH = 5.66;                                        // kg NH3 / kg H2, Gentari and Duiker basis (Duiker Table 1: 5.66/7.03)
+const STOICH_KBR = 33.8 / 500 * 1e6 / (34.3 * 350);          // 5.63: KBR §4.2 "ammonia cracked for product" 33.8 MM$ at 500 USD/t, 12 ktpa
 const FIRING_NH3EQ = 1.54;                                  // kg NH3-eq / kg H2, Gentari basis
 
 // KBR H2ACT — KPI table §3.3, OPEX/LCOH §4.2, ISBL §4.1 (Rev 0, 23 Dec 2025)
@@ -690,7 +715,8 @@ function model(I) {
 
   // Technical
   r.nh3t = h2t * r.ratio;
-  r.nh3FuelEq = r.ratio - STOICH;                             // NH3 used as fuel (tail gas + direct), t/t
+  r.stoich = ref === "kbr" && I.basis === "kbr" ? STOICH_KBR : STOICH;
+  r.nh3FuelEq = r.ratio - r.stoich;                           // NH3 used as fuel (tail gas + direct), t/t
   r.ngKgPerKg = r.ngMJ / LHV.ng;
   r.ngt = h2t * r.ngKgPerKg;
   r.ngMWh = r.ngMJ * h2t * 1000 / 3600;
@@ -709,7 +735,10 @@ function model(I) {
 
   // OPEX (MM USD/yr)
   const o = [];
-  o.push({ k: "Ammonia feed (product + fuel)", v: r.nh3t * I.pNh3 / 1e6, d: `${fmt(r.nh3t / 1000, 1)} kt × ${fmt(I.pNh3, 0)} USD/t` });
+  const nh3Prod = h2t * r.stoich, nh3Fuel = h2t * r.nh3FuelEq;
+  const fuelSplit = r.custom ? `tail gas ${fmt(r.custom.tail, 2)} + direct ${fmt(r.custom.direct, 2)} t/t` : `${fmt(r.nh3FuelEq, 2)} t/t`;
+  o.push({ k: "Ammonia — cracked to product H₂", v: nh3Prod * I.pNh3 / 1e6, d: `${fmt(nh3Prod / 1000, 1)} kt (${fmt(r.stoich, 2)} t/t) × ${fmt(I.pNh3, 0)} USD/t` });
+  o.push({ k: "Ammonia — used as fuel", v: nh3Fuel * I.pNh3 / 1e6, d: `${fmt(nh3Fuel / 1000, 1)} kt (${fuelSplit}) × ${fmt(I.pNh3, 0)} USD/t` });
   if (r.ngMWh > 0) o.push({ k: "Natural gas", v: r.ngMWh * I.pNg / 1e6, d: `${fmt(r.ngMWh / 1000, 1)} GWh (LHV) × ${fmt(I.pNg, 0)} USD/MWh` });
   o.push({ k: "Electricity", v: r.elMWh * I.pEl / 1e6, d: `${fmt(r.elMWh / 1000, 2)} GWh × ${fmt(I.pEl, 0)} USD/MWh` });
   if (ref === "kbr") {
@@ -785,7 +814,7 @@ function setBfd(path, fromModel) {
   document.querySelectorAll(".seg button[data-path]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.path === path)));
   const p = CUSTOM[path];
   const h2made = p.cracked / STOICH, tailH2 = h2made - 1, n2 = p.cracked - h2made;
-  $("bfdFeed").textContent = `${fmt(p.feed, 2)} kg`;
+  $("bfdFeed").textContent = fmt(p.feed, 2);
   $("bfdCracked").textContent = fmt(p.cracked, 2);
   $("bfdCracked2").textContent = `${fmt(p.cracked, 2)} kg`;
   $("bfdDirect").style.display = p.direct > 0 ? "" : "none";
@@ -928,7 +957,9 @@ function renderSources() {
     ["NG emission factor", `${fmt(CO2_PER_KG_NG, 3)} kg CO₂/kg NG`, "Derived", "KBR I.E: 1,150 kg/h CO₂ ÷ 417.9 kg/h NG"],
     ["KBR total CAPEX 24/68/80 ktpa", caps(KBR_TOTAL).filter((c) => !KBR_TOTAL[c].stated).map((c) => `${fmt(KBR_TOTAL[c].v, 1)} MM$`).join(" / "), "Derived", "KBR §4.2 LCOH & OPEX, CRF(8 %, 25 yr), 350 d/yr"],
     ["KBR fixed O&M 24/68/80 ktpa", caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 2)} MM$/yr`).join(" / "), "Derived", "KBR §4.2 OPEX slope between NH₃ price points, less NG, power and consumables"],
-    ["KBR other consumables", `${fmt(KBR.consumablesUsdPerT, 1)} USD/t H₂`, "Derived", "0.4 MM$/yr at 12 ktpa, KBR §4.2 note 3"],
+    ["KBR NH₃ to product", `${fmt(STOICH_KBR, 2)} t/t`, "Derived", "KBR §4.2: ammonia cracked for product 33.8 MM$ at 500 USD/t, 12,005 t H₂/yr. Custom and Duiker use 5.66"],
+    ["KBR NH₃ ratio 12 ktpa NG100", "6.40 t/t used", "Discrepancy", "KBR KPI table says 6.40; KBR's own OPEX split (33.8 + 4.3 MM$ at 500 USD/t) implies 6.35. The model's NH₃-fuel line reads 4.6 MM$ vs KBR's 4.3"],
+    ["KBR other consumables",`${fmt(KBR.consumablesUsdPerT, 1)} USD/t H₂`, "Derived", "0.4 MM$/yr at 12 ktpa, KBR §4.2 note 3"],
     ["Duiker NH₃-fired ratio", "7.03 t/t used", "Discrepancy", "Duiker Tables 1 & 7 say 7.03; §3 text says 7.05 @ 90.9 %. The cracker workbook data.py uses 7.05"],
     ["Duiker construction licence fee", "Included in €47M", "Discrepancy", "Duiker Table 8 and §4.2 fold the adjusted fee into CAPEX; data.py treats €2.7M as additive"],
     ["Duiker NG-fired fuel", `${fmt(DUIKER.modes.NG.ngMJ, 2)} MJ/kg H₂`, "Derived", "0.21 kg CO₂/kg H₂ (Duiker §3.11.2) ÷ KBR NG emission factor. Duiker's 90.6 % efficiency implies ≈4.4 MJ"],
@@ -1007,6 +1038,35 @@ $("btnReset").addEventListener("click", () => {
   setRoute("own");
 });
 
+// Tabs
+const TAB_KEY = "nh3CrackerTab";
+function showTab(name) {
+  document.querySelectorAll(".tab[data-tab]").forEach((b) => { const on = b.dataset.tab === name; b.classList.toggle("active", on); b.setAttribute("aria-selected", String(on)); });
+  document.querySelectorAll("#ownPanels .tabpane").forEach((p) => p.classList.toggle("active", p.id === "pane-" + name));
+  try { localStorage.setItem(TAB_KEY, name); } catch (e) {}
+}
+document.querySelectorAll(".tab[data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+// Collapsible panels: click (or Enter / Space on) a header to fold the panel. Folded state is kept per viewer in this browser.
+const COLL_KEY = "nh3CrackerCollapsed";
+let collapsedPanels = null;
+try { collapsedPanels = JSON.parse(localStorage.getItem(COLL_KEY) || "null"); } catch (e) { collapsedPanels = null; }
+if (!collapsedPanels || typeof collapsedPanels !== "object") collapsedPanels = { "What this tool models": true };
+document.querySelectorAll(".panel > .panel-h").forEach((h) => {
+  const panel = h.parentElement, key = h.querySelector(".t").textContent;
+  h.classList.add("coll"); h.setAttribute("role", "button"); h.tabIndex = 0;
+  h.insertAdjacentHTML("afterbegin", '<span class="chev" aria-hidden="true">▾</span>');
+  const set = (c) => { panel.classList.toggle("collapsed", c); h.setAttribute("aria-expanded", String(!c)); };
+  set(!!collapsedPanels[key]);
+  const toggle = () => {
+    const c = !panel.classList.contains("collapsed"); set(c);
+    collapsedPanels[key] = c;
+    try { localStorage.setItem(COLL_KEY, JSON.stringify(collapsedPanels)); } catch (e) {}
+  };
+  h.addEventListener("click", (e) => { if (e.target.closest("button, a, input, select, label")) return; toggle(); });
+  h.addEventListener("keydown", (e) => { if (e.target === h && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(); } });
+});
+
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
   $("themeLabel").textContent = t === "light" ? "Light" : "Dark";
@@ -1022,6 +1082,8 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
   populateModes();
   populateTollingSelect();
   setBfd("cf", true);
+  let tab = "tech"; try { tab = localStorage.getItem(TAB_KEY) || "tech"; } catch (e) {}
+  showTab(["tech", "capex", "opex"].includes(tab) ? tab : "tech");
   setRoute("own");
 })();
 </script>

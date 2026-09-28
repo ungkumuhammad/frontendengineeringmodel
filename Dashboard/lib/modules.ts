@@ -10,7 +10,7 @@ export interface ModuleDefinition {
   slug: string;
   title: string;
   description: string;
-  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment" | "Storage Design" | "Cracker Design";
+  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment" | "Engineering Design";
   // Path (under /public) to the self-contained legacy HTML calculator.
   htmlPath: string;
   icon: string;
@@ -58,7 +58,7 @@ export const MODULES: ModuleDefinition[] = [
     title: "NH₃ Cracker Design",
     description:
       "Ammonia cracker sizing from required H₂ capacity on KBR H2ACT, Duiker AHC or custom fuel pathways (clean fuel, natural gas, maximum NG with double PSA) — NH₃, fuel, power and CO₂, CAPEX power-law curves, price-driven OPEX and LCOH, and a block flow diagram. Link the NH₃ demand straight into the NH₃ Storage Design module.",
-    category: "Cracker Design",
+    category: "Engineering Design",
     htmlPath: "/modules/nh3-cracker-design.html",
     icon: "flame",
   },
@@ -67,7 +67,7 @@ export const MODULES: ModuleDefinition[] = [
     title: "NH₃ Storage Design",
     description:
       "Refrigerated ammonia tank sizing from throughput, ship class and buffer rules — PGS 12 liquid levels and compliance check, tank dimensions, CAPEX, break-even storage tariff, optimum ship/tank size, and a register of terminal operator offers. Excel and project-file export.",
-    category: "Storage Design",
+    category: "Engineering Design",
     htmlPath: "/modules/nh3-storage-design.html",
     icon: "tank",
   },

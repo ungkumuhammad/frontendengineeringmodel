@@ -36,6 +36,12 @@ CAPEX = a × (H₂ ktpa)^b, least-squares fit in log space, computed at runtime.
 
 ## OPEX
 
+Ammonia is split into two cost lines: cracked to product H₂ and used as fuel. The product
+share uses 5.63 t/t for KBR (KBR §4.2: 33.8 MM$ "ammonia cracked for product" at 500 USD/t,
+12 ktpa) and 5.66 t/t for Duiker and Custom (Duiker Table 1: 5.66/7.03). KBR's KPI ratio of
+6.40 t/t at 12 ktpa NG100 exceeds the 6.35 its OPEX split implies, so the model's NH₃-fuel
+line reads 4.6 MM$ against KBR's 4.3 MM$.
+
 Bottom-up: quantities × user prices (NH₃ USD/t, electricity USD/MWh, NG USD/MWh LHV),
 plus reference-specific lines:
 

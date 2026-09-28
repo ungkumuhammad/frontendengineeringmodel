@@ -1,6 +1,6 @@
 // Navigation definitions shared by the sidebar. Icons are inline SVG path
 // data keyed by name (kept dependency-free).
-import { MODULES } from "@/lib/modules";
+import { MODULES, type ModuleDefinition } from "@/lib/modules";
 import type { UserRole } from "@/types";
 
 export interface NavItem {
@@ -15,6 +15,12 @@ export interface NavSection {
   items: NavItem[];
 }
 
+const toNavItem = (m: ModuleDefinition): NavItem => ({
+  label: m.title,
+  href: `/modules/${m.slug}`,
+  icon: m.icon,
+});
+
 export function buildNav(role: UserRole): NavSection[] {
   const sections: NavSection[] = [
     {
@@ -25,12 +31,12 @@ export function buildNav(role: UserRole): NavSection[] {
       ],
     },
     {
+      title: "Engineering Design",
+      items: MODULES.filter((m) => m.category === "Engineering Design").map(toNavItem),
+    },
+    {
       title: "Engineering Modules",
-      items: MODULES.map((m) => ({
-        label: m.title,
-        href: `/modules/${m.slug}`,
-        icon: m.icon,
-      })),
+      items: MODULES.filter((m) => m.category !== "Engineering Design").map(toNavItem),
     },
     {
       title: "Account",
