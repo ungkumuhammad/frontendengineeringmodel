@@ -10,7 +10,7 @@ export interface ModuleDefinition {
   slug: string;
   title: string;
   description: string;
-  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment" | "Storage Design";
+  category: "Techno-Economics" | "Pipeline Sizing" | "Commercial Assessment" | "Storage Design" | "Cracker Design";
   // Path (under /public) to the self-contained legacy HTML calculator.
   htmlPath: string;
   icon: string;
@@ -52,6 +52,15 @@ export const MODULES: ModuleDefinition[] = [
     category: "Commercial Assessment",
     htmlPath: "/modules/hydrogen-blend-calculator.html",
     icon: "coin",
+  },
+  {
+    slug: "nh3-cracker-design",
+    title: "NH₃ Cracker Design",
+    description:
+      "Ammonia cracker sizing from required H₂ delivery and licensor case (KBR H2ACT, Casale MACH2, Duiker AHC) — NH₃:H₂ ratio, efficiency, purity, direct CI, and indicative RFNBO/KEEI screening. Link the required NH₃ feed straight into the NH₃ Storage Design module as its downstream demand.",
+    category: "Cracker Design",
+    htmlPath: "/modules/nh3-cracker-design.html",
+    icon: "flame",
   },
   {
     slug: "nh3-storage-design",
