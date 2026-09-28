@@ -57,7 +57,7 @@ export const MODULES: ModuleDefinition[] = [
     slug: "nh3-cracker-design",
     title: "NH₃ Cracker Design",
     description:
-      "Ammonia cracker sizing from required H₂ delivery and licensor case (KBR H2ACT, Casale MACH2, Duiker AHC) — NH₃:H₂ ratio, efficiency, purity, direct CI, and indicative RFNBO/KEEI screening. Link the required NH₃ feed straight into the NH₃ Storage Design module as its downstream demand.",
+      "Ammonia cracker sizing from required H₂ capacity on KBR H2ACT, Duiker AHC or custom fuel pathways (clean fuel, natural gas, maximum NG with double PSA) — NH₃, fuel, power and CO₂, CAPEX power-law curves, price-driven OPEX and LCOH, and a block flow diagram. Link the NH₃ demand straight into the NH₃ Storage Design module.",
     category: "Cracker Design",
     htmlPath: "/modules/nh3-cracker-design.html",
     icon: "flame",

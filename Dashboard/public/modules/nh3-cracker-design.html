@@ -3,52 +3,44 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NH₃ Cracker Design — Licensor KPIs &amp; Storage Demand</title>
+<title>NH₃ Cracker Design — Sizing, CAPEX &amp; OPEX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet"/>
 <style>
   :root {
-    --brand:     #7030A0;
-    --brand2:    #0070C0;
-    --brand-ink: #7030A0;
-    --brand2-ink:#0070C0;
-    --brand-bg:  #f4edf9;
-    --on-brand:  #ffffff;
-    --bg:        #f5f6f9;
-    --bg2:       #ffffff;
-    --bg3:       #f7f8fb;
-    --bg4:       #eef0f5;
-    --border:    #dfe2ea;
-    --border-hi: #c3c8d4;
-    --text:      #1c1e26;
-    --text2:     #4a4f5c;
-    --text3:     #6b7180;
-    --info:      #0070C0;
-    --info-bg:   #e6f1fa;
-    --success:   #1a7f37;
-    --success-bg:#e3f5e8;
-    --warn:      #9a6700;
-    --warn-bg:   #fff6d6;
-    --danger:    #c62828;
-    --danger-bg: #fdecec;
+    --brand: #7030A0; --brand2: #0070C0; --brand-ink: #7030A0; --brand2-ink: #0070C0;
+    --brand-bg: #f4edf9; --on-brand: #ffffff;
+    --bg: #f5f6f9; --bg2: #ffffff; --bg3: #f7f8fb; --bg4: #eef0f5;
+    --border: #dfe2ea; --border-hi: #c3c8d4;
+    --text: #1c1e26; --text2: #4a4f5c; --text3: #6b7180;
+    --info: #0070C0; --info-bg: #e6f1fa;
+    --success: #1a7f37; --success-bg: #e3f5e8;
+    --warn: #9a6700; --warn-bg: #fff6d6;
+    --danger: #c62828; --danger-bg: #fdecec;
     --head: 'Montserrat', Arial, Helvetica, sans-serif;
     --sans: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-    --hero-grad: linear-gradient(135deg, #f6effb 0%, #eaf3fb 100%);
+    --mono: ui-monospace, Menlo, Consolas, monospace;
     --shadow: 0 1px 2px rgba(28,30,38,.05), 0 1px 3px rgba(28,30,38,.04);
+    --grid: #e9ebf1;
+    /* chart series */
+    --s-kbr: #7030A0; --s-isbl: #0070C0; --s-duiker: #C55A11;
+    /* process streams */
+    --nh3: #2361A6; --gas: #16805E; --fuel: #B06A08; --flue: #B03A2D; --water: #6A60A8; --ng: #56656E;
   }
   :root[data-theme="dark"] {
-    --brand:     #8a4cc0; --brand2: #2e8fd6; --brand-ink: #c39be6; --brand2-ink:#63b3ee;
-    --brand-bg:  #241a31; --on-brand: #ffffff;
+    --brand: #8a4cc0; --brand2: #2e8fd6; --brand-ink: #c39be6; --brand2-ink: #63b3ee;
+    --brand-bg: #241a31; --on-brand: #ffffff;
     --bg: #0f1016; --bg2: #171821; --bg3: #1d1f2a; --bg4: #13141c;
     --border: #2c2f3d; --border-hi: #444859;
     --text: #e9eaf0; --text2: #a4a8b6; --text3: #7c8192;
     --info: #2e8fd6; --info-bg: #14243a;
-    --success: #3fb950; --success-bg:#132418;
-    --warn: #e3b341; --warn-bg:#2d2410;
-    --danger: #f06a63; --danger-bg:#2d1518;
-    --hero-grad: linear-gradient(135deg, #21182d 0%, #141f2e 100%);
-    --shadow: none;
+    --success: #3fb950; --success-bg: #132418;
+    --warn: #e3b341; --warn-bg: #2d2410;
+    --danger: #f06a63; --danger-bg: #2d1518;
+    --shadow: none; --grid: #262937;
+    --s-kbr: #9A5CC8; --s-isbl: #2E8FD6; --s-duiker: #D9733A;
+    --nh3: #72A9E8; --gas: #4DC59B; --fuel: #E6A544; --flue: #EF7A6A; --water: #A89FE2; --ng: #A3B1BA;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; min-height: 100vh; font-variant-numeric: tabular-nums; }
@@ -63,45 +55,97 @@
   .icon-btn.primary:hover { filter: brightness(1.08); color: var(--on-brand); }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
   .panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
-  .panel-h { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; }
+  .panel-h { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .panel-h .t { font-weight: 700; color: var(--brand-ink); font-size: 14px; }
   .panel-h .s { color: var(--text3); font-size: 12px; }
-  .panel-b { padding: 16px; }
-  .intro p { margin-bottom: 10px; color: var(--text2); }
+  .panel-b { padding: 16px; display: grid; gap: 14px; }
+  .intro p { color: var(--text2); }
   .intro b { color: var(--text); }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 10px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
   .card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
   .card h3 { font-size: 13px; color: var(--brand-ink); margin-bottom: 6px; }
   .card ul { padding-left: 18px; font-size: 12.5px; color: var(--text2); display: flex; flex-direction: column; gap: 3px; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
   .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
   .field input, .field select { width: 100%; background: var(--bg3); border: 1px solid var(--border-hi); border-radius: 6px; padding: 7px 9px; font-size: 13.5px; color: var(--text); font-family: var(--sans); }
+  .field input:disabled, .field select:disabled { opacity: .5; }
   .field .hint { color: var(--text3); font-weight: 400; }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .sub-h { font-family: var(--head); font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
   .kpi { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
   .kpi .l { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
   .kpi .v { font-size: 20px; font-weight: 700; color: var(--brand-ink); margin-top: 2px; }
   .kpi .u { font-size: 11px; color: var(--text3); }
-  .note { font-size: 12px; color: var(--text3); margin-top: 8px; }
-  .flag { background: var(--warn-bg); color: var(--warn); border-radius: 6px; padding: 8px 10px; font-size: 12px; margin-top: 8px; }
+  .kpi.hero { background: var(--brand-bg); border-color: var(--brand); }
+  .note { font-size: 12px; color: var(--text3); }
+  .flag { background: var(--warn-bg); color: var(--warn); border-radius: 6px; padding: 8px 10px; font-size: 12px; }
+  .ok { background: var(--success-bg); color: var(--success); border-radius: 6px; padding: 8px 10px; font-size: 12px; }
+  .tbl-wrap { overflow-x: auto; }
   .dt { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  .dt th, .dt td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  .dt th, .dt td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
   .dt th { color: var(--text3); font-weight: 700; font-size: 11px; text-transform: uppercase; }
+  .dt td.n, .dt th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .dt tr.active td { background: var(--brand-bg); }
+  .dt tr.total td { font-weight: 700; border-top: 2px solid var(--border-hi); }
   .link-box { background: var(--info-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .link-box .txt { flex: 1; min-width: 260px; font-size: 13px; color: var(--text2); }
   .link-box .txt b { color: var(--text); }
   .hidden { display: none !important; }
   .src { font-size: 11px; color: var(--text3); }
   a { color: var(--brand2-ink); }
+  .seg { display: inline-flex; border: 1px solid var(--border-hi); border-radius: 7px; padding: 2px; gap: 2px; flex-wrap: wrap; }
+  .seg button { background: transparent; border: 0; border-radius: 5px; padding: 5px 10px; font: 700 12px var(--sans); color: var(--text2); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--brand); color: var(--on-brand); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid; }
+  .legend i.dash { border-top-style: dashed; }
+  .legend i.dot { width: 9px; height: 9px; border: 0; border-radius: 50%; }
+
+  /* charts */
+  .chart-wrap { position: relative; overflow-x: auto; }
+  .chart { display: block; width: 100%; max-width: 900px; min-width: 560px; height: auto; }
+  .chart .grid { stroke: var(--grid); stroke-width: 1; }
+  .chart .axis { stroke: var(--border-hi); stroke-width: 1; }
+  .chart .tick { font: 11px var(--sans); fill: var(--text3); }
+  .chart .lbl { font: 700 11.5px var(--sans); fill: var(--text); }
+  .chart .lbl2 { font: 11px var(--sans); fill: var(--text2); }
+  .tip { position: absolute; pointer-events: none; background: var(--bg2); border: 1px solid var(--border-hi); border-radius: 6px; padding: 6px 9px; font-size: 12px; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; }
+  .tip b { font-family: var(--head); }
+  .tip .row { display: flex; align-items: center; gap: 6px; }
+  .tip .sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  /* block flow diagram */
+  .bfd { display: block; width: 100%; min-width: 900px; height: auto; }
+  .bfd .blk { fill: var(--bg3); stroke: var(--text2); stroke-width: 1.4; }
+  .bfd .blk.core { stroke: var(--text); stroke-width: 2.2; }
+  .bfd .blk.osbl { stroke-dasharray: 5 4; }
+  .bfd .isbl { fill: none; stroke: var(--text3); stroke-width: 1.2; stroke-dasharray: 10 6; }
+  .bfd .t1 { font: 700 13px var(--sans); fill: var(--text); }
+  .bfd .t1.big { font-size: 15px; }
+  .bfd .t2 { font: 11px var(--mono); fill: var(--text2); }
+  .bfd .t3 { font: 10.5px var(--mono); fill: var(--text3); letter-spacing: .06em; }
+  .bfd .m { font: 700 11.5px var(--mono); }
+  .bfd .ln { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+  .bfd .ln.thin { stroke-width: 1.5; }
+  .bfd .dash { stroke-dasharray: 6 4; }
+  .bfd .nh3 { stroke: var(--nh3); } .bfd .m.nh3 { fill: var(--nh3); stroke: none; }
+  .bfd .gas { stroke: var(--gas); } .bfd .m.gas { fill: var(--gas); stroke: none; }
+  .bfd .fuel { stroke: var(--fuel); } .bfd .m.fuel { fill: var(--fuel); stroke: none; }
+  .bfd .flue { stroke: var(--flue); } .bfd .m.flue { fill: var(--flue); stroke: none; }
+  .bfd .water { stroke: var(--water); }
+  .bfd .ngl { stroke: var(--ng); } .bfd .m.ngl { fill: var(--ng); stroke: none; }
+  .bfd .air { stroke: var(--text3); }
+  .bfd .ah-nh3 { fill: var(--nh3); } .bfd .ah-gas { fill: var(--gas); } .bfd .ah-fuel { fill: var(--fuel); }
+  .bfd .ah-flue { fill: var(--flue); } .bfd .ah-water { fill: var(--water); } .bfd .ah-air { fill: var(--text3); } .bfd .ah-ng { fill: var(--ng); }
+  .bfd .dot { fill: var(--nh3); }
 </style>
 </head>
 <body>
 
 <div class="header">
   <span class="header-badge">Cracker Design</span>
-  <h1>NH₃ → H₂ Cracker Design — Licensor KPIs</h1>
+  <h1>NH₃ → H₂ Cracker Design — Sizing, CAPEX &amp; OPEX</h1>
   <div class="header-actions">
     <button class="icon-btn" id="btnReset">Reset</button>
     <button class="icon-btn" id="themeToggle">🌙 <span id="themeLabel">Dark</span></button>
@@ -113,66 +157,49 @@
   <div class="panel intro">
     <div class="panel-h"><span class="t">What this tool models</span></div>
     <div class="panel-b">
-      <p>An ammonia cracker converts liquid/gaseous NH₃ back into hydrogen via the endothermic
-      decomposition <b>2NH₃ → N₂ + 3H₂</b> (ΔH ≈ +92.4 kJ/mol at reaction conditions, or the
-      ΔH⁰ ≈ 46 kJ/mol NH₃ basis some licensors quote — the two bases are not interchangeable).
-      The cracked gas is then purified — ammonia recovery (H₂O/NH₃ absorption-distillation)
-      and PSA — to 99.5–99.999&nbsp;%wt H₂ depending on licensor.</p>
-      <p>Sizing a cracker is the <b>demand side</b> of an ammonia receiving/storage terminal: every
-      tonne of H₂ the cracker must deliver requires several tonnes of NH₃ feed (the NH₃:H₂ mass
-      ratio below, which varies by licensor and fuel mode). Use <b>“🔗 Link model to storage”</b>
-      below to send that required NH₃ throughput straight into the <a href="nh3-storage-design.html">NH₃ Storage Design</a>
-      module's demand input, so the terminal is sized against the cracker's actual offtake rather
-      than a manually re-typed number.</p>
-      <p>Choose a <b>commercial route</b> below: <b>Own &amp; Operate</b> compares a licensed unit's
-      CAPEX, OPEX and LCOH by licensor case (KBR H2ACT at 4 capacities × 3 ammonia price points;
-      Duiker AHC's lump-sum CAPEX/OPEX; Casale MACH2, technical-only, no cost data); or
-      <b>Tolling / offtake</b> compares indicative storage-and-cracking-as-a-service tariffs
-      (Vopak/Linde Antwerp LoI, VTTI Rotterdam/Antwerp Amplifhy) where you never own the CAPEX.</p>
-      <p class="src">Licensor KPIs imported from Gentari's ammonia-cracking technology workstream
-      (Licensor/ technical packages, Rev. dates as noted per card) — see the No-Fabrication note
-      at the bottom of this page.</p>
-
+      <p>An ammonia cracker converts NH₃ back into hydrogen via the endothermic decomposition
+      <b>2NH₃ → N₂ + 3H₂</b> (ΔH ≈ +92.4 kJ/mol at reaction conditions, or the ΔH⁰ ≈ 46 kJ/mol NH₃
+      basis Casale quotes; the two bases are not interchangeable). The cracked gas is purified by
+      ammonia recovery and PSA to 99.5–99.999 %wt H₂.</p>
+      <p>Enter the <b>H₂ capacity you need</b>, pick a technology basis and fuel mode, and the model
+      returns the technical sizing (ammonia, fuel, power, CO₂) plus CAPEX from power-law curves
+      fitted to the licensor data, and OPEX and LCOH from your ammonia, electricity and gas prices.
+      The required NH₃ feed is the <b>demand on the receiving terminal</b>. Use
+      <b>“🔗 Link model to storage”</b> to send it to the <a href="nh3-storage-design.html">NH₃ Storage Design</a> module.</p>
       <div class="cards">
         <div class="card">
           <h3>KBR — H2ACT®</h3>
           <ul>
-            <li>Down-fired, primary-reformer-derived furnace; Ni-based catalyst</li>
-            <li>Capacities in dataset: 12 / 24 / 68 / 80 ktpa H₂</li>
-            <li>Fuel modes: 100% NG, 50/50 NG-NH₃, 100% clean fuel (cracked gas)</li>
-            <li>NH₃:H₂ ratio 6.35–7.22 t/t · H₂ purity 99.97 mol%</li>
-            <li class="src">Source: Licensor/kbr/kbr-johor-hub.md, Rev 0, 23 Dec 2025</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3>Casale — MACH2™</h3>
-          <ul>
-            <li>Adiabatic axial-radial reactor + top-fired furnace</li>
-            <li>Three fuel schemes: Self-Sustaining / Low-Carbon / Maximum Fuel Source</li>
-            <li>NH₃:H₂ ratio up to 6.4–7.2 t/t · H₂ purity 99.999 mol% (grade 5)</li>
-            <li>Technical proposal only — no CAPEX/OPEX disclosed (Rev.00, 05 Dec 2025)</li>
-            <li class="src">Source: Licensor/Casale/Casale_Ammonia_Cracker__JohorHub.md</li>
+            <li>Down-fired, primary-reformer-derived furnace; Ni catalyst</li>
+            <li>Data at 12 / 24 / 68 / 80 ktpa H₂; 100 % NG, 50/50 and 100 % clean fuel</li>
+            <li>ISBL CAPEX 78–209 MM$ (Class V ±50 %, Q3 2025); OPEX &amp; LCOH at 3 NH₃ prices</li>
+            <li class="src">Licensor/kbr/kbr-johor-hub.md and I.E Feed &amp; Product sheet, Rev 0, 23 Dec 2025</li>
           </ul>
         </div>
         <div class="card">
           <h3>Duiker — AHC</h3>
           <ul>
-            <li>SCO combustor + convective (non-radiant) cracking reactor + PSA</li>
-            <li>Single dataset point: 12 ktpa H₂</li>
-            <li>NH₃-fired 7.05 t/t (90.9% eff.) · NG-fired 6.83 t/t (90.6% eff.)</li>
-            <li>€2.7M construction + €8.50/t H₂ operation license fee</li>
-            <li class="src">Source: Licensor/duiker/duiker-johor-hub.md, 05 Dec 2025 (Budgetary Proposal 122380)</li>
+            <li>SCO combustor + convective cracking reactor + PSA; no steam system</li>
+            <li>Single data point: 12 ktpa H₂; NH₃-fired 7.03 t/t, NG-fired 6.83 t/t</li>
+            <li>€47M lump-sum turnkey (±40 %), incl. construction licence fee; €8.50/t H₂ operation fee</li>
+            <li class="src">Licensor/duiker/duiker-johor-hub.md, Budgetary Proposal 122380, 05 Dec 2025</li>
           </ul>
         </div>
         <div class="card">
-          <h3>Technip Energies (Hynext) / Nippon Sanso</h3>
+          <h3>Custom pathways</h3>
           <ul>
-            <li>Licensor ≠ operator: technology by Technip Energies, tolling operated by
-              Nippon Sanso at LBC Tank Terminals (Netherlands, Hynetwork H2-Backbone)</li>
-            <li>KBR's technology is also operated by Nippon Sanso as tolling party in some regions —
-              confirm the pairing per project, do not assume it carries across regions</li>
-            <li>Commercial package only in this dataset — no independent KPI table</li>
-            <li class="src">Source: Licensor/technip/technip-nippon-sanso-lbc-tolling.md</li>
+            <li>Gentari mass-balance basis: 5.66 kg NH₃ → 1 kg H₂; 1.54 kg NH₃-eq of firing</li>
+            <li>100 % clean fuel 7.2 · natural gas 6.5 · maximum natural gas 5.7 t/t</li>
+            <li>Maximum NG needs a double PSA; CAPEX uplift is an input</li>
+            <li class="src">Process description supplied by Gentari, Sep 2026</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Not in the cost model</h3>
+          <ul>
+            <li>Casale MACH2™: technical proposal only, no CAPEX/OPEX (Rev.00, 05 Dec 2025)</li>
+            <li>Technip Energies / Nippon Sanso: tolling offer, see the Tolling route</li>
+            <li class="src">Licensor/Casale, Licensor/technip</li>
           </ul>
         </div>
       </div>
@@ -181,139 +208,285 @@
 
   <div class="panel">
     <div class="panel-h"><span class="t">Cracker sizing inputs</span></div>
-    <div class="panel-b" style="display:grid;gap:14px;">
-      <div class="field">
-        <label>Commercial route</label>
+    <div class="panel-b">
+      <div class="field" style="max-width:520px">
+        <label for="inRoute">Commercial route</label>
         <select id="inRoute">
           <option value="own">Own &amp; Operate — licensed unit (CAPEX/OPEX + licensor fees)</option>
           <option value="toll">Tolling / offtake — storage + cracking as a service</option>
         </select>
       </div>
 
-      <div id="ownInputs" class="row3">
-        <div class="field">
-          <label>Required H₂ delivery <span class="hint">ktpa</span></label>
-          <input type="number" step="1" min="0.1" id="inH2Ktpa" value="12"/>
+      <div id="ownInputs" class="panel-b" style="padding:0">
+        <div class="grid-inputs">
+          <div class="field"><label for="inCap">H₂ capacity required <span class="hint">ktpa</span></label><input type="number" step="1" min="1" id="inCap" value="12"/></div>
+          <div class="field"><label for="inDays">On-stream days <span class="hint">d/yr</span></label><input type="number" step="1" min="1" max="366" id="inDays" value="350"/></div>
+          <div class="field"><label for="inBasis">Licensor / fuel mode basis</label>
+            <select id="inBasis">
+              <option value="kbr">KBR H2ACT®</option>
+              <option value="duiker">Duiker AHC</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="field"><label for="inMode">Fuel mode</label><select id="inMode"></select></div>
         </div>
-        <div class="field">
-          <label>Licensor / fuel mode</label>
-          <select id="inCase"></select>
+        <div class="grid-inputs" id="customInputs">
+          <div class="field"><label for="inRef">CAPEX / O&amp;M reference</label>
+            <select id="inRef">
+              <option value="kbr">KBR H2ACT® curve</option>
+              <option value="duiker">Duiker AHC curve</option>
+            </select>
+          </div>
+          <div class="field"><label for="inPsaUplift">Double-PSA CAPEX uplift <span class="hint">% of CAPEX</span></label><input type="number" step="1" min="0" id="inPsaUplift" value="10"/></div>
         </div>
-        <div class="field">
-          <label>Ammonia price <span class="hint">USD/t, for OPEX/LCOH — KBR only</span></label>
-          <select id="inAmmoniaPrice">
-            <option value="500">500</option>
-            <option value="950" selected>950</option>
-            <option value="1100">1100</option>
-          </select>
+        <p class="note" id="modeNote"></p>
+
+        <div class="sub-h">Prices &amp; finance</div>
+        <div class="grid-inputs">
+          <div class="field"><label for="inPNh3">Ammonia price <span class="hint">USD/t</span></label><input type="number" step="10" min="0" id="inPNh3" value="500"/></div>
+          <div class="field"><label for="inPEl">Electricity price <span class="hint">USD/MWh</span></label><input type="number" step="5" min="0" id="inPEl" value="140"/></div>
+          <div class="field"><label for="inPNg">Natural gas price <span class="hint">USD/MWh (LHV)</span></label><input type="number" step="1" min="0" id="inPNg" value="30"/></div>
+          <div class="field"><label for="inFx">FX <span class="hint">USD per EUR</span></label><input type="number" step="0.01" min="0.01" id="inFx" value="1.1448"/></div>
+          <div class="field"><label for="inRate">Discount rate <span class="hint">%</span></label><input type="number" step="0.5" min="0" id="inRate" value="8"/></div>
+          <div class="field"><label for="inLife">Plant life <span class="hint">years</span></label><input type="number" step="1" min="1" id="inLife" value="25"/></div>
         </div>
+        <p class="note">Defaults are KBR's own cost basis (NH₃ 500 USD/t, power 140 USD/MWh, NG 30 USD/MWh, 8 %, 25 years, 350 d/yr), so a KBR case reproduces KBR's published LCOH. FX default is the ECB reference rate of 3 Jul 2026 used in the Gentari cracker workbook (an assumption).</p>
       </div>
 
-      <div id="tollInputs" class="row2 hidden">
-        <div class="field">
-          <label>Required H₂ delivery <span class="hint">ktpa</span></label>
-          <input type="number" step="1" min="0.1" id="inH2KtpaToll" value="70"/>
-        </div>
-        <div class="field">
-          <label>Tolling reference</label>
-          <select id="inTolling"></select>
-        </div>
+      <div id="tollInputs" class="grid-inputs hidden">
+        <div class="field"><label for="inH2KtpaToll">Required H₂ delivery <span class="hint">ktpa</span></label><input type="number" step="1" min="0.1" id="inH2KtpaToll" value="70"/></div>
+        <div class="field"><label for="inTolling">Tolling reference</label><select id="inTolling"></select></div>
       </div>
-
-      <p class="note" id="caseNote"></p>
     </div>
   </div>
 
-  <div class="panel" id="ownResultsPanel">
-    <div class="panel-h"><span class="t">Results</span><span class="s" id="resultSub"></span></div>
-    <div class="panel-b" style="display:grid;gap:14px;">
-      <div class="kpis" id="kpis"></div>
-      <div class="flag hidden" id="flagBox"></div>
+  <!-- ================= OWN & OPERATE ================= -->
+  <div id="ownPanels" style="display:grid;gap:18px">
 
-      <div class="kpis" id="costKpis"></div>
-      <p class="note" id="costNote"></p>
-
-      <div class="link-box">
-        <div class="txt">
-          <b>Link this cracker to a storage/receiving terminal.</b> Sends the required NH₃ feed
-          (ktpa) computed above into the NH₃ Storage Design module as its downstream demand — the
-          storage tank, shipping and CAPEX sizing will then reflect the cracker's actual offtake.
+    <div class="panel">
+      <div class="panel-h"><span class="t">Technical sizing</span><span class="s" id="techSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="techKpis"></div>
+        <div id="techFlags"></div>
+        <div class="link-box">
+          <div class="txt"><b>Link this cracker to a storage/receiving terminal.</b> Sends the NH₃ drawn
+          from storage (ktpa) to the NH₃ Storage Design module as its downstream demand, so tanks,
+          shipping and storage CAPEX are sized on the cracker's real offtake.</div>
+          <button class="icon-btn primary" id="btnLink">🔗 Link model to storage</button>
         </div>
-        <button class="icon-btn primary" id="btnLink">🔗 Link model to storage</button>
+        <p class="note" id="linkStatus"></p>
       </div>
-      <p class="note" id="linkStatus"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="t">Process flow — Custom pathways</span><span class="s">per 1 kg H₂ delivered</span></div>
+      <div class="panel-b">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div class="seg" role="group" aria-label="Pathway shown in the diagram">
+            <button type="button" data-path="cf" aria-pressed="true">100 % clean fuel · 7.2</button>
+            <button type="button" data-path="ng" aria-pressed="false">Natural gas · 6.5</button>
+            <button type="button" data-path="maxng" aria-pressed="false">Maximum NG · 5.7</button>
+          </div>
+          <span class="note" id="bfdSync"></span>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i style="border-color:var(--nh3)"></i>Ammonia</span>
+          <span><i style="border-color:var(--gas)"></i>Cracked gas / H₂</span>
+          <span><i style="border-color:var(--fuel)"></i>Burner fuel &amp; PSA tail gas</span>
+          <span><i style="border-color:var(--ng)"></i>Natural gas</span>
+          <span><i style="border-color:var(--flue)"></i>Flue gas</span>
+          <span><i class="dash" style="border-color:var(--water)"></i>Water / steam / cooling</span>
+        </div>
+        <div class="chart-wrap">
+          <svg class="bfd" viewBox="0 0 1380 660" role="img" aria-label="Block flow diagram of the selected custom cracker pathway">
+            <defs>
+              <marker id="a-nh3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-nh3" d="M0 0 L10 5 L0 10 z"/></marker>
+              <marker id="a-gas" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-gas" d="M0 0 L10 5 L0 10 z"/></marker>
+              <marker id="a-fuel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-fuel" d="M0 0 L10 5 L0 10 z"/></marker>
+              <marker id="a-flue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-flue" d="M0 0 L10 5 L0 10 z"/></marker>
+              <marker id="a-water" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-water" d="M0 0 L10 5 L0 10 z"/></marker>
+              <marker id="a-air" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-air" d="M0 0 L10 5 L0 10 z"/></marker>
+              <marker id="a-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ng" d="M0 0 L10 5 L0 10 z"/></marker>
+            </defs>
+            <rect class="isbl" x="188" y="36" width="1082" height="604" rx="4"/>
+            <text class="t3" x="202" y="628">CRACKER ISBL</text>
+            <text class="t2" id="bfdPower" x="1258" y="58" text-anchor="end"></text>
+
+            <path class="ln nh3" d="M144 270 H197" marker-end="url(#a-nh3)"/>
+            <path class="ln nh3" d="M310 270 H347" marker-end="url(#a-nh3)"/>
+            <path class="ln nh3" d="M480 270 H537" marker-end="url(#a-nh3)"/>
+            <g id="bfdDirect">
+              <path class="ln thin nh3" d="M500 270 V440 H557" marker-end="url(#a-nh3)"/>
+              <circle class="dot" cx="500" cy="270" r="3.5"/>
+              <text class="m nh3" id="bfdDirectLbl" x="490" y="368" text-anchor="end"></text>
+            </g>
+            <g id="bfdNg">
+              <path class="ln ngl" d="M144 440 H557" marker-end="url(#a-ng)"/>
+              <text class="m ngl" id="bfdNgLbl" x="372" y="430" text-anchor="middle"></text>
+              <text class="t3" x="82" y="400" text-anchor="middle">OSBL</text>
+              <rect class="blk osbl" x="20" y="410" width="124" height="60" rx="4"/>
+              <text class="t1" x="82" y="436" text-anchor="middle">Natural gas</text>
+              <text class="t2" x="82" y="454" text-anchor="middle">main fuel</text>
+            </g>
+            <path class="ln thin nh3 dash" d="M415 238 V143" marker-end="url(#a-nh3)"/>
+
+            <path class="ln flue" d="M630 206 V180 H465 V235" marker-end="url(#a-flue)"/>
+            <path class="ln flue" d="M365 238 V143" marker-end="url(#a-flue)"/>
+            <path class="ln flue" d="M350 110 H313" marker-end="url(#a-flue)"/>
+            <path class="ln flue" d="M255 80 V46" marker-end="url(#a-flue)"/>
+            <text class="t2" x="268" y="52">to atmosphere</text>
+            <text class="m flue" id="bfdCo2" x="268" y="68"></text>
+            <text class="m flue" x="578" y="172">≈ 800 °C</text>
+
+            <path class="ln gas" d="M720 270 H787" marker-end="url(#a-gas)"/>
+            <path class="ln gas" d="M910 270 H957" marker-end="url(#a-gas)"/>
+            <path class="ln gas" d="M1070 270 H1107" marker-end="url(#a-gas)"/>
+            <path class="ln gas" d="M1230 270 H1366" marker-end="url(#a-gas)"/>
+
+            <path class="ln thin water dash" d="M850 196 V235" marker-end="url(#a-water)"/>
+            <text class="t2" x="850" y="188" text-anchor="middle">demin water</text>
+            <path class="ln thin nh3" d="M850 302 V407" marker-end="url(#a-nh3)"/>
+            <path class="ln thin nh3" d="M850 470 V517" marker-end="url(#a-nh3)"/>
+            <path class="ln thin water dash" d="M960 428 H913" marker-end="url(#a-water)"/>
+            <path class="ln thin water dash" d="M910 454 H957" marker-end="url(#a-water)"/>
+            <path class="ln thin water dash" d="M1015 302 V407" marker-end="url(#a-water)"/>
+            <text class="t2" x="1028" y="350">cooling-water heat</text>
+
+            <path class="ln fuel" d="M1170 302 V610 H680 V473" marker-end="url(#a-fuel)"/>
+            <text class="m fuel" id="bfdTailLbl" x="925" y="600" text-anchor="middle"></text>
+            <path class="ln fuel" d="M630 410 V337" marker-end="url(#a-fuel)"/>
+            <path class="ln thin air dash" d="M600 560 V473" marker-end="url(#a-air)"/>
+            <text class="t2" x="600" y="576" text-anchor="middle">combustion air</text>
+
+            <text class="m nh3" id="bfdFeed" x="166" y="258" text-anchor="middle"></text>
+            <text class="m nh3" id="bfdCracked" x="518" y="258" text-anchor="middle"></text>
+            <text class="m gas" id="bfdCracked2" x="755" y="258" text-anchor="middle"></text>
+            <text class="t2" x="755" y="292" text-anchor="middle">700 °C</text>
+            <text class="t2" x="755" y="306" text-anchor="middle">50 barg</text>
+            <text class="t2" x="1088" y="292" text-anchor="middle">20 °C</text>
+            <text class="m gas" x="1316" y="258" text-anchor="middle">1.00 kg H₂</text>
+
+            <text class="t3" x="82" y="226" text-anchor="middle">OSBL</text>
+            <rect class="blk osbl" x="20" y="236" width="124" height="68" rx="4"/>
+            <text class="t1" x="82" y="262" text-anchor="middle">NH₃ storage</text>
+            <text class="t2" x="82" y="280" text-anchor="middle">−33 °C · 6 barg</text>
+            <text class="t2" x="82" y="294" text-anchor="middle">liquid</text>
+            <rect class="blk" x="200" y="238" width="110" height="64" rx="4"/>
+            <text class="t1" x="255" y="264" text-anchor="middle">Booster pump</text>
+            <text class="t2" x="255" y="284" text-anchor="middle">6 → 50 barg</text>
+            <rect class="blk" x="350" y="238" width="130" height="64" rx="4"/>
+            <text class="t1" x="415" y="259" text-anchor="middle">Pre-heater /</text>
+            <text class="t1" x="415" y="275" text-anchor="middle">vaporiser</text>
+            <text class="t2" x="415" y="293" text-anchor="middle">−33 → 400 °C</text>
+            <rect class="blk core" x="540" y="206" width="180" height="128" rx="4"/>
+            <text class="t1 big" x="630" y="246" text-anchor="middle">NH₃ cracker</text>
+            <text class="t2" x="630" y="268" text-anchor="middle">Ni catalyst</text>
+            <text class="t2" x="630" y="285" text-anchor="middle">600–700 °C · 50 barg</text>
+            <text class="t2" x="630" y="310" text-anchor="middle">2NH₃ → N₂ + 3H₂</text>
+            <rect class="blk" x="790" y="238" width="120" height="64" rx="4"/>
+            <text class="t1" x="850" y="264" text-anchor="middle">NH₃ scrubber</text>
+            <text class="t2" x="850" y="284" text-anchor="middle">water wash</text>
+            <rect class="blk" x="960" y="238" width="110" height="64" rx="4"/>
+            <text class="t1" x="1015" y="264" text-anchor="middle">Syngas cooler</text>
+            <text class="t2" x="1015" y="284" text-anchor="middle">to 20 °C</text>
+            <rect class="blk" id="bfdPsaBox" x="1110" y="238" width="120" height="64" rx="4"/>
+            <text class="t1" id="bfdPsa" x="1170" y="264" text-anchor="middle">PSA</text>
+            <text class="t2" id="bfdPsaSub" x="1170" y="284" text-anchor="middle"></text>
+            <rect class="blk" x="200" y="80" width="110" height="60" rx="4"/>
+            <text class="t1" x="255" y="115" text-anchor="middle">Stack / flare</text>
+            <rect class="blk" x="350" y="80" width="130" height="60" rx="4"/>
+            <text class="t1" x="415" y="106" text-anchor="middle">SCR</text>
+            <text class="t2" x="415" y="124" text-anchor="middle">NOₓ reduction</text>
+            <rect class="blk" x="560" y="410" width="140" height="60" rx="4"/>
+            <text class="t1" x="630" y="436" text-anchor="middle">Burner fuel mix</text>
+            <text class="t2" x="630" y="454" text-anchor="middle">1.54 kg NH₃-eq</text>
+            <rect class="blk" x="790" y="410" width="120" height="60" rx="4"/>
+            <text class="t1" x="850" y="435" text-anchor="middle">Reboiler /</text>
+            <text class="t1" x="850" y="452" text-anchor="middle">NH₃ stripper</text>
+            <rect class="blk" x="960" y="410" width="110" height="60" rx="4"/>
+            <text class="t1" x="1015" y="445" text-anchor="middle">Steam drum</text>
+            <rect class="blk" x="790" y="520" width="120" height="52" rx="4"/>
+            <text class="t1" x="850" y="542" text-anchor="middle">Aqueous NH₃ /</text>
+            <text class="t1" x="850" y="559" text-anchor="middle">condensate tank</text>
+          </svg>
+        </div>
+        <p class="note" id="bfdCaption"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="t">CAPEX</span><span class="s" id="capexSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="capexKpis"></div>
+        <div class="grid-inputs" style="max-width:420px">
+          <div class="field"><label for="inDuikerExp">Duiker scale exponent <span class="hint">single data point — borrowed</span></label><input type="number" step="0.01" min="0.1" max="1.2" id="inDuikerExp"/></div>
+        </div>
+        <div class="legend" id="capexLegend" aria-hidden="true">
+          <span><i style="border-color:var(--s-kbr)"></i>KBR total installed (ISBL + OSBL)</span>
+          <span><i style="border-color:var(--s-isbl)"></i>KBR ISBL only</span>
+          <span><i class="dash" style="border-color:var(--s-duiker)"></i>Duiker lump-sum turnkey</span>
+          <span><i class="dot" style="background:var(--text2)"></i>stated data point</span>
+          <span><i class="dot" style="border:2px solid var(--text2);background:transparent"></i>derived data point</span>
+        </div>
+        <div class="chart-wrap" id="capexChartWrap">
+          <svg class="chart" id="capexChart" viewBox="0 0 760 340" role="img" aria-label="CAPEX versus H2 capacity power-law curves for KBR and Duiker"></svg>
+          <div class="tip hidden" id="capexTip"></div>
+        </div>
+        <div class="tbl-wrap"><table class="dt" id="fitTable"></table></div>
+        <p class="note" id="capexNote"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="t">OPEX &amp; LCOH</span><span class="s" id="opexSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="opexKpis"></div>
+        <div class="tbl-wrap"><table class="dt" id="opexTable"></table></div>
+        <div id="checkBox"></div>
+        <p class="note" id="opexNote"></p>
+      </div>
     </div>
   </div>
 
-  <div class="panel hidden" id="tollResultsPanel">
-    <div class="panel-h"><span class="t">Tolling tariff — indicative</span><span class="s" id="tollSub"></span></div>
-    <div class="panel-b" style="display:grid;gap:14px;">
-      <div class="kpis" id="tollKpis"></div>
-      <p class="note" id="tollNote"></p>
-      <div class="link-box">
-        <div class="txt">
-          <b>Link this cracker to a storage/receiving terminal.</b> Sends the required NH₃ feed
-          (ktpa, midpoint of the tolling reference's stated consumption range) into the NH₃
-          Storage Design module as its downstream demand.
+  <!-- ================= TOLLING ================= -->
+  <div id="tollPanels" class="hidden" style="display:grid;gap:18px">
+    <div class="panel">
+      <div class="panel-h"><span class="t">Tolling tariff — indicative</span><span class="s" id="tollSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="tollKpis"></div>
+        <p class="note" id="tollNote"></p>
+        <div class="link-box">
+          <div class="txt"><b>Link this cracker to a storage/receiving terminal.</b> Sends the required NH₃
+          feed (ktpa, midpoint of the tolling reference's stated ratio range) to the NH₃ Storage Design module.</div>
+          <button class="icon-btn primary" id="btnLinkToll">🔗 Link model to storage</button>
         </div>
-        <button class="icon-btn primary" id="btnLinkToll">🔗 Link model to storage</button>
+        <p class="note" id="linkStatusToll"></p>
       </div>
-      <p class="note" id="linkStatusToll"></p>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="t">Tolling reference comparison</span></div>
+      <div class="panel-b"><div class="tbl-wrap"><table class="dt" id="tollTable"></table></div></div>
     </div>
   </div>
 
   <div class="panel">
-    <div class="panel-h"><span class="t">Licensor case comparison</span></div>
+    <div class="panel-h"><span class="t">Clean-molecule screen — indicative only</span></div>
     <div class="panel-b">
-      <table class="dt" id="caseTable"></table>
-      <p class="note">CAPEX is Total Installed Cost (ISBL+OSBL for KBR; single lump-sum for Duiker).
-      OPEX and LCOH are shown at the selected ammonia price point above (KBR only — KBR publishes
-      OPEX/LCOH at 3 ammonia price points; Duiker and Casale do not vary by price point in their
-      packages). "—" means not disclosed in the source package, not zero.</p>
+      <p id="ciLine" style="color:var(--text2);font-size:13px"></p>
+      <p style="color:var(--text2);font-size:13px">Two frameworks are in scope: <b>EU RFNBO</b> (RED II/III, ≥70 % GHG
+      reduction, ≈28.2 gCO₂e/MJ derived ceiling, ISCC EU / CertifHy) and <b>Korea KEEI</b> (proposed CI &lt; 4.0
+      kgCO₂/kgH₂). Conversion used: LHV H₂ ≈ 120 MJ/kg, so 1 kgCO₂/kgH₂ ≈ 8.33 gCO₂/MJ. Only the cracker's direct
+      CI is shown; upstream ammonia CI stacks on top.</p>
+      <p class="note">A screen against a threshold is not a certification outcome. Qualification needs full
+      additionality, correlation and scheme verification.</p>
     </div>
   </div>
 
   <div class="panel">
-    <div class="panel-h"><span class="t">Tolling reference comparison</span></div>
+    <div class="panel-h"><span class="t">Sources, derivations &amp; flagged discrepancies</span></div>
     <div class="panel-b">
-      <table class="dt" id="tollTable"></table>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-h"><span class="t">Clean-molecule certification — indicative only</span></div>
-    <div class="panel-b">
-      <p style="color:var(--text2);font-size:13px;">A cracker's fuel mode drives its direct carbon
-      intensity: a 100% clean-fuel (NH₃/H₂ off-gas fired) cracker can be CI ≈ 0 direct, while a
-      100% natural-gas-fired cracker adds materially (e.g. KBR H₂ACT 100% NG ≈ 0.80–0.81
-      kgCO₂/kgH₂ direct, per its own KPI table). This stacks with upstream ammonia production CI.</p>
-      <p style="color:var(--text2);font-size:13px;margin-top:8px;">Two frameworks are commonly
-      referenced: <b>EU RFNBO</b> (RED II/III, ≥70% GHG reduction vs. fossil comparator, ≈28.2
-      gCO₂e/MJ derived ceiling, verified via ISCC EU/CertifHy) and <b>Korea's KEEI</b> clean
-      hydrogen scheme (proposed threshold CI &lt; 4.0 kgCO₂/kgH₂). The two use different bases
-      (gCO₂e/MJ vs. kgCO₂/kgH₂; LHV H₂ ≈ 120 MJ/kg → 1 kgCO₂/kgH₂ ≈ 8.33 gCO₂/MJ) — never compare
-      them without converting first.</p>
-      <p class="note">This tool states what an indicative CI figure would/would not clear against a
-      threshold — it never asserts that a project "qualifies" as RFNBO or KEEI-clean; that is a
-      certification outcome subject to full additionality/correlation/verification.</p>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-h"><span class="t">No-fabrication note</span></div>
-    <div class="panel-b">
-      <p style="color:var(--text2);font-size:12.5px;">All licensor and tolling figures above (NH₃:H₂
-      ratio, energy efficiency, H₂ purity, CI, CAPEX, OPEX, LCOH, tolling tariffs) are carried over
-      verbatim from the corresponding technical or commercial package in the
-      <code>Gentari-ammoniacracker</code> repository's <code>Licensor/</code> and <code>tolling/</code>
-      folders and its <code>tools/cracker_model/data.py</code> single source-of-truth, each with its
-      own citation and revision date (see the source line under each result). Figures marked
-      "technical-only" or "not disclosed" (Casale CAPEX/OPEX) are intentionally left blank rather
-      than estimated. The one non-cited figure is KBR's OSBL = 55% of ISBL, explicitly flagged as an
-      <b>assumption</b> (confirmed only at the 12 ktpa point, applied flat elsewhere for lack of a
-      second data point). All cost figures are Class III–V (±40–50%) estimates and
-      indicative/non-binding — several (Vopak, VTTI) are pre-FEED Letters of Intent / Commercial
-      Information Packages, not firm quotes.</p>
+      <div class="tbl-wrap"><table class="dt" id="srcTable"></table></div>
+      <p class="note">Every figure is either quoted from the Gentari-ammoniacracker source packages (with section and revision), derived by a stated calculation from those figures, or labelled an assumption. Cost figures are Class IV–V estimates (±40–50 %) and non-binding.</p>
     </div>
   </div>
 
@@ -321,259 +494,519 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//   DATA — imported from Gentari-ammoniacracker/tools/cracker_model/data.py
-//   Each row cites its source document + revision date (see cards above).
+//   DATA — Gentari-ammoniacracker Licensor/ packages
 // ═══════════════════════════════════════════════════════════════
-// KBR ISBL CAPEX (MM USD, Class V +/-50%, Q3 2025) and the OSBL~=55%-of-ISBL
-// assumption (confirmed only at 12 ktpa; applied flat to the other capacities
-// per the source's own note that it "reduces for larger capacity" with no
-// second data point given). Both from data.py / KBR §4.1.
-const KBR_ISBL_CAPEX_MUSD = { 12: 78, 24: 110, 68: 191, 80: 209 };
-const KBR_OSBL_PCT_OF_ISBL = 0.55; // ASSUMPTION — see note above
-function kbrCapex(capacityKtpa) {
-  const isbl = KBR_ISBL_CAPEX_MUSD[capacityKtpa];
-  if (!isbl) return null;
-  const total = isbl * (1 + KBR_OSBL_PCT_OF_ISBL);
-  return { isbl, osblPct: KBR_OSBL_PCT_OF_ISBL, total, currency: "MM USD", accuracy: "Class V, ±50%, Q3 2025" };
+const LHV = { nh3: 18.529, h2: 119.42, ng: 49.56 };         // MJ/kg, KBR I.E Feed & Product sheet
+const CO2_PER_KG_NG = 1150 / 417.9;                         // kg CO2 / kg NG, KBR I.E 12 ktpa NG100
+const STOICH = 5.66;                                        // kg NH3 / kg H2, Gentari basis
+const FIRING_NH3EQ = 1.54;                                  // kg NH3-eq / kg H2, Gentari basis
+
+// KBR H2ACT — KPI table §3.3, OPEX/LCOH §4.2, ISBL §4.1 (Rev 0, 23 Dec 2025)
+const KBR = {
+  tpd: { 12: 34.3, 24: 68.6, 68: 194.3, 80: 228.6 },
+  onstream: 350, rate: 0.08, life: 25,
+  isbl: { 12: 78, 24: 110, 68: 191, 80: 209 },
+  totalStated: { 12: 120.9 },
+  price: { nh3: [500, 950, 1100], el: 140, ng: 30 },
+  consumablesUsdPerT: 0.4e6 / (34.3 * 350),                 // "Other consumables" 0.4 MM$ at 12 ktpa
+  fixed12: 6.9,                                             // Fixed annual operating costs, 12 ktpa
+  cw: 25, dnw: 0.1,                                         // t per t H2, all modes
+  modes: {
+    NG100: { label: "100 % natural gas (NG100)",
+      ratio: { 12: 6.40, 24: 6.35, 68: 6.35, 80: 6.35 }, el: { 12: 324, 24: 305, 68: 290, 80: 280 },
+      ngMJ: { 12: 14.5, 24: 14.5, 68: 14.4, 80: 14.4 }, co2: { 12: 0.81, 24: 0.80, 68: 0.80, 80: 0.80 },
+      eff: { 12: 89.5, 24: 89.6, 68: 89.8, 80: 89.8 },
+      opex: { 12: [47.5, 81.8, 93.2], 24: [89.3, 157.9, 180.8], 68: [237.7, 432.1, 496.8], 80: [278.4, 507.1, 583.3] },
+      lcoh: { 12: [4.90, 7.76, 8.71], 24: [4.36, 7.22, 8.17], 68: [3.85, 6.71, 7.66], 80: [3.81, 6.67, 7.62] } },
+    NG50: { label: "50 % NG / 50 % cracked gas (NG50)",
+      ratio: { 12: 6.74, 80: 6.72 }, el: { 12: 335, 80: 284 }, ngMJ: { 12: 8.1, 80: 8.1 }, co2: { 12: 0.45, 80: 0.45 },
+      eff: { 12: 89.0, 80: 89.3 },
+      opex: { 12: [49.2, 85.6, 97.8], 80: [274.1, 502.7, 578.9] }, lcoh: { 12: [5.04, 8.08, 9.09], 80: [3.76, 6.61, 7.57] } },
+    CF100: { label: "100 % clean fuel, cracked gas (CF100)",
+      ratio: { 12: 7.22, 80: 7.20 }, el: { 12: 342, 80: 290 }, ngMJ: { 12: 0, 80: 0 }, co2: { 12: 0, 80: 0 },
+      eff: { 12: 88.4, 80: 88.7 },
+      opex: { 12: [51.3, 90.3, 103.3], 80: [302.8, 562.0, 648.4] }, lcoh: { 12: [5.22, 8.47, 9.55], 80: [4.11, 7.35, 8.43] } },
+  },
+};
+
+// Duiker AHC — Budgetary Proposal 122380, 05 Dec 2025
+const DUIKER = {
+  cap: 12, capexEurM: 47, h2t: 12000,
+  laborEurM: 0.2, maintEurM: 0.3, catalystEurM: 0.2,        // Table 9
+  opFeeEurPerT: 8.50,                                        // §4.2
+  el: 250,                                                   // kWh/t H2, both modes (§2 and §3)
+  modes: {
+    NH3: { label: "NH₃-fired (base case)", ratio: 7.03, co2: 0, eff: 90.9 },
+    NG: { label: "Natural-gas-fired", ratio: 6.83, co2: 0.21, eff: 90.6 },
+  },
+};
+DUIKER.modes.NH3.ngMJ = 0;
+DUIKER.modes.NG.ngMJ = DUIKER.modes.NG.co2 / CO2_PER_KG_NG * LHV.ng; // derived from stated CO2
+
+// Custom pathways — Gentari process basis (per kg H2 delivered)
+const CUSTOM = {
+  cf:    { label: "100 % clean fuel (7.2 t/t)",           feed: 7.20, cracked: 6.50, ngEq: 0.00 },
+  ng:    { label: "Natural gas main fuel (6.5 t/t)",      feed: 6.50, cracked: 6.50, ngEq: 0.70 },
+  maxng: { label: "Maximum natural gas (5.7 t/t, double PSA)", feed: 5.70, cracked: 5.70, ngEq: 1.50 },
+};
+for (const p of Object.values(CUSTOM)) {
+  p.tail = p.cracked - STOICH;
+  p.direct = p.feed - p.cracked;
+  p.ngMJ = p.ngEq * LHV.nh3;
+  p.co2 = p.ngMJ / LHV.ng * CO2_PER_KG_NG;
 }
 
-const CASES = [
-  { id: "kbr-12-ng100", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 100% Natural Gas", capacityKtpa: 12, ratio: 6.40, eff: 89.5, purity: 99.97, ci: 0.81, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 47.5, 950: 81.8, 1100: 93.2 }, lcoh: { 500: 4.90, 950: 7.76, 1100: 8.71 } },
-  { id: "kbr-12-ng50", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 50/50 NG-NH₃", capacityKtpa: 12, ratio: 6.74, eff: 89.0, purity: 99.97, ci: 0.45, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 49.2, 950: 85.6, 1100: 97.8 }, lcoh: { 500: 5.04, 950: 8.08, 1100: 9.09 } },
-  { id: "kbr-12-cf100", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 100% Clean Fuel", capacityKtpa: 12, ratio: 7.22, eff: 88.4, purity: 99.97, ci: 0.00, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 51.3, 950: 90.3, 1100: 103.3 }, lcoh: { 500: 5.22, 950: 8.47, 1100: 9.55 } },
-  { id: "kbr-24-ng100", licensor: "KBR H2ACT", label: "KBR · 24 ktpa · 100% Natural Gas", capacityKtpa: 24, ratio: 6.35, eff: 89.6, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 89.3, 950: 157.9, 1100: 180.8 }, lcoh: { 500: 4.36, 950: 7.22, 1100: 8.17 } },
-  { id: "kbr-68-ng100", licensor: "KBR H2ACT", label: "KBR · 68 ktpa · 100% Natural Gas", capacityKtpa: 68, ratio: 6.35, eff: 89.8, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 237.7, 950: 432.1, 1100: 496.8 }, lcoh: { 500: 3.85, 950: 6.71, 1100: 7.66 } },
-  { id: "kbr-80-ng100", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 100% Natural Gas", capacityKtpa: 80, ratio: 6.35, eff: 89.8, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 278.4, 950: 507.1, 1100: 583.3 }, lcoh: { 500: 3.81, 950: 6.67, 1100: 7.62 } },
-  { id: "kbr-80-ng50", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 50/50 NG-NH₃", capacityKtpa: 80, ratio: 6.72, eff: 89.3, purity: 99.97, ci: 0.45, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 274.1, 950: 502.7, 1100: 578.9 }, lcoh: { 500: 3.76, 950: 6.61, 1100: 7.57 } },
-  { id: "kbr-80-cf100", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 100% Clean Fuel", capacityKtpa: 80, ratio: 7.20, eff: 88.7, purity: 99.97, ci: 0.00, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 302.8, 950: 562.0, 1100: 648.4 }, lcoh: { 500: 4.11, 950: 7.35, 1100: 8.43 } },
-  { id: "casale-self", licensor: "Casale MACH2", label: "Casale · Self-Sustaining scheme", capacityKtpa: null, ratio: 7.2, eff: 89, purity: 99.999, ci: 0, ciUnit: "kgCO2/kgH2", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025", noCost: "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX disclosed for any scheme." },
-  { id: "casale-low", licensor: "Casale MACH2", label: "Casale · Low-Carbon scheme", capacityKtpa: null, ratio: 6.4, eff: 90, purity: 99.999, ci: 0.3, ciUnit: "kgCO2/kgH2 (up to)", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025", noCost: "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX disclosed for any scheme." },
-  { id: "casale-max", licensor: "Casale MACH2", label: "Casale · Maximum Fuel Source scheme", capacityKtpa: null, ratio: 6.4, eff: 90, purity: 99.999, ci: 1.2, ciUnit: "kgCO2/kgH2 (>)", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025", noCost: "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX disclosed for any scheme." },
-  { id: "duiker-nh3", licensor: "Duiker AHC", label: "Duiker · 12 ktpa · NH₃-fired", capacityKtpa: 12, ratio: 7.05, eff: 90, purity: 99.97, ci: 0, ciUnit: "kgCO2/kgH2", note: "Duiker §3.x / §4.1-4.3, 05 Dec 2025 (Budgetary Proposal 122380); @90.9% enthalpy eff.",
-    duikerCapexEurM: 47, duikerOpexEurMPerYr: 2.9, duikerLicenseConstructionEur: 2_700_000, duikerLicenseOperationEurPerTH2: 8.50, duikerAccuracy: "±40%" },
-  { id: "duiker-ng", licensor: "Duiker AHC", label: "Duiker · 12 ktpa · NG-fired", capacityKtpa: 12, ratio: 6.83, eff: 90, purity: 99.97, ci: 0.21, ciUnit: "kgCO2/kgH2", note: "Duiker §3.x / §4.1-4.3, 05 Dec 2025 (Budgetary Proposal 122380); @90.6% enthalpy eff.",
-    duikerCapexEurM: 47, duikerOpexEurMPerYr: 2.9, duikerLicenseConstructionEur: 2_700_000, duikerLicenseOperationEurPerTH2: 8.50, duikerAccuracy: "±40%" },
-];
-
-// Tolling / offtake references — storage + cracking as a service, no owned
-// CAPEX for the customer; commercial packages only, not licensor KPI sheets.
+// Tolling references
 const TOLLING = [
-  {
-    id: "vopak",
-    label: "Vopak Energy Park Antwerp (Linde cracker) — LoI",
-    capacityMinKtpa: 35, capacityMaxKtpa: 120,
-    tariffLow: 0.50, tariffHigh: 1.00, tariffUnit: "EUR/kg H2 (tolling fee, excl. passthrough)",
-    ratioLow: 6, ratioHigh: 7,
-    term: "15–20 years, Take-or-Pay, Monthly tolling fee, indexed",
-    accuracy: "AACE Class 5 (non-binding)",
-    note: "Tariff fixed on booked H2 throughput capacity. Energy/fuel/utility variable OPEX passed through separately (ammonia feed 6–7 t/t H2, ammonia or NG fuel, power 0.5–1 MW/t H2 basis). Excludes governmental/environmental taxes.",
-    source: "tolling/vopak/Vopak_Cracker_Tolling_Fee.md, LoI effective 20 Aug 2025",
-  },
-  {
-    id: "vtti-toponly",
-    label: "VTTI Rotterdam/Antwerp (Amplifhy) — take-or-pay only",
-    capacityMinKtpa: 70, capacityMaxKtpa: 140,
-    tariffLow: 1.15, tariffHigh: 1.67, tariffUnit: "EUR/kg H2 (ToP only, excl. variable passthrough & conversion loss)",
-    ratioLow: 6.3, ratioHigh: 7.3,
-    term: "Not stated in this excerpt of the Commercial Info Package",
-    accuracy: "Pre-FEED, indicative, upper bound includes contingency",
-    note: "140 ktpa or 70 ktpa H2 cracker capacity options under evaluation. Ratio 6.3–6.5 t/t with max natural-gas firing, 7.1–7.3 t/t with max green-ammonia firing.",
-    source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025",
-  },
-  {
-    id: "vtti-total",
-    label: "VTTI Rotterdam/Antwerp (Amplifhy) — ToP + variable passthrough",
-    capacityMinKtpa: 70, capacityMaxKtpa: 140,
-    tariffLow: 1.58, tariffHigh: 2.21, tariffUnit: "EUR/kg H2 (ToP + estimated variable passthrough, excl. conversion loss)",
-    ratioLow: 6.3, ratioHigh: 7.3,
-    term: "Not stated in this excerpt of the Commercial Info Package",
-    accuracy: "Pre-FEED, indicative, upper bound includes contingency",
-    note: "Same capacity/ratio basis as the ToP-only row above; this row folds in current variable cost-passthrough assumptions.",
-    source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025",
-  },
+  { id: "vopak", label: "Vopak Energy Park Antwerp (Linde cracker) — LoI", capacityMinKtpa: 35, capacityMaxKtpa: 120,
+    tariffLow: 0.50, tariffHigh: 1.00, tariffUnit: "EUR/kg H₂ (tolling fee, excl. passthrough)", ratioLow: 6, ratioHigh: 7,
+    term: "15–20 years, Take-or-Pay, monthly tolling fee, indexed", accuracy: "AACE Class 5 (non-binding)",
+    note: "Tariff fixed on booked H₂ capacity. Energy, fuel and utility costs passed through (feed 6–7 t NH₃/t H₂). Excludes governmental and environmental taxes.",
+    source: "tolling/vopak/Vopak_Cracker_Tolling_Fee.md, LoI effective 20 Aug 2025" },
+  { id: "vtti-toponly", label: "VTTI Rotterdam/Antwerp (Amplifhy) — take-or-pay only", capacityMinKtpa: 70, capacityMaxKtpa: 140,
+    tariffLow: 1.15, tariffHigh: 1.67, tariffUnit: "EUR/kg H₂ (ToP only, excl. variable passthrough and conversion loss)", ratioLow: 6.3, ratioHigh: 7.3,
+    term: "Not stated in this excerpt", accuracy: "Pre-FEED, indicative",
+    note: "140 or 70 ktpa H₂ options. Ratio 6.3–6.5 t/t with maximum NG firing, 7.1–7.3 t/t with maximum green-ammonia firing.",
+    source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025" },
+  { id: "vtti-total", label: "VTTI Rotterdam/Antwerp (Amplifhy) — ToP + variable passthrough", capacityMinKtpa: 70, capacityMaxKtpa: 140,
+    tariffLow: 1.58, tariffHigh: 2.21, tariffUnit: "EUR/kg H₂ (ToP + estimated variable passthrough, excl. conversion loss)", ratioLow: 6.3, ratioHigh: 7.3,
+    term: "Not stated in this excerpt", accuracy: "Pre-FEED, indicative",
+    note: "Same basis as the ToP-only row, with current variable-cost assumptions folded in.",
+    source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025" },
 ];
 
+// ═══════════════════════════════════════════════════════════════
+//   HELPERS
+// ═══════════════════════════════════════════════════════════════
 const $ = (id) => document.getElementById(id);
 const num = (v, f = 0) => { const n = parseFloat(v); return Number.isFinite(n) ? n : f; };
 const fmt = (v, d = 2) => Number.isFinite(v) ? v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
-
-function populateCaseSelect() {
-  $("inCase").innerHTML = CASES.map((c) => `<option value="${c.id}">${c.label}</option>`).join("");
-}
-function populateTollingSelect() {
-  $("inTolling").innerHTML = TOLLING.map((t) => `<option value="${t.id}">${t.label}</option>`).join("");
-}
-
-function selectedCase() {
-  return CASES.find((c) => c.id === $("inCase").value) || CASES[0];
-}
-function selectedTolling() {
-  return TOLLING.find((t) => t.id === $("inTolling").value) || TOLLING[0];
-}
-
-function costFor(c, priceUsd) {
-  // Returns { capexLine, opexLine, lcohLine, flag } given a licensor case
-  // and the selected ammonia price point (only KBR's OPEX/LCOH vary by it).
-  if (c.licensor === "KBR H2ACT") {
-    const capex = kbrCapex(c.capacityKtpa);
-    const opex = c.opex ? c.opex[priceUsd] : undefined;
-    const lcoh = c.lcoh ? c.lcoh[priceUsd] : undefined;
-    return {
-      capex: capex ? `${fmt(capex.total, 0)} MM USD` : "—",
-      capexDetail: capex ? `ISBL ${fmt(capex.isbl, 0)} + OSBL ${fmt(capex.total - capex.isbl, 0)} (${(capex.osblPct * 100).toFixed(0)}% of ISBL, assumption) · ${capex.accuracy}` : "Not disclosed",
-      opex: opex !== undefined ? `${fmt(opex, 1)} MM USD/yr` : "—",
-      lcoh: lcoh !== undefined ? `${fmt(lcoh, 2)} USD/kg H₂` : "—",
-      note: `CAPEX: KBR §4.1 (Class V, ±50%, Q3 2025). OPEX/LCOH at ${priceUsd} USD/t NH₃: KBR §4.2 (own cost-assumption base case, distinct from the price you'd actually pay). OSBL is Gentari's flat 55%-of-ISBL assumption, confirmed only at the 12 ktpa point.`,
-    };
+const crf = (r, n) => r === 0 ? 1 / n : r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+const caps = (m) => Object.keys(m).map(Number).sort((a, b) => a - b);
+function interp(m, x) {
+  const k = caps(m);
+  if (x <= k[0]) return m[k[0]];
+  if (x >= k[k.length - 1]) return m[k[k.length - 1]];
+  for (let i = 0; i < k.length - 1; i++) {
+    if (x >= k[i] && x <= k[i + 1]) return m[k[i]] + (m[k[i + 1]] - m[k[i]]) * (x - k[i]) / (k[i + 1] - k[i]);
   }
-  if (c.licensor === "Duiker AHC") {
-    const opexPerTH2 = (c.duikerOpexEurMPerYr * 1e6) / (c.capacityKtpa * 1000);
-    return {
-      capex: `${fmt(c.duikerCapexEurM, 0)} MM EUR`,
-      capexDetail: `Lump-sum Total Installed Cost (equipment + buildings/civil, incl. engineering/EPC), ${c.duikerAccuracy}. Plus one-off construction license fee ${fmt(c.duikerLicenseConstructionEur / 1e6, 2)} MM EUR.`,
-      opex: `${fmt(c.duikerOpexEurMPerYr, 1)} MM EUR/yr`,
-      lcoh: `— (not an LCOH; ≈ ${fmt(opexPerTH2, 0)} EUR/t H₂ OPEX + ${fmt(c.duikerLicenseOperationEurPerTH2, 2)} EUR/t H₂ operation license fee)`,
-      note: `Duiker §4.1–4.2 (Budgetary Proposal 122380, 05 Dec 2025), ${c.duikerAccuracy}. Cost basis: ammonia 600 EUR/t, electricity 100 EUR/MWh. No discounted LCOH published — shown as OPEX intensity instead of fabricating a discount-rate assumption.`,
-    };
+}
+function fitPower(pts) {
+  const lx = pts.map((p) => Math.log(p.x)), ly = pts.map((p) => Math.log(p.y)), n = pts.length;
+  const mx = lx.reduce((a, b) => a + b) / n, my = ly.reduce((a, b) => a + b) / n;
+  const sxx = lx.reduce((s, v) => s + (v - mx) ** 2, 0);
+  const b = lx.reduce((s, v, i) => s + (v - mx) * (ly[i] - my), 0) / sxx;
+  const a = Math.exp(my - b * mx);
+  const ssr = ly.reduce((s, v, i) => s + (v - (Math.log(a) + b * lx[i])) ** 2, 0);
+  const sst = ly.reduce((s, v) => s + (v - my) ** 2, 0);
+  return { a, b, r2: n > 2 ? 1 - ssr / sst : null, n, f: (x) => a * Math.pow(x, b) };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   DERIVED REFERENCE CURVES (from source data, computed once)
+// ═══════════════════════════════════════════════════════════════
+const KBR_CRF = crf(KBR.rate, KBR.life);
+const kbrH2t = (c) => KBR.tpd[c] * KBR.onstream;
+
+// Total installed CAPEX implied by KBR's own LCOH: CAPEX = (LCOH x H2 - OPEX) / CRF(8 %, 25 yr).
+// Reproduces the stated 120.9 MM$ at 12 ktpa; CAPEX is fuel-mode-invariant per KBR §4.2.
+const KBR_TOTAL = {};
+for (const c of caps(KBR.isbl)) {
+  if (KBR.totalStated[c]) { KBR_TOTAL[c] = { v: KBR.totalStated[c], stated: true }; continue; }
+  const vals = [];
+  for (const m of Object.values(KBR.modes)) {
+    if (!m.opex[c]) continue;
+    m.opex[c].forEach((o, i) => vals.push((m.lcoh[c][i] * kbrH2t(c) / 1000 - o) / KBR_CRF));
   }
+  KBR_TOTAL[c] = { v: vals.reduce((a, b) => a + b) / vals.length, stated: false };
+}
+const FIT_ISBL = fitPower(caps(KBR.isbl).map((c) => ({ x: c, y: KBR.isbl[c] })));
+const FIT_KBR = fitPower(caps(KBR_TOTAL).map((c) => ({ x: c, y: KBR_TOTAL[c].v })));
+
+// Fixed O&M implied by KBR NG100 OPEX at each capacity:
+// fixed = OPEX(500) - NH3 cost - NG cost - power cost - consumables, with NH3 t/yr from the OPEX slope between price points.
+const KBR_FIXED = {};
+for (const c of caps(KBR.modes.NG100.opex)) {
+  if (c === 12) { KBR_FIXED[c] = { v: KBR.fixed12, stated: true }; continue; }
+  const m = KBR.modes.NG100, o = m.opex[c], h = kbrH2t(c);
+  const nh3t = (o[1] - o[0]) / (KBR.price.nh3[1] - KBR.price.nh3[0]);  // MM t
+  const rest = o[0] - nh3t * KBR.price.nh3[0];
+  const ng = m.ngMJ[c] * h / 3600 * KBR.price.ng / 1e6 * 1000;
+  const el = m.el[c] * h / 1000 * KBR.price.el / 1e6;
+  const cons = KBR.consumablesUsdPerT * h / 1e6;
+  KBR_FIXED[c] = { v: rest - ng - el - cons, stated: false };
+}
+const FIT_FIXED = fitPower(caps(KBR_FIXED).map((c) => ({ x: c, y: KBR_FIXED[c].v })));
+const FIT_EL = {};
+for (const [k, m] of Object.entries(KBR.modes)) FIT_EL[k] = fitPower(caps(m.el).map((c) => ({ x: c, y: m.el[c] })));
+
+// ═══════════════════════════════════════════════════════════════
+//   MODEL
+// ═══════════════════════════════════════════════════════════════
+const MODE_OPTIONS = {
+  kbr: Object.entries(KBR.modes).map(([k, m]) => [k, m.label]),
+  duiker: Object.entries(DUIKER.modes).map(([k, m]) => [k, m.label]),
+  custom: Object.entries(CUSTOM).map(([k, m]) => [k, m.label]),
+};
+
+function inputs() {
   return {
-    capex: "—", capexDetail: c.noCost || "Not disclosed", opex: "—", lcoh: "—",
-    note: c.noCost || "No cost data disclosed for this case.",
+    cap: Math.max(0.1, num($("inCap").value, 12)), days: Math.min(366, Math.max(1, num($("inDays").value, 350))),
+    basis: $("inBasis").value, mode: $("inMode").value, ref: $("inRef").value,
+    uplift: num($("inPsaUplift").value, 10) / 100,
+    pNh3: num($("inPNh3").value), pEl: num($("inPEl").value), pNg: num($("inPNg").value),
+    fx: num($("inFx").value, 1.1448), rate: num($("inRate").value, 8) / 100, life: Math.max(1, num($("inLife").value, 25)),
+    duikerExp: num($("inDuikerExp").value, FIT_KBR.b),
   };
 }
 
-function recalc() {
-  const h2Ktpa = num($("inH2Ktpa").value, 0);
-  const c = selectedCase();
-  const priceUsd = num($("inAmmoniaPrice").value, 950);
-  const nh3Ktpa = h2Ktpa * c.ratio;
-  const cost = costFor(c, priceUsd);
+function duikerCapexUsdM(cap, I) { return DUIKER.capexEurM * I.fx * Math.pow(cap / DUIKER.cap, I.duikerExp); }
 
-  $("resultSub").textContent = c.label;
-  $("caseNote").textContent = `Source: ${c.note}${c.capacityKtpa ? ` — licensor dataset point closest to ${c.capacityKtpa} ktpa H₂` : " — capacity-independent ratio as published"}`;
-
-  $("kpis").innerHTML = `
-    <div class="kpi"><div class="l">Required NH₃ feed</div><div class="v">${fmt(nh3Ktpa, 1)}</div><div class="u">ktpa</div></div>
-    <div class="kpi"><div class="l">NH₃:H₂ mass ratio</div><div class="v">${fmt(c.ratio, 2)}</div><div class="u">t NH₃ / t H₂</div></div>
-    <div class="kpi"><div class="l">Energy efficiency</div><div class="v">${fmt(c.eff, 1)}</div><div class="u">% (LHV)</div></div>
-    <div class="kpi"><div class="l">H₂ purity</div><div class="v">${fmt(c.purity, c.purity >= 99.99 ? 3 : 2)}</div><div class="u">mol%</div></div>
-    <div class="kpi"><div class="l">Direct carbon intensity</div><div class="v">${fmt(c.ci, 2)}</div><div class="u">${c.ciUnit}</div></div>
-  `;
-  $("costKpis").innerHTML = `
-    <div class="kpi"><div class="l">CAPEX (Total Installed)</div><div class="v" style="font-size:16px;">${cost.capex}</div></div>
-    <div class="kpi"><div class="l">OPEX</div><div class="v" style="font-size:16px;">${cost.opex}</div></div>
-    <div class="kpi"><div class="l">LCOH</div><div class="v" style="font-size:16px;">${cost.lcoh}</div></div>
-  `;
-  $("costNote").innerHTML = `${cost.capexDetail}<br/>${cost.note}`;
-
-  const flagBox = $("flagBox");
-  if (c.licensor.startsWith("Casale")) {
-    flagBox.textContent = "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX figures exist for this case; this tool shows sizing/KPI outputs only.";
-    flagBox.classList.remove("hidden");
+function model(I) {
+  const h2t = I.cap * 1000;
+  const r = { h2t, tpd: h2t / I.days, flags: [], basisLabel: "", modeLabel: "" };
+  let ref;
+  if (I.basis === "kbr") {
+    const m = KBR.modes[I.mode];
+    Object.assign(r, { ratio: interp(m.ratio, I.cap), ngMJ: interp(m.ngMJ, I.cap), co2: interp(m.co2, I.cap),
+      eff: interp(m.eff, I.cap), el: FIT_EL[I.mode].f(I.cap) });
+    r.basisLabel = "KBR H2ACT®"; r.modeLabel = m.label; ref = "kbr";
+    if (I.cap < 12 || I.cap > 80) r.flags.push(`${fmt(I.cap, 0)} ktpa is outside KBR's 12–80 ktpa data. CAPEX and power are extrapolated along the fitted curves; NH₃ ratio, NG and CI are held at the nearest data point.`);
+  } else if (I.basis === "duiker") {
+    const m = DUIKER.modes[I.mode];
+    Object.assign(r, { ratio: m.ratio, ngMJ: m.ngMJ, co2: m.co2, eff: m.eff, el: DUIKER.el });
+    r.basisLabel = "Duiker AHC"; r.modeLabel = m.label; ref = "duiker";
+    if (I.cap !== 12) r.flags.push(`Duiker only priced 12 ktpa. CAPEX at ${fmt(I.cap, 0)} ktpa uses a borrowed scale exponent of ${fmt(I.duikerExp, 2)}; performance figures are held at the 12 ktpa values.`);
   } else {
-    flagBox.classList.add("hidden");
+    const p = CUSTOM[I.mode];
+    ref = I.ref;
+    const el = ref === "kbr" ? FIT_EL[I.mode === "cf" ? "CF100" : "NG100"].f(I.cap) : DUIKER.el;
+    const eff = LHV.h2 / (p.feed * LHV.nh3 + p.ngMJ + el / 1000 * 3.6) * 100;
+    Object.assign(r, { ratio: p.feed, ngMJ: p.ngMJ, co2: p.co2, eff, el, custom: p });
+    r.basisLabel = "Custom"; r.modeLabel = p.label;
+    if (I.mode === "maxng") r.flags.push(`Maximum-NG pathway: 5.70 t/t means the PSA train recovers ${fmt(STOICH / p.cracked * 100, 1)} % of the H₂, which needs a double PSA. CAPEX includes the ${fmt(I.uplift * 100, 0)} % uplift. Power is taken from the ${ref === "kbr" ? "KBR NG100 curve" : "Duiker figure"}; a second PSA may add load not captured here.`);
   }
+  r.ref = ref;
 
-  $("inAmmoniaPrice").disabled = c.licensor !== "KBR H2ACT";
+  // Technical
+  r.nh3t = h2t * r.ratio;
+  r.nh3FuelEq = r.ratio - STOICH;                             // NH3 used as fuel (tail gas + direct), t/t
+  r.ngKgPerKg = r.ngMJ / LHV.ng;
+  r.ngt = h2t * r.ngKgPerKg;
+  r.ngMWh = r.ngMJ * h2t * 1000 / 3600;
+  r.elMWh = r.el * h2t / 1000;
+  r.elMW = r.elMWh / (I.days * 24);
+  r.co2t = r.co2 * h2t;
+  r.cwt = ref === "kbr" ? KBR.cw * h2t : 0;
+  r.dnwt = ref === "kbr" ? KBR.dnw * h2t : null;
 
-  renderCaseTable(c, priceUsd);
+  // CAPEX
+  r.capexIsbl = ref === "kbr" ? FIT_ISBL.f(I.cap) : null;
+  r.capexBase = ref === "kbr" ? FIT_KBR.f(I.cap) : duikerCapexUsdM(I.cap, I);
+  r.upliftUsd = I.basis === "custom" && I.mode === "maxng" ? r.capexBase * I.uplift : 0;
+  r.capex = r.capexBase + r.upliftUsd;
+  r.accuracy = ref === "kbr" ? 0.5 : 0.4;
+
+  // OPEX (MM USD/yr)
+  const o = [];
+  o.push({ k: "Ammonia feed (product + fuel)", v: r.nh3t * I.pNh3 / 1e6, d: `${fmt(r.nh3t / 1000, 1)} kt × ${fmt(I.pNh3, 0)} USD/t` });
+  if (r.ngMWh > 0) o.push({ k: "Natural gas", v: r.ngMWh * I.pNg / 1e6, d: `${fmt(r.ngMWh / 1000, 1)} GWh (LHV) × ${fmt(I.pNg, 0)} USD/MWh` });
+  o.push({ k: "Electricity", v: r.elMWh * I.pEl / 1e6, d: `${fmt(r.elMWh / 1000, 2)} GWh × ${fmt(I.pEl, 0)} USD/MWh` });
+  if (ref === "kbr") {
+    o.push({ k: "Other consumables (utilities, catalyst, chemicals)", v: KBR.consumablesUsdPerT * h2t / 1e6, d: `${fmt(KBR.consumablesUsdPerT, 1)} USD/t H₂, KBR 12 ktpa` });
+    o.push({ k: "Fixed O&M (labour, overheads, insurance, maintenance)", v: FIT_FIXED.f(I.cap), d: `KBR-derived curve, ${fmt(FIT_FIXED.a, 2)} × ktpa^${fmt(FIT_FIXED.b, 3)}` });
+  } else {
+    const cat = DUIKER.catalystEurM * 1e6 / DUIKER.h2t * I.fx;
+    o.push({ k: "Catalyst", v: cat * h2t / 1e6, d: `€${fmt(DUIKER.catalystEurM * 1e6 / DUIKER.h2t, 2)}/t H₂, Duiker Table 9` });
+    o.push({ k: "Fixed O&M (labour, maintenance)", v: (DUIKER.laborEurM + DUIKER.maintEurM) * I.fx * Math.pow(I.cap / DUIKER.cap, FIT_FIXED.b), d: `€0.5M at 12 ktpa, scaled with KBR fixed-cost exponent ${fmt(FIT_FIXED.b, 3)}` });
+    o.push({ k: "Duiker operation licence fee", v: DUIKER.opFeeEurPerT * I.fx * h2t / 1e6, d: `€8.50/t H₂ exported` });
+  }
+  r.opex = o;
+  r.opexTotal = o.reduce((s, x) => s + x.v, 0);
+  r.capCharge = r.capex * crf(I.rate, I.life);
+  r.lcoh = (r.capCharge + r.opexTotal) / (h2t / 1000);        // USD/kg
+  return r;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   RENDER
+// ═══════════════════════════════════════════════════════════════
+function kpi(l, v, u, hero) { return `<div class="kpi${hero ? " hero" : ""}"><div class="l">${l}</div><div class="v">${v}</div><div class="u">${u}</div></div>`; }
+
+function populateModes() {
+  const b = $("inBasis").value, cur = $("inMode").value;
+  $("inMode").innerHTML = MODE_OPTIONS[b].map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+  if (MODE_OPTIONS[b].some(([k]) => k === cur)) $("inMode").value = cur;
+}
+
+function recalc() {
+  const I = inputs();
+  $("customInputs").classList.toggle("hidden", I.basis !== "custom");
+  $("inPsaUplift").disabled = !(I.basis === "custom" && I.mode === "maxng");
+  const r = model(I);
+  $("modeNote").textContent = I.basis === "custom"
+    ? `Custom pathway on Gentari's basis: ${fmt(STOICH, 2)} kg NH₃ to product, ${fmt(FIRING_NH3EQ, 2)} kg NH₃-eq of firing, of which ${fmt(r.custom.tail, 2)} from PSA tail gas, ${fmt(r.custom.direct, 2)} direct NH₃ and ${fmt(r.custom.ngEq, 2)} as natural gas. CAPEX, power and O&M follow the ${I.ref === "kbr" ? "KBR" : "Duiker"} reference.`
+    : I.basis === "kbr" ? "KBR H2ACT® figures, interpolated between the 12, 24, 68 and 80 ktpa data points."
+    : "Duiker AHC figures at the 12 ktpa data point.";
+
+  // technical
+  $("techSub").textContent = `${r.basisLabel} · ${r.modeLabel}`;
+  $("techKpis").innerHTML = [
+    kpi("H₂ output", fmt(I.cap, 1), `ktpa · ${fmt(r.tpd, 1)} t/d`),
+    kpi("NH₃ from storage", fmt(r.nh3t / 1000, 1), `ktpa · ${fmt(r.nh3t / I.days, 0)} t/d — storage demand`, true),
+    kpi("NH₃ : H₂ ratio", fmt(r.ratio, 2), "t NH₃ / t H₂"),
+    kpi("NH₃ used as fuel", fmt(r.nh3FuelEq * I.cap, 1), `ktpa NH₃-eq (${fmt(r.nh3FuelEq, 2)} t/t)`),
+    kpi("Natural gas", fmt(r.ngt / 1000, 1), `ktpa · ${fmt(r.ngMWh / 1000, 0)} GWh/yr LHV (${fmt(r.ngMJ, 1)} MJ/kg H₂)`),
+    kpi("Electricity", fmt(r.elMWh / 1000, 1), `GWh/yr · ${fmt(r.elMW, 2)} MW avg (${fmt(r.el, 0)} kWh/t H₂)`),
+    kpi("Direct CO₂", fmt(r.co2t / 1000, 1), `kt/yr · ${fmt(r.co2, 2)} kg CO₂/kg H₂`),
+    kpi("Energy efficiency", fmt(r.eff, 1), "% LHV, incl. power"),
+    kpi("Cooling / demin water", r.ref === "kbr" ? fmt(r.cwt / 1e6, 2) : "—", r.ref === "kbr" ? `Mt/yr CW · ${fmt(r.dnwt / 1000, 1)} kt/yr demin` : "Duiker: no steam or cooling water"),
+  ].join("");
+  $("techFlags").innerHTML = r.flags.map((f) => `<div class="flag">${f}</div>`).join("");
   $("linkStatus").textContent = "";
-  return { h2Ktpa, nh3Ktpa, c };
+
+  // BFD sync
+  if (I.basis === "custom") setBfd(I.mode, true);
+  $("bfdSync").textContent = I.basis === "custom" ? "Following the Custom fuel mode above." : "Reference diagram. KBR fires cracked gas (NG50, CF100) rather than NH₃ vapour, so its flow differs in detail.";
+
+  renderCapex(I, r);
+  renderOpex(I, r);
+  renderCi(r);
+  renderSources();
+  lastOwn = { I, r };
+  return r;
+}
+let lastOwn = null;
+
+// ---------- BFD ----------
+let bfdPath = "cf";
+function setBfd(path, fromModel) {
+  bfdPath = path;
+  document.querySelectorAll(".seg button[data-path]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.path === path)));
+  const p = CUSTOM[path];
+  const h2made = p.cracked / STOICH, tailH2 = h2made - 1, n2 = p.cracked - h2made;
+  $("bfdFeed").textContent = `${fmt(p.feed, 2)} kg`;
+  $("bfdCracked").textContent = fmt(p.cracked, 2);
+  $("bfdCracked2").textContent = `${fmt(p.cracked, 2)} kg`;
+  $("bfdDirect").style.display = p.direct > 0 ? "" : "none";
+  $("bfdDirectLbl").textContent = `${fmt(p.direct, 2)} kg NH₃`;
+  $("bfdNg").style.display = p.ngEq > 0 ? "" : "none";
+  $("bfdNgLbl").textContent = `${fmt(p.ngMJ / LHV.ng, 2)} kg NG ≡ ${fmt(p.ngEq, 2)} kg NH₃ (${fmt(p.ngMJ, 1)} MJ)`;
+  $("bfdTailLbl").textContent = `PSA tail gas: ${fmt(tailH2, 3)} kg H₂ + ${fmt(n2, 2)} kg N₂ ≡ ${fmt(p.tail, 2)} kg NH₃-eq`;
+  $("bfdPsa").textContent = path === "maxng" ? "Double PSA" : "PSA";
+  $("bfdPsaSub").textContent = `recovers ${fmt(1 / h2made * 100, 1)} %`;
+  $("bfdCo2").textContent = p.co2 > 0 ? `direct CO₂ ≈ ${fmt(p.co2, 2)} kg` : "direct CO₂: 0";
+  const elKey = path === "cf" ? "CF100" : "NG100";
+  $("bfdPower").textContent = `power ≈ ${fmt(FIT_EL[elKey].f(12) / 1000, 3)} kWh (KBR ${elKey}, 12 ktpa)`;
+  $("bfdCaption").textContent = path === "cf"
+    ? "Clean fuel: burner takes 0.84 kg NH₃-eq of PSA tail gas plus 0.70 kg NH₃ vapour drawn at the pre-heater outlet. No direct CO₂."
+    : path === "ng"
+    ? "Natural gas: burner takes the same 0.84 kg NH₃-eq of tail gas; 0.26 kg of natural gas replaces the 0.70 kg direct NH₃ draw. All 6.50 kg from storage is cracked."
+    : "Maximum natural gas: a double PSA recovers almost all the H₂, so only 0.04 kg NH₃-eq returns as tail gas. Natural gas supplies the other 1.50 kg NH₃-eq of firing (27.8 MJ). Storage supplies 5.70 kg.";
+  if (!fromModel && $("inBasis").value === "custom") { $("inMode").value = path; recalc(); }
 }
 
-function renderCaseTable(active, priceUsd) {
-  const rows = CASES.map((c) => {
-    const cost = costFor(c, priceUsd);
-    return `
-    <tr class="${c.id === active.id ? "active" : ""}">
-      <td>${c.label}</td>
-      <td>${fmt(c.ratio, 2)}</td>
-      <td>${fmt(c.eff, 1)}</td>
-      <td>${fmt(c.purity, c.purity >= 99.99 ? 3 : 2)}</td>
-      <td>${fmt(c.ci, 2)} ${c.ciUnit.replace("kgCO2/kgH2", "")}</td>
-      <td>${cost.capex}</td>
-      <td>${cost.opex}</td>
-      <td>${cost.lcoh}</td>
-    </tr>`;
-  }).join("");
-  $("caseTable").innerHTML = `
-    <thead><tr><th>Licensor / case</th><th>NH₃:H₂ (t/t)</th><th>Efficiency (%)</th><th>H₂ purity (mol%)</th><th>Direct CI</th><th>CAPEX</th><th>OPEX</th><th>LCOH</th></tr></thead>
-    <tbody>${rows}</tbody>`;
+// ---------- CAPEX ----------
+function niceCeil(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+
+function renderCapex(I, r) {
+  const lo = r.capex * (1 - r.accuracy), hi = r.capex * (1 + r.accuracy);
+  $("capexSub").textContent = r.ref === "kbr" ? "KBR curve · Class V ±50 %, Q3 2025 USD" : "Duiker curve · ±40 %, EUR converted at the FX input";
+  const k = [kpi("CAPEX, total installed", fmt(r.capex, 0), `MM USD · range ${fmt(lo, 0)}–${fmt(hi, 0)}`, true)];
+  if (r.capexIsbl !== null) k.push(kpi("of which ISBL", fmt(r.capexIsbl, 0), "MM USD, KBR ISBL curve"));
+  if (r.upliftUsd > 0) k.push(kpi("Double-PSA uplift", fmt(r.upliftUsd, 1), `MM USD (${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)})`));
+  k.push(kpi("Specific CAPEX", fmt(r.capex * 1e6 / r.h2t, 0), "USD per t/yr H₂ capacity"));
+  k.push(kpi("Capital charge", fmt(r.capCharge, 1), `MM USD/yr (CRF ${fmt(crf(I.rate, I.life) * 100, 2)} %)`));
+  $("capexKpis").innerHTML = k.join("");
+  drawCapexChart(I, r);
+  $("fitTable").innerHTML = `
+    <thead><tr><th>Curve</th><th>Data points (ktpa → MM USD)</th><th class="n">a</th><th class="n">b (exponent)</th><th class="n">R²</th><th>Basis</th></tr></thead>
+    <tbody>
+      <tr class="${r.ref === "kbr" ? "active" : ""}"><td>KBR total installed</td><td>${caps(KBR_TOTAL).map((c) => `${c} → ${fmt(KBR_TOTAL[c].v, 1)}${KBR_TOTAL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_KBR.a, 2)}</td><td class="n">${fmt(FIT_KBR.b, 3)}</td><td class="n">${fmt(FIT_KBR.r2, 4)}</td><td>12 ktpa stated (§4.2). *Derived from KBR's LCOH: (LCOH × H₂ − OPEX) ÷ CRF(8 %, 25 yr)</td></tr>
+      <tr><td>KBR ISBL only</td><td>${caps(KBR.isbl).map((c) => `${c} → ${KBR.isbl[c]}`).join(" · ")}</td><td class="n">${fmt(FIT_ISBL.a, 2)}</td><td class="n">${fmt(FIT_ISBL.b, 3)}</td><td class="n">${fmt(FIT_ISBL.r2, 4)}</td><td>Stated, KBR §4.1</td></tr>
+      <tr class="${r.ref === "duiker" ? "active" : ""}"><td>Duiker lump-sum turnkey</td><td>12 → ${fmt(DUIKER.capexEurM * I.fx, 1)} (€47M × ${fmt(I.fx, 4)})</td><td class="n">${fmt(DUIKER.capexEurM * I.fx / Math.pow(12, I.duikerExp), 2)}</td><td class="n">${fmt(I.duikerExp, 3)}</td><td class="n">—</td><td>One point; exponent borrowed (default = KBR total fit)</td></tr>
+    </tbody>`;
+  const osbl = caps(KBR_TOTAL).map((c) => `${c} ktpa ${fmt((KBR_TOTAL[c].v / KBR.isbl[c] - 1) * 100, 0)} %`).join(", ");
+  $("capexNote").innerHTML = `CAPEX = a × (H₂ ktpa)<sup>b</sup>, least-squares fit in log space. KBR's LCOH implies OSBL shrinks with scale (${osbl} of ISBL), matching KBR's note that OSBL "reduces for larger capacity"; the flat 55 % used elsewhere overstates OSBL above 24 ktpa. Duiker's €47M already includes buildings, civil works, EPC and the construction licence fee (Table 8). KBR excludes contingency, owner's costs, licence fees and royalties (§4.1).`;
 }
 
-function renderTollTable(active) {
-  const rows = TOLLING.map((t) => `
-    <tr class="${t.id === active.id ? "active" : ""}">
-      <td>${t.label}</td>
-      <td>${t.capacityMinKtpa}–${t.capacityMaxKtpa}</td>
-      <td>${fmt(t.tariffLow, 2)}–${fmt(t.tariffHigh, 2)}<br/><span class="src">${t.tariffUnit}</span></td>
-      <td>${fmt(t.ratioLow, 1)}–${fmt(t.ratioHigh, 1)}</td>
-      <td>${t.accuracy}</td>
-    </tr>`).join("");
-  $("tollTable").innerHTML = `
-    <thead><tr><th>Reference</th><th>H₂ capacity (ktpa)</th><th>Tariff</th><th>NH₃:H₂ (t/t)</th><th>Estimate class</th></tr></thead>
-    <tbody>${rows}</tbody>`;
+function drawCapexChart(I, r) {
+  const svg = $("capexChart");
+  const W = 760, H = 340, m = { l: 58, r: 150, t: 30, b: 44 };
+  const xmax = niceCeil(Math.max(100, I.cap * 1.15));
+  const dk = (x) => duikerCapexUsdM(x, I);
+  const ymax = niceCeil(Math.max(FIT_KBR.f(xmax), dk(xmax), r.capex) * 1.05);
+  const sx = (x) => m.l + x / xmax * (W - m.l - m.r);
+  const sy = (y) => H - m.b - y / ymax * (H - m.t - m.b);
+  let s = "";
+  const yt = 5;
+  for (let i = 0; i <= yt; i++) {
+    const v = ymax * i / yt, y = sy(v);
+    s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/><text class="tick" x="${m.l - 8}" y="${y + 4}" text-anchor="end">${fmt(v, 0)}</text>`;
+  }
+  const xt = 5;
+  for (let i = 0; i <= xt; i++) {
+    const v = xmax * i / xt, x = sx(v);
+    s += `<text class="tick" x="${x}" y="${H - m.b + 18}" text-anchor="middle">${fmt(v, 0)}</text>`;
+  }
+  s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${sy(0)}" y2="${sy(0)}"/>`;
+  s += `<text class="tick" x="${(m.l + W - m.r) / 2}" y="${H - 6}" text-anchor="middle">H₂ capacity, ktpa</text>`;
+  s += `<text class="tick" x="${m.l}" y="14" text-anchor="middle">MM USD</text>`;
+  const path = (f) => { let d = ""; for (let i = 0; i <= 90; i++) { const x = Math.max(1, xmax * i / 90); d += `${i ? "L" : "M"}${sx(x).toFixed(1)} ${sy(f(x)).toFixed(1)}`; } return d; };
+  const series = [
+    { f: FIT_KBR.f, c: "var(--s-kbr)", dash: "", name: "KBR total", key: "kbr" },
+    { f: FIT_ISBL.f, c: "var(--s-isbl)", dash: "", name: "KBR ISBL", key: "isbl" },
+    { f: dk, c: "var(--s-duiker)", dash: "6 4", name: "Duiker", key: "duiker" },
+  ];
+  for (const se of series) s += `<path d="${path(se.f)}" fill="none" stroke="${se.c}" stroke-width="${se.key === r.ref ? 2.5 : 2}" stroke-dasharray="${se.dash}" stroke-linecap="round"/>`;
+  const pt = (x, y, c, hollow) => `<circle cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${hollow ? "var(--bg2)" : c}" stroke="${hollow ? c : "var(--bg2)"}" stroke-width="2"/>`;
+  for (const c of caps(KBR.isbl)) s += pt(c, KBR.isbl[c], "var(--s-isbl)", false);
+  for (const c of caps(KBR_TOTAL)) s += pt(c, KBR_TOTAL[c].v, "var(--s-kbr)", !KBR_TOTAL[c].stated);
+  s += pt(12, DUIKER.capexEurM * I.fx, "var(--s-duiker)", false);
+  // end labels, nudged apart
+  const ends = series.map((se) => ({ y: sy(se.f(xmax)), se })).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 16) ends[i].y = ends[i - 1].y + 16;
+  for (const e of ends) s += `<line x1="${W - m.r + 6}" x2="${W - m.r + 18}" y1="${e.y}" y2="${e.y}" stroke="${e.se.c}" stroke-width="2.5"/><text class="lbl2" x="${W - m.r + 22}" y="${e.y + 4}">${e.se.name} ${fmt(e.se.f(xmax), 0)}</text>`;
+  // selected capacity
+  const xs = sx(I.cap);
+  s += `<line x1="${xs}" x2="${xs}" y1="${m.t}" y2="${sy(0)}" stroke="var(--text3)" stroke-dasharray="3 3"/>`;
+  s += `<circle cx="${xs}" cy="${sy(r.capex)}" r="6" fill="var(--text)" stroke="var(--bg2)" stroke-width="2"/>`;
+  const lx = xs + 10 > W - m.r - 120 ? xs - 10 : xs + 10, anchor = xs + 10 > W - m.r - 120 ? "end" : "start";
+  s += `<text class="lbl" x="${lx}" y="${Math.max(m.t + 12, sy(r.capex) - 10)}" text-anchor="${anchor}">${fmt(I.cap, 0)} ktpa → ${fmt(r.capex, 0)} MM USD</text>`;
+  s += `<rect id="capexHit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"/>`;
+  s += `<line id="capexCross" x1="0" x2="0" y1="${m.t}" y2="${sy(0)}" stroke="var(--text2)" stroke-width="1" visibility="hidden"/>`;
+  svg.innerHTML = s;
+  const hit = $("capexHit"), cross = $("capexCross"), tip = $("capexTip"), wrap = $("capexChartWrap");
+  hit.addEventListener("mousemove", (e) => {
+    const pt2 = svg.createSVGPoint(); pt2.x = e.clientX; pt2.y = e.clientY;
+    const p = pt2.matrixTransform(svg.getScreenCTM().inverse());
+    const x = Math.max(1, (p.x - m.l) / (W - m.l - m.r) * xmax);
+    cross.setAttribute("x1", sx(x)); cross.setAttribute("x2", sx(x)); cross.setAttribute("visibility", "visible");
+    tip.innerHTML = `<b>${fmt(x, 0)} ktpa H₂</b>` + series.map((se) => `<div class="row"><span class="sw" style="background:${se.c}"></span>${se.name}: ${fmt(se.f(x), 0)} MM USD</div>`).join("");
+    tip.classList.remove("hidden");
+    const wr = wrap.getBoundingClientRect();
+    let left = e.clientX - wr.left + wrap.scrollLeft + 14;
+    if (left + tip.offsetWidth > wrap.scrollWidth) left = e.clientX - wr.left + wrap.scrollLeft - tip.offsetWidth - 14;
+    tip.style.left = left + "px"; tip.style.top = (e.clientY - wr.top + 10) + "px";
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("visibility", "hidden"); tip.classList.add("hidden"); });
 }
 
+// ---------- OPEX ----------
+function renderOpex(I, r) {
+  $("opexSub").textContent = `${fmt(I.cap, 1)} ktpa · NH₃ ${fmt(I.pNh3, 0)} USD/t · power ${fmt(I.pEl, 0)} USD/MWh · NG ${fmt(I.pNg, 0)} USD/MWh`;
+  const perKg = (v) => v * 1e6 / (r.h2t * 1000);
+  $("opexKpis").innerHTML = [
+    kpi("OPEX", fmt(r.opexTotal, 1), `MM USD/yr · ${fmt(perKg(r.opexTotal), 2)} USD/kg H₂`, true),
+    kpi("Capital charge", fmt(r.capCharge, 1), `MM USD/yr · ${fmt(perKg(r.capCharge), 2)} USD/kg H₂`),
+    kpi("LCOH (cracking)", fmt(r.lcoh, 2), `USD/kg H₂ at ${fmt(I.rate * 100, 1)} %, ${fmt(I.life, 0)} yr`, true),
+  ].join("");
+  const rows = r.opex.map((o) => `<tr><td>${o.k}</td><td class="note">${o.d}</td><td class="n">${fmt(o.v, 2)}</td><td class="n">${fmt(perKg(o.v), 3)}</td><td class="n">${fmt(o.v / r.opexTotal * 100, 1)} %</td></tr>`).join("");
+  $("opexTable").innerHTML = `<thead><tr><th>Cost line</th><th>Basis</th><th class="n">MM USD/yr</th><th class="n">USD/kg H₂</th><th class="n">Share</th></tr></thead>
+    <tbody>${rows}<tr class="total"><td>Total OPEX</td><td></td><td class="n">${fmt(r.opexTotal, 2)}</td><td class="n">${fmt(perKg(r.opexTotal), 3)}</td><td class="n">100 %</td></tr>
+    <tr><td>Capital charge (CAPEX × CRF)</td><td class="note">${fmt(r.capex, 0)} MM USD × ${fmt(crf(I.rate, I.life), 4)}</td><td class="n">${fmt(r.capCharge, 2)}</td><td class="n">${fmt(perKg(r.capCharge), 3)}</td><td class="n"></td></tr>
+    <tr class="total"><td>LCOH (cracking only)</td><td></td><td class="n">${fmt(r.capCharge + r.opexTotal, 2)}</td><td class="n">${fmt(r.lcoh, 3)}</td><td class="n"></td></tr></tbody>`;
+
+  // Reconciliation against KBR's own LCOH at 12 ktpa NG100 on KBR's cost basis
+  const kI = { ...I, cap: 12, basis: "kbr", mode: "NG100", pNh3: 500, pEl: 140, pNg: 30, rate: 0.08, life: 25 };
+  const kr = model(kI);
+  const dev = (kr.lcoh / 4.90 - 1) * 100;
+  $("checkBox").innerHTML = `<div class="${Math.abs(dev) < 2 ? "ok" : "flag"}">Model check: KBR 12 ktpa NG100 on KBR's basis (NH₃ 500 USD/t, power 140, NG 30, 8 %, 25 yr) gives ${fmt(kr.lcoh, 2)} USD/kg against KBR's published 4.90 (${dev >= 0 ? "+" : ""}${fmt(dev, 1)} %).</div>`;
+  $("opexNote").innerHTML = `OPEX is rebuilt bottom-up from quantities × your prices. KBR fixed O&M comes from KBR's own OPEX tables: 6.9 MM USD at 12 ktpa (stated), and ${caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 1)} at ${c}`).join(", ")} ktpa (derived), so it barely scales with size. Duiker's €2.2M "utilities" line lumps electricity, fuel, nitrogen, instrument air and cooling water; electricity and fuel are priced here from quantities, and the nitrogen, instrument air and cooling water share is not separable and is left out.`;
+}
+
+// ---------- CI ----------
+function renderCi(r) {
+  const g = r.co2 * 8.33;
+  $("ciLine").innerHTML = `Selected case: direct CI <b>${fmt(r.co2, 2)} kgCO₂/kgH₂</b> ≈ ${fmt(g, 1)} gCO₂/MJ. Based on this indicative figure, the cracker's direct share alone would ${r.co2 < 4 ? "clear" : "not clear"} the KEEI 4.0 kgCO₂/kgH₂ threshold and use about ${fmt(g / 28.2 * 100, 0)} % of the ≈28.2 gCO₂e/MJ RFNBO ceiling before upstream ammonia is counted, subject to full certification.`;
+}
+
+// ---------- Sources ----------
+function renderSources() {
+  const rows = [
+    ["Heating values", "NH₃ 18.529, H₂ 119.42, NG 49.56 MJ/kg LHV", "Stated", "KBR I.E Feed & Product, Rev 0"],
+    ["NG emission factor", `${fmt(CO2_PER_KG_NG, 3)} kg CO₂/kg NG`, "Derived", "KBR I.E: 1,150 kg/h CO₂ ÷ 417.9 kg/h NG"],
+    ["KBR total CAPEX 24/68/80 ktpa", caps(KBR_TOTAL).filter((c) => !KBR_TOTAL[c].stated).map((c) => `${fmt(KBR_TOTAL[c].v, 1)} MM$`).join(" / "), "Derived", "KBR §4.2 LCOH & OPEX, CRF(8 %, 25 yr), 350 d/yr"],
+    ["KBR fixed O&M 24/68/80 ktpa", caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 2)} MM$/yr`).join(" / "), "Derived", "KBR §4.2 OPEX slope between NH₃ price points, less NG, power and consumables"],
+    ["KBR other consumables", `${fmt(KBR.consumablesUsdPerT, 1)} USD/t H₂`, "Derived", "0.4 MM$/yr at 12 ktpa, KBR §4.2 note 3"],
+    ["Duiker NH₃-fired ratio", "7.03 t/t used", "Discrepancy", "Duiker Tables 1 & 7 say 7.03; §3 text says 7.05 @ 90.9 %. The cracker workbook data.py uses 7.05"],
+    ["Duiker construction licence fee", "Included in €47M", "Discrepancy", "Duiker Table 8 and §4.2 fold the adjusted fee into CAPEX; data.py treats €2.7M as additive"],
+    ["Duiker NG-fired fuel", `${fmt(DUIKER.modes.NG.ngMJ, 2)} MJ/kg H₂`, "Derived", "0.21 kg CO₂/kg H₂ (Duiker §3.11.2) ÷ KBR NG emission factor. Duiker's 90.6 % efficiency implies ≈4.4 MJ"],
+    ["Duiker CAPEX exponent", "0.44 default", "Assumption", "Borrowed from the KBR total-CAPEX fit; editable"],
+    ["Duiker fixed O&M scaling", `exponent ${fmt(FIT_FIXED.b, 3)}`, "Assumption", "Borrowed from the KBR fixed-cost fit"],
+    ["Custom pathways", "5.66 stoich, 1.54 firing; feed 7.2 / 6.5 / 5.7", "Given", "Gentari process basis. 5.66 uses rounded molar masses (exact: 5.63)"],
+    ["Custom tail gas 0.84", "implies 87.1 % PSA recovery", "Discrepancy", "Earlier Gentari basis said 88 % (tail gas 0.77); the 0.07 difference can be read as NH₃ slip"],
+    ["Double-PSA uplift", "10 % default", "Assumption", "Gentari input; not from a licensor quote"],
+    ["Maximum-NG power", "KBR NG100 or Duiker figure", "Assumption", "No licensor data for a double-PSA configuration"],
+    ["FX", "1.1448 USD/EUR default", "Assumption", "ECB reference rate 3 Jul 2026, as in the cracker workbook"],
+  ];
+  $("srcTable").innerHTML = `<thead><tr><th>Item</th><th>Value</th><th>Status</th><th>Source / derivation</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td class="note">${x[3]}</td></tr>`).join("")}</tbody>`;
+}
+
+// ---------- Tolling ----------
+function populateTollingSelect() { $("inTolling").innerHTML = TOLLING.map((t) => `<option value="${t.id}">${t.label}</option>`).join(""); }
+function selectedTolling() { return TOLLING.find((t) => t.id === $("inTolling").value) || TOLLING[0]; }
 function recalcToll() {
   const h2Ktpa = num($("inH2KtpaToll").value, 0);
   const t = selectedTolling();
   const ratioMid = (t.ratioLow + t.ratioHigh) / 2;
   const nh3Ktpa = h2Ktpa * ratioMid;
-  const tariffMid = (t.tariffLow + t.tariffHigh) / 2;
-
   $("tollSub").textContent = t.label;
-  $("tollKpis").innerHTML = `
-    <div class="kpi"><div class="l">Required NH₃ feed</div><div class="v">${fmt(nh3Ktpa, 1)}</div><div class="u">ktpa (midpoint ratio)</div></div>
-    <div class="kpi"><div class="l">NH₃:H₂ ratio range</div><div class="v" style="font-size:16px;">${fmt(t.ratioLow, 1)}–${fmt(t.ratioHigh, 1)}</div><div class="u">t NH₃ / t H₂</div></div>
-    <div class="kpi"><div class="l">Tolling tariff range</div><div class="v" style="font-size:15px;">${fmt(t.tariffLow, 2)}–${fmt(t.tariffHigh, 2)}</div><div class="u">${t.tariffUnit}</div></div>
-    <div class="kpi"><div class="l">Contract capacity</div><div class="v" style="font-size:16px;">${t.capacityMinKtpa}–${t.capacityMaxKtpa}</div><div class="u">ktpa H₂</div></div>
-  `;
+  $("tollKpis").innerHTML = [
+    kpi("Required NH₃ feed", fmt(nh3Ktpa, 1), "ktpa (midpoint ratio)", true),
+    kpi("NH₃ : H₂ ratio range", `${fmt(t.ratioLow, 1)}–${fmt(t.ratioHigh, 1)}`, "t NH₃ / t H₂"),
+    kpi("Tolling tariff range", `${fmt(t.tariffLow, 2)}–${fmt(t.tariffHigh, 2)}`, t.tariffUnit),
+    kpi("Contract capacity", `${t.capacityMinKtpa}–${t.capacityMaxKtpa}`, "ktpa H₂"),
+  ].join("");
   $("tollNote").innerHTML = `${t.note}<br/><b>Term:</b> ${t.term} · <b>Accuracy:</b> ${t.accuracy}<br/><span class="src">Source: ${t.source}</span>`;
-  renderTollTable(t);
+  $("tollTable").innerHTML = `<thead><tr><th>Reference</th><th>H₂ capacity (ktpa)</th><th>Tariff</th><th>NH₃:H₂ (t/t)</th><th>Estimate class</th></tr></thead><tbody>${TOLLING.map((x) => `
+    <tr class="${x.id === t.id ? "active" : ""}"><td>${x.label}</td><td>${x.capacityMinKtpa}–${x.capacityMaxKtpa}</td><td>${fmt(x.tariffLow, 2)}–${fmt(x.tariffHigh, 2)}<br/><span class="src">${x.tariffUnit}</span></td><td>${fmt(x.ratioLow, 1)}–${fmt(x.ratioHigh, 1)}</td><td>${x.accuracy}</td></tr>`).join("")}</tbody>`;
+  $("ciLine").textContent = "Tolling route: carbon intensity depends on the operator's fuel mode, which the tolling packages leave open.";
   $("linkStatusToll").textContent = "";
-  return { h2Ktpa, nh3Ktpa, t, tariffMid };
+  return { h2Ktpa, nh3Ktpa, t };
 }
 
 function setRoute(route) {
   $("ownInputs").classList.toggle("hidden", route !== "own");
   $("tollInputs").classList.toggle("hidden", route !== "toll");
-  $("ownResultsPanel").classList.toggle("hidden", route !== "own");
-  $("tollResultsPanel").classList.toggle("hidden", route !== "toll");
+  $("ownPanels").classList.toggle("hidden", route !== "own");
+  $("tollPanels").classList.toggle("hidden", route !== "toll");
   if (route === "own") recalc(); else recalcToll();
 }
 
+// ---------- Link to storage ----------
 const LINK_KEY = "gentari.link.crackerToStorage.v1";
+function writeLink(payload) { try { localStorage.setItem(LINK_KEY, JSON.stringify(payload)); return true; } catch (e) { return false; } }
 $("btnLink").addEventListener("click", () => {
-  const { h2Ktpa, nh3Ktpa, c } = recalc();
-  const payload = { throughputKtpa: nh3Ktpa, h2OutputKtpa: h2Ktpa, licensor: c.licensor, fuelMode: c.label, ts: Date.now() };
-  try { localStorage.setItem(LINK_KEY, JSON.stringify(payload)); } catch (e) {}
-  $("linkStatus").innerHTML = `Linked. Open <a href="nh3-storage-design.html">NH₃ Storage Design</a> — it will offer to apply ${fmt(nh3Ktpa, 1)} ktpa as its demand throughput.`;
+  const r = recalc(), I = inputs();
+  const ok = writeLink({ throughputKtpa: r.nh3t / 1000, h2OutputKtpa: I.cap, licensor: r.basisLabel, fuelMode: r.modeLabel, ts: Date.now() });
+  $("linkStatus").innerHTML = ok ? `Linked. Open <a href="nh3-storage-design.html">NH₃ Storage Design</a>; it will offer to apply ${fmt(r.nh3t / 1000, 1)} ktpa as its demand throughput.` : "Could not save the link: browser storage is blocked.";
 });
 $("btnLinkToll").addEventListener("click", () => {
   const { h2Ktpa, nh3Ktpa, t } = recalcToll();
-  const payload = { throughputKtpa: nh3Ktpa, h2OutputKtpa: h2Ktpa, licensor: t.label, fuelMode: "Tolling reference (midpoint ratio)", ts: Date.now() };
-  try { localStorage.setItem(LINK_KEY, JSON.stringify(payload)); } catch (e) {}
-  $("linkStatusToll").innerHTML = `Linked. Open <a href="nh3-storage-design.html">NH₃ Storage Design</a> — it will offer to apply ${fmt(nh3Ktpa, 1)} ktpa as its demand throughput.`;
+  const ok = writeLink({ throughputKtpa: nh3Ktpa, h2OutputKtpa: h2Ktpa, licensor: t.label, fuelMode: "Tolling reference (midpoint ratio)", ts: Date.now() });
+  $("linkStatusToll").innerHTML = ok ? `Linked. Open <a href="nh3-storage-design.html">NH₃ Storage Design</a>; it will offer to apply ${fmt(nh3Ktpa, 1)} ktpa as its demand throughput.` : "Could not save the link: browser storage is blocked.";
 });
 
+// ---------- Wiring ----------
 $("inRoute").addEventListener("change", (e) => setRoute(e.target.value));
-$("inH2Ktpa").addEventListener("input", recalc);
-$("inCase").addEventListener("change", recalc);
-$("inAmmoniaPrice").addEventListener("change", recalc);
+$("inBasis").addEventListener("change", () => { populateModes(); recalc(); });
+["inMode", "inRef"].forEach((id) => $(id).addEventListener("change", recalc));
+["inCap", "inDays", "inPsaUplift", "inPNh3", "inPEl", "inPNg", "inFx", "inRate", "inLife", "inDuikerExp"].forEach((id) => $(id).addEventListener("input", recalc));
 $("inH2KtpaToll").addEventListener("input", recalcToll);
 $("inTolling").addEventListener("change", recalcToll);
+document.querySelectorAll(".seg button[data-path]").forEach((b) => b.addEventListener("click", () => setBfd(b.dataset.path, false)));
+
+const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inH2KtpaToll: 70 };
 $("btnReset").addEventListener("click", () => {
-  $("inRoute").value = "own";
-  $("inH2Ktpa").value = 12;
-  $("inCase").value = CASES[0].id;
-  $("inAmmoniaPrice").value = 950;
-  $("inH2KtpaToll").value = 70;
+  for (const [k, v] of Object.entries(DEFAULTS)) $(k).value = v;
+  $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
+  populateModes(); $("inMode").value = "NG100";
   $("inTolling").value = TOLLING[0].id;
+  setBfd("cf", true);
   setRoute("own");
 });
 
-// Theme
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
   $("themeLabel").textContent = t === "light" ? "Light" : "Dark";
@@ -585,8 +1018,10 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
 (function init() {
   let t = "light"; try { t = localStorage.getItem("nh3CrackerThemeV2") || "light"; } catch (e) {}
   applyTheme(t);
-  populateCaseSelect();
+  $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
+  populateModes();
   populateTollingSelect();
+  setBfd("cf", true);
   setRoute("own");
 })();
 </script>
