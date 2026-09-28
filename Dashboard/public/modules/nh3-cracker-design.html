@@ -124,6 +124,11 @@
       below to send that required NH₃ throughput straight into the <a href="nh3-storage-design.html">NH₃ Storage Design</a>
       module's demand input, so the terminal is sized against the cracker's actual offtake rather
       than a manually re-typed number.</p>
+      <p>Choose a <b>commercial route</b> below: <b>Own &amp; Operate</b> compares a licensed unit's
+      CAPEX, OPEX and LCOH by licensor case (KBR H2ACT at 4 capacities × 3 ammonia price points;
+      Duiker AHC's lump-sum CAPEX/OPEX; Casale MACH2, technical-only, no cost data); or
+      <b>Tolling / offtake</b> compares indicative storage-and-cracking-as-a-service tariffs
+      (Vopak/Linde Antwerp LoI, VTTI Rotterdam/Antwerp Amplifhy) where you never own the CAPEX.</p>
       <p class="src">Licensor KPIs imported from Gentari's ammonia-cracking technology workstream
       (Licensor/ technical packages, Rev. dates as noted per card) — see the No-Fabrication note
       at the bottom of this page.</p>
@@ -177,7 +182,15 @@
   <div class="panel">
     <div class="panel-h"><span class="t">Cracker sizing inputs</span></div>
     <div class="panel-b" style="display:grid;gap:14px;">
-      <div class="row2">
+      <div class="field">
+        <label>Commercial route</label>
+        <select id="inRoute">
+          <option value="own">Own &amp; Operate — licensed unit (CAPEX/OPEX + licensor fees)</option>
+          <option value="toll">Tolling / offtake — storage + cracking as a service</option>
+        </select>
+      </div>
+
+      <div id="ownInputs" class="row3">
         <div class="field">
           <label>Required H₂ delivery <span class="hint">ktpa</span></label>
           <input type="number" step="1" min="0.1" id="inH2Ktpa" value="12"/>
@@ -186,16 +199,39 @@
           <label>Licensor / fuel mode</label>
           <select id="inCase"></select>
         </div>
+        <div class="field">
+          <label>Ammonia price <span class="hint">USD/t, for OPEX/LCOH — KBR only</span></label>
+          <select id="inAmmoniaPrice">
+            <option value="500">500</option>
+            <option value="950" selected>950</option>
+            <option value="1100">1100</option>
+          </select>
+        </div>
       </div>
+
+      <div id="tollInputs" class="row2 hidden">
+        <div class="field">
+          <label>Required H₂ delivery <span class="hint">ktpa</span></label>
+          <input type="number" step="1" min="0.1" id="inH2KtpaToll" value="70"/>
+        </div>
+        <div class="field">
+          <label>Tolling reference</label>
+          <select id="inTolling"></select>
+        </div>
+      </div>
+
       <p class="note" id="caseNote"></p>
     </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="ownResultsPanel">
     <div class="panel-h"><span class="t">Results</span><span class="s" id="resultSub"></span></div>
     <div class="panel-b" style="display:grid;gap:14px;">
       <div class="kpis" id="kpis"></div>
       <div class="flag hidden" id="flagBox"></div>
+
+      <div class="kpis" id="costKpis"></div>
+      <p class="note" id="costNote"></p>
 
       <div class="link-box">
         <div class="txt">
@@ -209,10 +245,38 @@
     </div>
   </div>
 
+  <div class="panel hidden" id="tollResultsPanel">
+    <div class="panel-h"><span class="t">Tolling tariff — indicative</span><span class="s" id="tollSub"></span></div>
+    <div class="panel-b" style="display:grid;gap:14px;">
+      <div class="kpis" id="tollKpis"></div>
+      <p class="note" id="tollNote"></p>
+      <div class="link-box">
+        <div class="txt">
+          <b>Link this cracker to a storage/receiving terminal.</b> Sends the required NH₃ feed
+          (ktpa, midpoint of the tolling reference's stated consumption range) into the NH₃
+          Storage Design module as its downstream demand.
+        </div>
+        <button class="icon-btn primary" id="btnLinkToll">🔗 Link model to storage</button>
+      </div>
+      <p class="note" id="linkStatusToll"></p>
+    </div>
+  </div>
+
   <div class="panel">
     <div class="panel-h"><span class="t">Licensor case comparison</span></div>
     <div class="panel-b">
       <table class="dt" id="caseTable"></table>
+      <p class="note">CAPEX is Total Installed Cost (ISBL+OSBL for KBR; single lump-sum for Duiker).
+      OPEX and LCOH are shown at the selected ammonia price point above (KBR only — KBR publishes
+      OPEX/LCOH at 3 ammonia price points; Duiker and Casale do not vary by price point in their
+      packages). "—" means not disclosed in the source package, not zero.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><span class="t">Tolling reference comparison</span></div>
+    <div class="panel-b">
+      <table class="dt" id="tollTable"></table>
     </div>
   </div>
 
@@ -238,15 +302,18 @@
   <div class="panel">
     <div class="panel-h"><span class="t">No-fabrication note</span></div>
     <div class="panel-b">
-      <p style="color:var(--text2);font-size:12.5px;">All licensor KPI figures above (NH₃:H₂
-      ratio, energy efficiency, H₂ purity, CI, footprint) are carried over verbatim from the
-      corresponding technical package in the <code>Gentari-ammoniacracker</code> repository's
-      <code>Licensor/</code> folder and its <code>tools/cracker_model/data.py</code> single
-      source-of-truth, each with its own citation and revision date. Figures marked "technical-only"
-      or "not disclosed" (e.g. Casale CAPEX/OPEX) are intentionally left blank rather than
-      estimated. Cost estimates elsewhere in that workstream are Class III–V (±40–50%) and
-      indicative/non-binding — carry that qualifier forward if you extend this tool with cost
-      outputs.</p>
+      <p style="color:var(--text2);font-size:12.5px;">All licensor and tolling figures above (NH₃:H₂
+      ratio, energy efficiency, H₂ purity, CI, CAPEX, OPEX, LCOH, tolling tariffs) are carried over
+      verbatim from the corresponding technical or commercial package in the
+      <code>Gentari-ammoniacracker</code> repository's <code>Licensor/</code> and <code>tolling/</code>
+      folders and its <code>tools/cracker_model/data.py</code> single source-of-truth, each with its
+      own citation and revision date (see the source line under each result). Figures marked
+      "technical-only" or "not disclosed" (Casale CAPEX/OPEX) are intentionally left blank rather
+      than estimated. The one non-cited figure is KBR's OSBL = 55% of ISBL, explicitly flagged as an
+      <b>assumption</b> (confirmed only at the 12 ktpa point, applied flat elsewhere for lack of a
+      second data point). All cost figures are Class III–V (±40–50%) estimates and
+      indicative/non-binding — several (Vopak, VTTI) are pre-FEED Letters of Intent / Commercial
+      Information Packages, not firm quotes.</p>
     </div>
   </div>
 
@@ -257,20 +324,73 @@
 //   DATA — imported from Gentari-ammoniacracker/tools/cracker_model/data.py
 //   Each row cites its source document + revision date (see cards above).
 // ═══════════════════════════════════════════════════════════════
+// KBR ISBL CAPEX (MM USD, Class V +/-50%, Q3 2025) and the OSBL~=55%-of-ISBL
+// assumption (confirmed only at 12 ktpa; applied flat to the other capacities
+// per the source's own note that it "reduces for larger capacity" with no
+// second data point given). Both from data.py / KBR §4.1.
+const KBR_ISBL_CAPEX_MUSD = { 12: 78, 24: 110, 68: 191, 80: 209 };
+const KBR_OSBL_PCT_OF_ISBL = 0.55; // ASSUMPTION — see note above
+function kbrCapex(capacityKtpa) {
+  const isbl = KBR_ISBL_CAPEX_MUSD[capacityKtpa];
+  if (!isbl) return null;
+  const total = isbl * (1 + KBR_OSBL_PCT_OF_ISBL);
+  return { isbl, osblPct: KBR_OSBL_PCT_OF_ISBL, total, currency: "MM USD", accuracy: "Class V, ±50%, Q3 2025" };
+}
+
 const CASES = [
-  { id: "kbr-12-ng100", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 100% Natural Gas", capacityKtpa: 12, ratio: 6.40, eff: 89.5, purity: 99.97, ci: 0.81, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-12-ng50", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 50/50 NG-NH₃", capacityKtpa: 12, ratio: 6.74, eff: 89.0, purity: 99.97, ci: 0.45, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-12-cf100", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 100% Clean Fuel", capacityKtpa: 12, ratio: 7.22, eff: 88.4, purity: 99.97, ci: 0.00, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-24-ng100", licensor: "KBR H2ACT", label: "KBR · 24 ktpa · 100% Natural Gas", capacityKtpa: 24, ratio: 6.35, eff: 89.6, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-68-ng100", licensor: "KBR H2ACT", label: "KBR · 68 ktpa · 100% Natural Gas", capacityKtpa: 68, ratio: 6.35, eff: 89.8, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-80-ng100", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 100% Natural Gas", capacityKtpa: 80, ratio: 6.35, eff: 89.8, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-80-ng50", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 50/50 NG-NH₃", capacityKtpa: 80, ratio: 6.72, eff: 89.3, purity: 99.97, ci: 0.45, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "kbr-80-cf100", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 100% Clean Fuel", capacityKtpa: 80, ratio: 7.20, eff: 88.7, purity: 99.97, ci: 0.00, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table, Rev 0, 23 Dec 2025" },
-  { id: "casale-self", licensor: "Casale MACH2", label: "Casale · Self-Sustaining scheme", capacityKtpa: null, ratio: 7.2, eff: 89, purity: 99.999, ci: 0, ciUnit: "kgCO2/kgH2", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025" },
-  { id: "casale-low", licensor: "Casale MACH2", label: "Casale · Low-Carbon scheme", capacityKtpa: null, ratio: 6.4, eff: 90, purity: 99.999, ci: 0.3, ciUnit: "kgCO2/kgH2 (up to)", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025" },
-  { id: "casale-max", licensor: "Casale MACH2", label: "Casale · Maximum Fuel Source scheme", capacityKtpa: null, ratio: 6.4, eff: 90, purity: 99.999, ci: 1.2, ciUnit: "kgCO2/kgH2 (>)", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025" },
-  { id: "duiker-nh3", licensor: "Duiker AHC", label: "Duiker · 12 ktpa · NH₃-fired", capacityKtpa: 12, ratio: 7.05, eff: 90, purity: 99.97, ci: 0, ciUnit: "kgCO2/kgH2", note: "Duiker §3.x, 05 Dec 2025 (Budgetary Proposal 122380); @90.9% enthalpy eff." },
-  { id: "duiker-ng", licensor: "Duiker AHC", label: "Duiker · 12 ktpa · NG-fired", capacityKtpa: 12, ratio: 6.83, eff: 90, purity: 99.97, ci: 0.21, ciUnit: "kgCO2/kgH2", note: "Duiker §3.x, 05 Dec 2025 (Budgetary Proposal 122380); @90.6% enthalpy eff." },
+  { id: "kbr-12-ng100", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 100% Natural Gas", capacityKtpa: 12, ratio: 6.40, eff: 89.5, purity: 99.97, ci: 0.81, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 47.5, 950: 81.8, 1100: 93.2 }, lcoh: { 500: 4.90, 950: 7.76, 1100: 8.71 } },
+  { id: "kbr-12-ng50", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 50/50 NG-NH₃", capacityKtpa: 12, ratio: 6.74, eff: 89.0, purity: 99.97, ci: 0.45, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 49.2, 950: 85.6, 1100: 97.8 }, lcoh: { 500: 5.04, 950: 8.08, 1100: 9.09 } },
+  { id: "kbr-12-cf100", licensor: "KBR H2ACT", label: "KBR · 12 ktpa · 100% Clean Fuel", capacityKtpa: 12, ratio: 7.22, eff: 88.4, purity: 99.97, ci: 0.00, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 51.3, 950: 90.3, 1100: 103.3 }, lcoh: { 500: 5.22, 950: 8.47, 1100: 9.55 } },
+  { id: "kbr-24-ng100", licensor: "KBR H2ACT", label: "KBR · 24 ktpa · 100% Natural Gas", capacityKtpa: 24, ratio: 6.35, eff: 89.6, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 89.3, 950: 157.9, 1100: 180.8 }, lcoh: { 500: 4.36, 950: 7.22, 1100: 8.17 } },
+  { id: "kbr-68-ng100", licensor: "KBR H2ACT", label: "KBR · 68 ktpa · 100% Natural Gas", capacityKtpa: 68, ratio: 6.35, eff: 89.8, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 237.7, 950: 432.1, 1100: 496.8 }, lcoh: { 500: 3.85, 950: 6.71, 1100: 7.66 } },
+  { id: "kbr-80-ng100", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 100% Natural Gas", capacityKtpa: 80, ratio: 6.35, eff: 89.8, purity: 99.97, ci: 0.80, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 278.4, 950: 507.1, 1100: 583.3 }, lcoh: { 500: 3.81, 950: 6.67, 1100: 7.62 } },
+  { id: "kbr-80-ng50", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 50/50 NG-NH₃", capacityKtpa: 80, ratio: 6.72, eff: 89.3, purity: 99.97, ci: 0.45, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 274.1, 950: 502.7, 1100: 578.9 }, lcoh: { 500: 3.76, 950: 6.61, 1100: 7.57 } },
+  { id: "kbr-80-cf100", licensor: "KBR H2ACT", label: "KBR · 80 ktpa · 100% Clean Fuel", capacityKtpa: 80, ratio: 7.20, eff: 88.7, purity: 99.97, ci: 0.00, ciUnit: "kgCO2/kgH2", note: "KBR §3.3 KPI table / §4.2 OPEX table, Rev 0, 23 Dec 2025", opex: { 500: 302.8, 950: 562.0, 1100: 648.4 }, lcoh: { 500: 4.11, 950: 7.35, 1100: 8.43 } },
+  { id: "casale-self", licensor: "Casale MACH2", label: "Casale · Self-Sustaining scheme", capacityKtpa: null, ratio: 7.2, eff: 89, purity: 99.999, ci: 0, ciUnit: "kgCO2/kgH2", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025", noCost: "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX disclosed for any scheme." },
+  { id: "casale-low", licensor: "Casale MACH2", label: "Casale · Low-Carbon scheme", capacityKtpa: null, ratio: 6.4, eff: 90, purity: 99.999, ci: 0.3, ciUnit: "kgCO2/kgH2 (up to)", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025", noCost: "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX disclosed for any scheme." },
+  { id: "casale-max", licensor: "Casale MACH2", label: "Casale · Maximum Fuel Source scheme", capacityKtpa: null, ratio: 6.4, eff: 90, purity: 99.999, ci: 1.2, ciUnit: "kgCO2/kgH2 (>)", note: "Casale §3 Table 1 (MACH2 KPI), Rev.00, 05 Dec 2025", noCost: "Casale's Dec-2025 package is technical-only — no CAPEX/OPEX disclosed for any scheme." },
+  { id: "duiker-nh3", licensor: "Duiker AHC", label: "Duiker · 12 ktpa · NH₃-fired", capacityKtpa: 12, ratio: 7.05, eff: 90, purity: 99.97, ci: 0, ciUnit: "kgCO2/kgH2", note: "Duiker §3.x / §4.1-4.3, 05 Dec 2025 (Budgetary Proposal 122380); @90.9% enthalpy eff.",
+    duikerCapexEurM: 47, duikerOpexEurMPerYr: 2.9, duikerLicenseConstructionEur: 2_700_000, duikerLicenseOperationEurPerTH2: 8.50, duikerAccuracy: "±40%" },
+  { id: "duiker-ng", licensor: "Duiker AHC", label: "Duiker · 12 ktpa · NG-fired", capacityKtpa: 12, ratio: 6.83, eff: 90, purity: 99.97, ci: 0.21, ciUnit: "kgCO2/kgH2", note: "Duiker §3.x / §4.1-4.3, 05 Dec 2025 (Budgetary Proposal 122380); @90.6% enthalpy eff.",
+    duikerCapexEurM: 47, duikerOpexEurMPerYr: 2.9, duikerLicenseConstructionEur: 2_700_000, duikerLicenseOperationEurPerTH2: 8.50, duikerAccuracy: "±40%" },
+];
+
+// Tolling / offtake references — storage + cracking as a service, no owned
+// CAPEX for the customer; commercial packages only, not licensor KPI sheets.
+const TOLLING = [
+  {
+    id: "vopak",
+    label: "Vopak Energy Park Antwerp (Linde cracker) — LoI",
+    capacityMinKtpa: 35, capacityMaxKtpa: 120,
+    tariffLow: 0.50, tariffHigh: 1.00, tariffUnit: "EUR/kg H2 (tolling fee, excl. passthrough)",
+    ratioLow: 6, ratioHigh: 7,
+    term: "15–20 years, Take-or-Pay, Monthly tolling fee, indexed",
+    accuracy: "AACE Class 5 (non-binding)",
+    note: "Tariff fixed on booked H2 throughput capacity. Energy/fuel/utility variable OPEX passed through separately (ammonia feed 6–7 t/t H2, ammonia or NG fuel, power 0.5–1 MW/t H2 basis). Excludes governmental/environmental taxes.",
+    source: "tolling/vopak/Vopak_Cracker_Tolling_Fee.md, LoI effective 20 Aug 2025",
+  },
+  {
+    id: "vtti-toponly",
+    label: "VTTI Rotterdam/Antwerp (Amplifhy) — take-or-pay only",
+    capacityMinKtpa: 70, capacityMaxKtpa: 140,
+    tariffLow: 1.15, tariffHigh: 1.67, tariffUnit: "EUR/kg H2 (ToP only, excl. variable passthrough & conversion loss)",
+    ratioLow: 6.3, ratioHigh: 7.3,
+    term: "Not stated in this excerpt of the Commercial Info Package",
+    accuracy: "Pre-FEED, indicative, upper bound includes contingency",
+    note: "140 ktpa or 70 ktpa H2 cracker capacity options under evaluation. Ratio 6.3–6.5 t/t with max natural-gas firing, 7.1–7.3 t/t with max green-ammonia firing.",
+    source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025",
+  },
+  {
+    id: "vtti-total",
+    label: "VTTI Rotterdam/Antwerp (Amplifhy) — ToP + variable passthrough",
+    capacityMinKtpa: 70, capacityMaxKtpa: 140,
+    tariffLow: 1.58, tariffHigh: 2.21, tariffUnit: "EUR/kg H2 (ToP + estimated variable passthrough, excl. conversion loss)",
+    ratioLow: 6.3, ratioHigh: 7.3,
+    term: "Not stated in this excerpt of the Commercial Info Package",
+    accuracy: "Pre-FEED, indicative, upper bound includes contingency",
+    note: "Same capacity/ratio basis as the ToP-only row above; this row folds in current variable cost-passthrough assumptions.",
+    source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -280,15 +400,54 @@ const fmt = (v, d = 2) => Number.isFinite(v) ? v.toLocaleString(undefined, { min
 function populateCaseSelect() {
   $("inCase").innerHTML = CASES.map((c) => `<option value="${c.id}">${c.label}</option>`).join("");
 }
+function populateTollingSelect() {
+  $("inTolling").innerHTML = TOLLING.map((t) => `<option value="${t.id}">${t.label}</option>`).join("");
+}
 
 function selectedCase() {
   return CASES.find((c) => c.id === $("inCase").value) || CASES[0];
+}
+function selectedTolling() {
+  return TOLLING.find((t) => t.id === $("inTolling").value) || TOLLING[0];
+}
+
+function costFor(c, priceUsd) {
+  // Returns { capexLine, opexLine, lcohLine, flag } given a licensor case
+  // and the selected ammonia price point (only KBR's OPEX/LCOH vary by it).
+  if (c.licensor === "KBR H2ACT") {
+    const capex = kbrCapex(c.capacityKtpa);
+    const opex = c.opex ? c.opex[priceUsd] : undefined;
+    const lcoh = c.lcoh ? c.lcoh[priceUsd] : undefined;
+    return {
+      capex: capex ? `${fmt(capex.total, 0)} MM USD` : "—",
+      capexDetail: capex ? `ISBL ${fmt(capex.isbl, 0)} + OSBL ${fmt(capex.total - capex.isbl, 0)} (${(capex.osblPct * 100).toFixed(0)}% of ISBL, assumption) · ${capex.accuracy}` : "Not disclosed",
+      opex: opex !== undefined ? `${fmt(opex, 1)} MM USD/yr` : "—",
+      lcoh: lcoh !== undefined ? `${fmt(lcoh, 2)} USD/kg H₂` : "—",
+      note: `CAPEX: KBR §4.1 (Class V, ±50%, Q3 2025). OPEX/LCOH at ${priceUsd} USD/t NH₃: KBR §4.2 (own cost-assumption base case, distinct from the price you'd actually pay). OSBL is Gentari's flat 55%-of-ISBL assumption, confirmed only at the 12 ktpa point.`,
+    };
+  }
+  if (c.licensor === "Duiker AHC") {
+    const opexPerTH2 = (c.duikerOpexEurMPerYr * 1e6) / (c.capacityKtpa * 1000);
+    return {
+      capex: `${fmt(c.duikerCapexEurM, 0)} MM EUR`,
+      capexDetail: `Lump-sum Total Installed Cost (equipment + buildings/civil, incl. engineering/EPC), ${c.duikerAccuracy}. Plus one-off construction license fee ${fmt(c.duikerLicenseConstructionEur / 1e6, 2)} MM EUR.`,
+      opex: `${fmt(c.duikerOpexEurMPerYr, 1)} MM EUR/yr`,
+      lcoh: `— (not an LCOH; ≈ ${fmt(opexPerTH2, 0)} EUR/t H₂ OPEX + ${fmt(c.duikerLicenseOperationEurPerTH2, 2)} EUR/t H₂ operation license fee)`,
+      note: `Duiker §4.1–4.2 (Budgetary Proposal 122380, 05 Dec 2025), ${c.duikerAccuracy}. Cost basis: ammonia 600 EUR/t, electricity 100 EUR/MWh. No discounted LCOH published — shown as OPEX intensity instead of fabricating a discount-rate assumption.`,
+    };
+  }
+  return {
+    capex: "—", capexDetail: c.noCost || "Not disclosed", opex: "—", lcoh: "—",
+    note: c.noCost || "No cost data disclosed for this case.",
+  };
 }
 
 function recalc() {
   const h2Ktpa = num($("inH2Ktpa").value, 0);
   const c = selectedCase();
+  const priceUsd = num($("inAmmoniaPrice").value, 950);
   const nh3Ktpa = h2Ktpa * c.ratio;
+  const cost = costFor(c, priceUsd);
 
   $("resultSub").textContent = c.label;
   $("caseNote").textContent = `Source: ${c.note}${c.capacityKtpa ? ` — licensor dataset point closest to ${c.capacityKtpa} ktpa H₂` : " — capacity-independent ratio as published"}`;
@@ -300,6 +459,12 @@ function recalc() {
     <div class="kpi"><div class="l">H₂ purity</div><div class="v">${fmt(c.purity, c.purity >= 99.99 ? 3 : 2)}</div><div class="u">mol%</div></div>
     <div class="kpi"><div class="l">Direct carbon intensity</div><div class="v">${fmt(c.ci, 2)}</div><div class="u">${c.ciUnit}</div></div>
   `;
+  $("costKpis").innerHTML = `
+    <div class="kpi"><div class="l">CAPEX (Total Installed)</div><div class="v" style="font-size:16px;">${cost.capex}</div></div>
+    <div class="kpi"><div class="l">OPEX</div><div class="v" style="font-size:16px;">${cost.opex}</div></div>
+    <div class="kpi"><div class="l">LCOH</div><div class="v" style="font-size:16px;">${cost.lcoh}</div></div>
+  `;
+  $("costNote").innerHTML = `${cost.capexDetail}<br/>${cost.note}`;
 
   const flagBox = $("flagBox");
   if (c.licensor.startsWith("Casale")) {
@@ -309,23 +474,73 @@ function recalc() {
     flagBox.classList.add("hidden");
   }
 
-  renderCaseTable(c);
+  $("inAmmoniaPrice").disabled = c.licensor !== "KBR H2ACT";
+
+  renderCaseTable(c, priceUsd);
   $("linkStatus").textContent = "";
   return { h2Ktpa, nh3Ktpa, c };
 }
 
-function renderCaseTable(active) {
-  const rows = CASES.map((c) => `
+function renderCaseTable(active, priceUsd) {
+  const rows = CASES.map((c) => {
+    const cost = costFor(c, priceUsd);
+    return `
     <tr class="${c.id === active.id ? "active" : ""}">
       <td>${c.label}</td>
       <td>${fmt(c.ratio, 2)}</td>
       <td>${fmt(c.eff, 1)}</td>
       <td>${fmt(c.purity, c.purity >= 99.99 ? 3 : 2)}</td>
       <td>${fmt(c.ci, 2)} ${c.ciUnit.replace("kgCO2/kgH2", "")}</td>
-    </tr>`).join("");
+      <td>${cost.capex}</td>
+      <td>${cost.opex}</td>
+      <td>${cost.lcoh}</td>
+    </tr>`;
+  }).join("");
   $("caseTable").innerHTML = `
-    <thead><tr><th>Licensor / case</th><th>NH₃:H₂ (t/t)</th><th>Efficiency (%)</th><th>H₂ purity (mol%)</th><th>Direct CI</th></tr></thead>
+    <thead><tr><th>Licensor / case</th><th>NH₃:H₂ (t/t)</th><th>Efficiency (%)</th><th>H₂ purity (mol%)</th><th>Direct CI</th><th>CAPEX</th><th>OPEX</th><th>LCOH</th></tr></thead>
     <tbody>${rows}</tbody>`;
+}
+
+function renderTollTable(active) {
+  const rows = TOLLING.map((t) => `
+    <tr class="${t.id === active.id ? "active" : ""}">
+      <td>${t.label}</td>
+      <td>${t.capacityMinKtpa}–${t.capacityMaxKtpa}</td>
+      <td>${fmt(t.tariffLow, 2)}–${fmt(t.tariffHigh, 2)}<br/><span class="src">${t.tariffUnit}</span></td>
+      <td>${fmt(t.ratioLow, 1)}–${fmt(t.ratioHigh, 1)}</td>
+      <td>${t.accuracy}</td>
+    </tr>`).join("");
+  $("tollTable").innerHTML = `
+    <thead><tr><th>Reference</th><th>H₂ capacity (ktpa)</th><th>Tariff</th><th>NH₃:H₂ (t/t)</th><th>Estimate class</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+function recalcToll() {
+  const h2Ktpa = num($("inH2KtpaToll").value, 0);
+  const t = selectedTolling();
+  const ratioMid = (t.ratioLow + t.ratioHigh) / 2;
+  const nh3Ktpa = h2Ktpa * ratioMid;
+  const tariffMid = (t.tariffLow + t.tariffHigh) / 2;
+
+  $("tollSub").textContent = t.label;
+  $("tollKpis").innerHTML = `
+    <div class="kpi"><div class="l">Required NH₃ feed</div><div class="v">${fmt(nh3Ktpa, 1)}</div><div class="u">ktpa (midpoint ratio)</div></div>
+    <div class="kpi"><div class="l">NH₃:H₂ ratio range</div><div class="v" style="font-size:16px;">${fmt(t.ratioLow, 1)}–${fmt(t.ratioHigh, 1)}</div><div class="u">t NH₃ / t H₂</div></div>
+    <div class="kpi"><div class="l">Tolling tariff range</div><div class="v" style="font-size:15px;">${fmt(t.tariffLow, 2)}–${fmt(t.tariffHigh, 2)}</div><div class="u">${t.tariffUnit}</div></div>
+    <div class="kpi"><div class="l">Contract capacity</div><div class="v" style="font-size:16px;">${t.capacityMinKtpa}–${t.capacityMaxKtpa}</div><div class="u">ktpa H₂</div></div>
+  `;
+  $("tollNote").innerHTML = `${t.note}<br/><b>Term:</b> ${t.term} · <b>Accuracy:</b> ${t.accuracy}<br/><span class="src">Source: ${t.source}</span>`;
+  renderTollTable(t);
+  $("linkStatusToll").textContent = "";
+  return { h2Ktpa, nh3Ktpa, t, tariffMid };
+}
+
+function setRoute(route) {
+  $("ownInputs").classList.toggle("hidden", route !== "own");
+  $("tollInputs").classList.toggle("hidden", route !== "toll");
+  $("ownResultsPanel").classList.toggle("hidden", route !== "own");
+  $("tollResultsPanel").classList.toggle("hidden", route !== "toll");
+  if (route === "own") recalc(); else recalcToll();
 }
 
 const LINK_KEY = "gentari.link.crackerToStorage.v1";
@@ -335,10 +550,28 @@ $("btnLink").addEventListener("click", () => {
   try { localStorage.setItem(LINK_KEY, JSON.stringify(payload)); } catch (e) {}
   $("linkStatus").innerHTML = `Linked. Open <a href="nh3-storage-design.html">NH₃ Storage Design</a> — it will offer to apply ${fmt(nh3Ktpa, 1)} ktpa as its demand throughput.`;
 });
+$("btnLinkToll").addEventListener("click", () => {
+  const { h2Ktpa, nh3Ktpa, t } = recalcToll();
+  const payload = { throughputKtpa: nh3Ktpa, h2OutputKtpa: h2Ktpa, licensor: t.label, fuelMode: "Tolling reference (midpoint ratio)", ts: Date.now() };
+  try { localStorage.setItem(LINK_KEY, JSON.stringify(payload)); } catch (e) {}
+  $("linkStatusToll").innerHTML = `Linked. Open <a href="nh3-storage-design.html">NH₃ Storage Design</a> — it will offer to apply ${fmt(nh3Ktpa, 1)} ktpa as its demand throughput.`;
+});
 
+$("inRoute").addEventListener("change", (e) => setRoute(e.target.value));
 $("inH2Ktpa").addEventListener("input", recalc);
 $("inCase").addEventListener("change", recalc);
-$("btnReset").addEventListener("click", () => { $("inH2Ktpa").value = 12; $("inCase").value = CASES[0].id; recalc(); });
+$("inAmmoniaPrice").addEventListener("change", recalc);
+$("inH2KtpaToll").addEventListener("input", recalcToll);
+$("inTolling").addEventListener("change", recalcToll);
+$("btnReset").addEventListener("click", () => {
+  $("inRoute").value = "own";
+  $("inH2Ktpa").value = 12;
+  $("inCase").value = CASES[0].id;
+  $("inAmmoniaPrice").value = 950;
+  $("inH2KtpaToll").value = 70;
+  $("inTolling").value = TOLLING[0].id;
+  setRoute("own");
+});
 
 // Theme
 function applyTheme(t) {
@@ -353,7 +586,8 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
   let t = "light"; try { t = localStorage.getItem("nh3CrackerThemeV2") || "light"; } catch (e) {}
   applyTheme(t);
   populateCaseSelect();
-  recalc();
+  populateTollingSelect();
+  setRoute("own");
 })();
 </script>
 </body>
