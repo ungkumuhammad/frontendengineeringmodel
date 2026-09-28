@@ -28,7 +28,7 @@ separate module (or a terminal-type switch) rather than reusing the demand-drive
 |---|---|
 | Tank sizing | Required net from parcel + buffer rule, gross storage size rounded up or down, tank diameter/volumes, max fill vs net section to scale, throughput sensitivity of storage size (± 5 × 100 ktpa), nominal inventory cycle, shipping and jetty checks. Every panel folds from its header |
 | PGS 12 tank & levels | Section through a full-containment tank with the liquid levels to scale, level schedule per tank, live PGS 12 check of the design, open items and sources |
-| CAPEX & tariff | CAPEX from the reference cost curve, break-even storage tariff, throughput sensitivity of CAPEX and tariff (± 5 × 100 ktpa), market check against registered offers |
+| CAPEX & tariff | CAPEX from the reference cost curve, break-even storage tariff, throughput sensitivity of CAPEX and tariff (± 5 × 100 ktpa), CAPEX references table (every CAPEX figure in the register, scaled to this design), market check against registered offers |
 | Optimum size | Repeats the sizing for MGC / LGC / VLAC / Other and picks the lowest storage + utilities + freight cost per tonne |
 | Economics register | Vopak tariffs, TEPSA quote, Project Titan benchmark, open questions, decision log — all editable, derived values live |
 
@@ -148,6 +148,12 @@ and port costs are placeholders.
   CPI-indexed revenue and fixed OPEX, straight-line tax depreciation, optional residual value;
   CAPEX capitalised to start of operations over the build spend profile.
 - **Vopak** implied CAPEX and **TEPSA** implied return use the same model.
+- **CAPEX references** (CAPEX & tariff tab and Excel) lists every CAPEX figure in the economics register
+  side by side, in €M before financing: TEPSA storage, jetty and total (the quote behind the reference
+  curve), Vopak 40/60 kt at both quoted throughputs (implied from the tariff, low–high range, mid shown),
+  Project Titan (USD at the register FX), and this design. Each is scaled to this design's net size:
+  `CAPEX × (design net ÷ reference net)^exponent`, jetty fixed, no location factor. The *vs this design*
+  column compares storage with storage, jetty with jetty/marine and full-terminal figures with total CAPEX.
 
 ## Excel export
 
@@ -162,7 +168,7 @@ throughout, gridlines off, frozen table headers and landscape/portrait print set
 | Inputs | Every input grouped by section, with units and placeholder notes; ship classes |
 | Sizing | Capacity build-up, tank dimensions vs TEPSA, plot area, operations, voyage and freight |
 | PGS 12 Levels | Level schedule per tank and the full PGS 12 check with coloured status |
-| CAPEX & Tariff | CAPEX, tariff build-up, financial assumptions, market check |
+| CAPEX & Tariff | CAPEX, CAPEX references, tariff build-up, financial assumptions, market check |
 | Ship Options | All ship classes; lowest-cost row in green |
 | Register | Vopak, TEPSA, Titan benchmark, open questions, decision log |
 

@@ -625,6 +625,10 @@
         </div>
       </div>
       <div class="panel">
+        <div class="panel-h"><span class="t">CAPEX references</span><span class="s">from the economics register · €M, before financing</span></div>
+        <div class="tbl-wrap"><table class="dt" id="capexRefTable"></table></div>
+      </div>
+      <div class="panel">
         <div class="panel-h"><span class="t">Market check at this throughput</span><span class="s">registered offers, 40 kt tank, all-in incl. utilities</span></div>
         <div class="tbl-wrap"><table class="dt" id="marketTable"></table></div>
       </div>
@@ -1046,6 +1050,37 @@ function capexFor(sz) {
   return { storage, marine, other, total, low: total * (1 - acc), high: total * (1 + acc), acc, f, be,
     beLow: breakEvenTariff(total * (1 - acc), sz.thrT / 1000, f).eurT, beHigh: breakEvenTariff(total * (1 + acc), sz.thrT / 1000, f).eurT,
     util, allIn: be.eurT + util, idc: idcFactor(f.h, f.profile) };
+}
+
+// Every CAPEX figure in the economics register, on one basis (€M before financing), scaled to this
+// design's net size with the CAPEX exponent. References are quoted on net size, so the scaling is on
+// net; no location factor. cmp = the part of this design's CAPEX the reference is compared against.
+function capexRefs(sz, cx) {
+  const R = P.register, t = R.tepsa, v = R.vopak, ti = R.titan, f = finParams(), e = num(P.capex.exponent);
+  const scale = (eurM, netT) => netT > 0 ? eurM * Math.pow(sz.net / netT, e) : NaN;
+  const tNet = num(t.netT) || 40000, capT = num(t.storageEurM) + num(t.jettyEurM);
+  const out = [
+    { ref: "TEPSA — storage", where: "HAROPA, Le Havre (FR)", scope: "Tank only", basis: `${t.status} quote · model reference curve`, netT: tNet,
+      eurM: num(t.storageEurM), scaled: scale(num(t.storageEurM), tNet), cmp: cx.storage },
+    { ref: "TEPSA — jetty", where: "HAROPA, Le Havre (FR)", scope: "Jetty / marine", basis: `${t.status} quote · fixed, not scaled`, netT: NaN,
+      eurM: num(t.jettyEurM), scaled: num(t.jettyEurM), cmp: cx.marine },
+    { ref: "TEPSA — total", where: "HAROPA, Le Havre (FR)", scope: "Tank + jetty", basis: `${t.status} quote`, netT: tNet,
+      eurM: capT, scaled: scale(num(t.storageEurM), tNet) + num(t.jettyEurM), cmp: cx.total, cls: "total" },
+  ];
+  for (const s of ["t40", "t60"]) for (const qk of ["q1", "q2"]) {
+    const qKt = num(v[qk]), lo = num(v[s][qk].low), hi = num(v[s][qk].high);
+    const cLo = impliedCapex(lo, qKt, f).overnight, cHi = impliedCapex(hi, qKt, f).overnight, mid = (cLo + cHi) / 2;
+    const netT = s === "t40" ? 40000 : 60000;
+    out.push({ ref: `Vopak — ${netT / 1000} kt · ${fmt(qKt)} ktpa`, where: "HAROPA, Le Havre (FR)", scope: "Tank, jetty, dredging, pipeline",
+      basis: `Implied from €${fmt(lo)}–${fmt(hi)}/t tariff (mid shown) · €${fmt(cLo)}–${fmt(cHi)}M`, netT, eurM: mid, scaled: scale(mid, netT), cmp: cx.total });
+  }
+  const tiEur = num(ti.capexUsdM) / Math.max(0.01, num(ti.fxUsdPerEur)), tiT = num(ti.capacityKt) * 1000;
+  out.push({ ref: ti.name, where: ti.location, scope: ti.scope, basis: `Benchmark · USD ${fmt(num(ti.capexUsdM))}M at ${fmt(num(ti.fxUsdPerEur), 2)} USD/EUR · no location factor`,
+    netT: tiT, eurM: tiEur, scaled: scale(tiEur, tiT), cmp: cx.total });
+  out.push({ ref: "This design", where: "", scope: "Tank + jetty + other", basis: `Reference curve × location factor ${num(P.capex.locationFactor)}`,
+    netT: sz.net, eurM: cx.total, scaled: cx.total, cmp: NaN, cls: "best" });
+  for (const r of out) { r.perKt = r.netT > 0 ? r.eurM / (r.netT / 1000) : NaN; r.vs = r.cmp > 0 ? r.scaled / r.cmp - 1 : NaN; }
+  return out;
 }
 
 // Vessel round trip, fleet size and freight. Arrival interval is set by demand (parcel ÷ send-out);
@@ -1705,6 +1740,12 @@ function renderCapex(sz, cx) {
     { cells: ["Utility fee (pass-through)", fmt(cx.util * q / 1000, 2), fmt(cx.util, 2)] },
     { cls: "total", cells: ["All-in", fmt(cx.be.revEurM + cx.util * q / 1000, 1), fmt(cx.allIn, 1)] },
   ]);
+  const sgn = (x) => Number.isFinite(x) ? (x > 0 ? "+" : "") + pct(x, 0) : "—";
+  $("capexRefTable").innerHTML = rows([
+    { head: ["Reference", "Location", "Scope", "Size, t net", "CAPEX, €M", "€M per kt", `Scaled to ${fmt(sz.net)} t, €M`, "vs this design", "Basis"] },
+    ...capexRefs(sz, cx).map((r) => ({ cls: r.cls, cells: [esc(r.ref), esc(r.where), esc(r.scope), Number.isFinite(r.netT) ? fmt(r.netT) : "—",
+      fmt(r.eurM, 1), fmt(r.perKt, 2), fmt(r.scaled, 1), sgn(r.vs), esc(r.basis)] })),
+  ], [1, 2, 8]) + `<tr><td colspan="9" class="lbl" style="font-size:10.5px;color:var(--text3)">Scaled = CAPEX × (this design's ${fmt(sz.net)} t net ÷ reference size)^${num(P.capex.exponent)}; the jetty is fixed. "vs this design" compares storage with storage, jetty with jetty/marine, and full-terminal figures with total CAPEX. Vopak is implied from its tariff at the current financial assumptions; whether its 40/60 kt is net or gross is an open question. Edit the figures on the Economics register tab.</td></tr>`;
   const vl = vopakAt("t40", q, "low"), vm = vopakAt("t40", q, "mid"), vh = vopakAt("t40", q, "high"), tp = tepsaAt(q);
   const u = cx.util;
   $("marketTable").innerHTML = rows([
@@ -2548,6 +2589,12 @@ async function exportExcel(full) {
       R("Total, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} % → €${fmt(cx.low)}–${fmt(cx.high)}M`, "key");
       R("Financing during construction", cx.be.capexCod - cx.total, "€M", `${fmt(f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`);
       R("CAPEX at start of operations", cx.be.capexCod, "€M", "", "total");
+      S.section("CAPEX references", `from the economics register · scaled to ${fmt(sz.net)} t net`);
+      S.header(["Reference", "CAPEX, €M", "Scaled, €M", "Location · scope · size · basis · vs this design"], [0, 3]);
+      capexRefs(sz, cx).forEach((r) => S.row([r.ref, r.eurM, r.scaled,
+        [r.where, r.scope, Number.isFinite(r.netT) ? `${fmt(r.netT)} t net` : "", r.basis, Number.isFinite(r.vs) ? `${r.vs > 0 ? "+" : ""}${pct(r.vs, 0)} vs this design` : ""].filter(Boolean).join(" · ")],
+        { kind: r.cls === "best" ? "key" : r.cls, fmt: [null, XF.d1, XF.d1] }));
+      S.note(`Scaled = CAPEX × (${fmt(sz.net)} t net ÷ reference size)^${num(c.exponent)}; jetty fixed; no location factor. Vopak implied from its tariff at the current financial assumptions.`);
       S.section("Tariff build-up", `${fmt(f.h * 100, 1)} % return · ${f.term} yr`);
       S.header(["Component", "€M / yr", "€/t", "Note"], [0, 3]);
       const opex1 = f.opex * cx.be.capexCod;
