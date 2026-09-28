@@ -26,7 +26,7 @@ separate module (or a terminal-type switch) rather than reusing the demand-drive
 
 | Tab | What it does |
 |---|---|
-| Tank sizing | Required net from parcel + buffer rule, gross storage size rounded up or down, tank diameter/volumes, max fill vs net section to scale, throughput sensitivity of storage size (± 5 × 100 ktpa), nominal inventory cycle, shipping and jetty checks. Every panel folds from its header |
+| Tank sizing | Required net from parcel + buffer rule, gross storage size rounded up or down, tank diameter/volumes, max fill vs loadable volume section to scale, throughput sensitivity of storage size (± 5 × 100 ktpa), nominal inventory cycle, shipping and jetty checks. Every panel folds from its header |
 | PGS 12 tank & levels | Section through a full-containment tank with the liquid levels to scale, level schedule per tank, live PGS 12 check of the design, open items and sources |
 | CAPEX & tariff | CAPEX from the reference cost curve, break-even storage tariff, throughput sensitivity of CAPEX and tariff (± 5 × 100 ktpa), market check against registered offers |
 | Optimum size | Repeats the sizing for MGC / LGC / VLAC / Other and picks the lowest storage + utilities + freight cost per tonne |
@@ -139,11 +139,12 @@ and port costs are placeholders.
 
 ## Economics method
 
-- **CAPEX** = tanks × reference storage CAPEX × (storage size per tank ÷ reference size)^exponent ×
-  location factor + (jetty/marine + ship-class adder + other) × location factor. Storage size is
-  the gross tank size to shell top, as rounded up or down under Required storage.
-  Default reference: TEPSA €185M storage + €20M jetty for its 40,000 t net tank, taken on the same
-  gross basis: 69,557 m³ nominal × 682 kg/m³ = 47,438 t.
+- **CAPEX** = tanks × reference storage CAPEX × (loadable volume per tank ÷ reference loadable
+  volume)^exponent × location factor + (jetty/marine + ship-class adder + other) × location factor.
+  Loadable volume is the working range between the low and high alarms, in the gross tank size
+  chosen (rounded up or down) under Required storage.
+  Default reference: TEPSA €185M storage + €20M jetty for its 40,000 t loadable tank
+  (58,651 m³ × 682 kg/m³; 69,557 m³ nominal).
 - **Break-even tariff**: post-tax NPV = 0 at the operator return over the contract term;
   CPI-indexed revenue and fixed OPEX, straight-line tax depreciation, optional residual value;
   CAPEX capitalised to start of operations over the build spend profile.
@@ -158,7 +159,7 @@ throughout, gridlines off, frozen table headers and landscape/portrait print set
 | Sheet | Content |
 |---|---|
 | Results | Results only: headline (net capacity, tank size, plot, CAPEX, tariffs, landed cost) highlighted, then storage, levels, plot, shipping, economics, optimum ship class, PGS 12 check sorted worst-first, and the model's flags |
-| Sensitivity | Storage size, required gross and net working capacity, total CAPEX and break-even tariff at the current throughput ± 5 × 100 ktpa, as charts (images) with the data tables. Written in both export options |
+| Sensitivity | Storage size, required gross and loadable volume, total CAPEX and break-even tariff at the current throughput ± 5 × 100 ktpa, as charts (images) with the data tables. Written in both export options |
 | Inputs | Every input grouped by section, with units and placeholder notes; ship classes |
 | Sizing | Capacity build-up, tank dimensions vs TEPSA, plot area, operations, voyage and freight |
 | PGS 12 Levels | Level schedule per tank and the full PGS 12 check with coloured status |

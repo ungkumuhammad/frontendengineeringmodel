@@ -475,14 +475,14 @@
       <div class="grp-body">
         <div class="row2">
           <div class="field"><label>Reference storage CAPEX <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.refStorageEurM"/></div>
-          <div class="field"><label>At reference storage size <span class="hint">t gross, to shell top</span></label><input type="number" step="1000" min="1" data-path="capex.refGrossT"/></div>
+          <div class="field"><label>At reference loadable volume <span class="hint">t per tank</span></label><input type="number" step="1000" min="1" data-path="capex.refNetT"/></div>
           <div class="field"><label>Scale exponent</label><input type="number" step="0.05" min="0" max="1.2" data-path="capex.exponent"/></div>
           <div class="field"><label>Location factor <span class="hint">× reference</span></label><input type="number" step="0.05" min="0" data-path="capex.locationFactor"/></div>
           <div class="field"><label>Jetty / marine <span class="hint">€M fixed</span></label><input type="number" step="1" min="0" data-path="capex.marineEurM"/></div>
           <div class="field"><label>Dredging, pipeline, other <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.otherEurM"/></div>
         </div>
         <div class="field"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="capex.accuracyPct"/></div>
-        <p class="note">Default reference = TEPSA quote: €185M storage + €20M jetty (HAROPA, Le Havre) for a 40,000 t net tank = 69,557 m³ nominal × 682 kg/m³ = 47,438 t gross. Scaling: CAPEX ∝ storage size (gross)<sup>exponent</sup>.</p>
+        <p class="note">Default reference = TEPSA quote: €185M storage + €20M jetty (HAROPA, Le Havre) for a 40,000 t loadable tank (58,651 m³ × 682 kg/m³; 69,557 m³ nominal). Scaling: CAPEX ∝ loadable volume per tank<sup>exponent</sup>.</p>
       </div>
     </details>
 
@@ -523,7 +523,7 @@
       <div id="sizingMsgs"></div>
 
       <div class="panel">
-        <div class="panel-h"><span class="t">Max fill vs net working capacity — levels to scale</span><span class="s" id="gapSub"></span></div>
+        <div class="panel-h"><span class="t">Max fill vs loadable volume — levels to scale</span><span class="s" id="gapSub"></span></div>
         <div class="panel-b gap-grid">
           <div class="chart" id="gapChart"></div>
           <div class="gap-sum" id="gapSum"></div>
@@ -538,7 +538,7 @@
 
       <div class="two-col">
         <div class="panel">
-          <div class="panel-h"><span class="t">Net working capacity build-up</span><span class="s" id="buildSub"></span></div>
+          <div class="panel-h"><span class="t">Loadable volume build-up</span><span class="s" id="buildSub"></span></div>
           <div class="tbl-wrap"><table class="dt" id="buildTable"></table></div>
         </div>
         <div class="panel">
@@ -643,8 +643,8 @@
       <div class="panel">
         <div class="panel-h"><span class="t">Method</span></div>
         <div class="panel-b">
-          <div class="formula">Storage CAPEX = tanks × Ref CAPEX × (storage size per tank ÷ Ref size)^exponent × location factor
-  (storage size = gross, to shell top: the rounded size chosen under Required storage)
+          <div class="formula">Storage CAPEX = tanks × Ref CAPEX × (loadable volume per tank ÷ Ref loadable volume)^exponent × location factor
+  (loadable volume = working range between the low and high alarms, in the tank size chosen under Required storage)
 Total CAPEX = storage + (jetty/marine + ship-class marine adder + other) × location factor
 Break-even tariff: NPV = 0 at the operator return, over the contract term —
   revenue (CPI-indexed) − fixed OPEX (CPI-indexed) − tax on (revenue − OPEX − depreciation)
@@ -745,8 +745,8 @@ const DEFAULTS = {
   // pump heel are PLACEHOLDERS — PGS 12 sets no value (HAZOP/SIL study and pump vendor do).
   levels: { freeboardM: 0.5, extraFreeboardM: 0, tripMin: 5, alarmMin: 30, lallM: 1.5, lowAlarmMin: 30 },
   utilities: { powerKWhPerT: 10.3, powerPriceEurMWh: 150, markupPct: 10, bogPctPerDay: 0.04 },
-  // refGrossT: TEPSA Scenario D, 69,557 m³ nominal × 682 kg/m³ (its 40,000 t net tank), to shell top.
-  capex: { refStorageEurM: 185, refGrossT: 47438, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
+  // refNetT: TEPSA's €185M is for its 40,000 t loadable tank (58,651 m³ × 682 kg/m³), so CAPEX scales on loadable volume.
+  capex: { refStorageEurM: 185, refNetT: 40000, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
   fin: { hurdlePct: 9, cpiPct: 2.5, taxPct: 25, depYears: 20, opexPct: 2.5, termYears: 15, residualPct: 0, buildYears: 3, spendProfile: "30/40/30" },
   register: {
     vopak: {
@@ -791,6 +791,7 @@ const DEFAULTS = {
       { date: "2026-09-27", text: "Freight calculated from voyage (distance, speed, hire, fuel, port costs); fleet sized from round trip vs arrival interval" },
       { date: "2026-09-27", text: "Plot required scales linearly from 3.7 ha at 60 kt (incl. jetty, jetty 500 m from tank); shown in ha, m², sq ft and acres" },
       { date: "2026-09-27", text: "Tank levels follow PGS 12: max design level ≥ 0.5 m below shell top, then independent overfill trip, high alarm, low alarm and pump heel; density from PGS 12:2025 Tabel 7" },
+      { date: "2026-09-28", text: "Storage CAPEX scales on loadable volume per tank (TEPSA €185M = 40,000 t loadable), not gross tank size" },
     ],
   },
 };
@@ -1046,8 +1047,8 @@ function size(shipKey = P.shipClass) {
 
 function capexFor(sz) {
   const c = P.capex, LF = num(c.locationFactor, 1);
-  const refT = Math.max(1, num(c.refGrossT));
-  const storage = sz.N * num(c.refStorageEurM) * Math.pow(sz.perTankGrossT / refT, num(c.exponent)) * LF;
+  const refT = Math.max(1, num(c.refNetT));
+  const storage = sz.N * num(c.refStorageEurM) * Math.pow(sz.perTankT / refT, num(c.exponent)) * LF;
   const marine = (num(c.marineEurM) + num(P.ships[sz.shipKey].marineAdderEurM)) * LF;
   const other = num(c.otherEurM) * LF;
   const total = storage + marine + other;
@@ -1233,9 +1234,9 @@ function renderSizing(sz) {
       `<button type="button" role="radio" aria-checked="${(sz.withUllage ? "include" : "exclude") === k}" data-ull="${k}" class="${(sz.withUllage ? "include" : "exclude") === k ? "active" : ""}">${t}<small>${sm}</small></button>`).join("")}</div></div>`;
   $("heroKpis").innerHTML =
     kpi("Storage size", fmt(sz.gross), "t",
-      `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankGrossT)} t · ` : ""}gross to shell top · ${sz.step > 0 ? `rounded ${sz.roundDir} from ${fmt(sz.req.gross)} t` : "no rounding"} · basis for CAPEX`, true) +
-    kpi("Net working capacity", fmt(sz.net), "t", `required ${fmt(sz.netReq)} t · ${short > 0.5 ? `<b style="color:var(--danger)">${fmt(short)} t short</b>` : short < -0.5 ? `${fmt(-short)} t spare` : "matches required"}`, true) +
-    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `net = ${pct(sz.netToNominal)} of nominal`) +
+      `${sz.N > 1 ? `${sz.N} tanks × ${fmt(sz.perTankGrossT)} t · ` : ""}gross to shell top · ${sz.step > 0 ? `rounded ${sz.roundDir} from ${fmt(sz.req.gross)} t` : "no rounding"}`, true) +
+    kpi("Loadable volume", fmt(sz.net), "t", `basis for CAPEX · required ${fmt(sz.netReq)} t · ${short > 0.5 ? `<b style="color:var(--danger)">${fmt(short)} t short</b>` : short < -0.5 ? `${fmt(-short)} t spare` : "matches required"}`, true) +
+    kpi("Nominal volume", fmt(sz.nominalM3 * sz.N), "m³", `loadable = ${pct(sz.netToNominal)} of nominal`) +
     kpi("Inner tank", `Ø${fmt(sz.D, 1)} × ${fmt(sz.H, 1)}`, "m", `outer Ø${fmt(sz.OD, 1)} m`) +
     kpi("Stock cover", fmt(sz.stockDays, 1), "days", `full tank at ${fmt(sz.qOp)} t/d (${fmt(num(P.demand.operatingDays))} op. days) · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`) +
     kpi("Plot required, incl. jetty", fmt(sz.plot.ha, 2), "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres`);
@@ -1244,7 +1245,7 @@ function renderSizing(sz) {
   if (!(sz.workH > 0)) m.push(["err", sz.lumped ? "Heel + top margin exceed the tank height — increase height or reduce the margins."
     : "Freeboard + pump heel + alarm margins leave no working range — increase the shell height or review the level inputs."]);
   if (!sz.withUllage && sz.ullageRuleDays > 0) m.push(["warn", `Ullage reserve excluded: no planned room for a ${fmt(num(P.buffer.noSendoutDays), 1)} d downstream outage or a ship ${fmt(num(P.buffer.earlyDays), 1)} d early. Only ${fmt(sz.ullageT)} t (${fmt(sz.ullageT / sz.q, 1)} d) of free space is left above the post-discharge peak — a ship arriving then may not discharge fully (demurrage).`]);
-  if (short > 0.5) m.push(["warn", `Gross tank size rounded down to ${fmt(sz.gross)} t: net working capacity ${fmt(sz.net)} t is <b>${fmt(short)} t below</b> the ${fmt(sz.netReq)} t required, so the buffer covers ${fmt(Math.max(0, sz.bufferEffDays), 1)} d instead of ${fmt(sz.bufferDays, 1)} d.`]);
+  if (short > 0.5) m.push(["warn", `Gross tank size rounded down to ${fmt(sz.gross)} t: loadable volume ${fmt(sz.net)} t is <b>${fmt(short)} t below</b> the ${fmt(sz.netReq)} t required, so the buffer covers ${fmt(Math.max(0, sz.bufferEffDays), 1)} d instead of ${fmt(sz.bufferDays, 1)} d.`]);
   if (sz.grossMdllT > PGS12.bandHiT) m.push(["err", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — above the ≈70 kt that PGS 12 (§1, Opmerking 2) says NEN-EN 14620 tanks reach even with >40 mm plate. Add a tank.`]);
   else if (sz.grossMdllT > PGS12.bandLoT) m.push(["warn", `Each tank holds ${fmt(sz.grossMdllT)} t at the max design level — inside PGS 12's ≈60–70 kt practical ceiling. Shell plate near the 40 mm limit; see the PGS 12 tab.`]);
   if (sz.D > num(P.geometry.maxDiameterM)) m.push(["warn", `Inner diameter ${fmt(sz.D, 1)} m exceeds the ${fmt(num(P.geometry.maxDiameterM))} m limit. Add a tank, raise the height, or use a smaller ship.`]);
@@ -1277,13 +1278,13 @@ function renderSizing(sz) {
     { cls: "sub", cells: ["+ Freeboard", "", fmt(sz.req.fbT)] },
     { cells: ["Required gross tank size (to shell top)", "", fmt(sz.req.gross)] },
     { cells: [sz.step > 0 ? `Design gross tank size — rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "Design gross tank size — no rounding", "", fmt(sz.gross)] },
-    { cls: "total", cells: ["Design net working capacity", "", fmt(sz.net)] },
+    { cls: "total", cells: ["Design loadable volume", "", fmt(sz.net)] },
   ]);
 
   $("dimTable").innerHTML = rows([
     { head: ["Per tank", "This design", "TEPSA D"] },
-    { cells: ["Net capacity, t", fmt(sz.perTankT), "40,000"] },
-    { cells: ["Net volume, m³", fmt(sz.perTankNetM3), "58,651"] },
+    { cells: ["Loadable volume, t", fmt(sz.perTankT), "40,000"] },
+    { cells: ["Loadable volume, m³", fmt(sz.perTankNetM3), "58,651"] },
     { cells: ["Nominal volume, m³", fmt(sz.nominalM3), "69,557"] },
     { cells: ["Inner diameter, m", fmt(sz.D, 1), "55.0"] },
     { cells: ["Outer diameter, m", fmt(sz.OD, 1), "58.0"] },
@@ -1464,7 +1465,7 @@ function renderPgs(sz) {
   const keyRows = new Set(["mdll", "lah", "lal"]);
   $("lvlTable").innerHTML = `<tr><th>Level</th><th class="num">Height m</th><th class="num">Volume m³</th><th class="num">Mass t</th><th>Basis</th><th>Status</th></tr>` +
     lr.map((x) => `<tr class="${keyRows.has(x.k) ? "lvl-key" : ""}"><td class="lbl" style="white-space:nowrap">${x.name}</td><td class="num">${fmt(x.h, 2)}</td><td class="num">${fmt(x.h * sz.area)}</td><td class="num">${fmt(sz.levelT(x.h))}</td><td class="basis">${x.basis}</td><td>${x.tag ? `<span class="tag">${x.tag}</span>` : ""}</td></tr>`).join("") +
-    `<tr class="total"><td class="lbl">Working range (max − min working level)</td><td class="num">${fmt(sz.workH, 2)}</td><td class="num">${fmt(sz.workH * sz.area)}</td><td class="num">${fmt(sz.levelT(sz.workH))}</td><td class="basis">= net working capacity per tank (${fmt(sz.perTankT)} t)</td><td></td></tr>` +
+    `<tr class="total"><td class="lbl">Working range (max − min working level)</td><td class="num">${fmt(sz.workH, 2)}</td><td class="num">${fmt(sz.workH * sz.area)}</td><td class="num">${fmt(sz.levelT(sz.workH))}</td><td class="basis">= loadable volume per tank (${fmt(sz.perTankT)} t)</td><td></td></tr>` +
     `<tr><td class="lbl">Unusable above max working level</td><td class="num">${fmt(sz.H - L.lah, 2)}</td><td class="num">${fmt((sz.H - L.lah) * sz.area)}</td><td class="num">${fmt(sz.levelT(sz.H - L.lah))}</td><td class="basis">shell volume kept empty</td><td></td></tr>` +
     `<tr><td class="lbl">Unusable below min working level</td><td class="num">${fmt(L.lal, 2)}</td><td class="num">${fmt(L.lal * sz.area)}</td><td class="num">${fmt(sz.levelT(L.lal))}</td><td class="basis">never sent out — keeps the tank cold (PGS 12 prefers never emptying it)</td><td></td></tr>` +
     `<tr><td class="lbl">Level rise / fall rate</td><td class="num">${fmt(sz.riseMh, 2)} / ${fmt(sz.fallMh, 3)}</td><td></td><td></td><td class="basis">m/h at ${fmt(num(P.jetty.unloadRateTph))} t/h unloading into one tank / ${fmt(sz.q)} t/d send-out</td><td></td></tr>`;
@@ -1491,7 +1492,7 @@ function renderPgs(sz) {
   drawSection(sz);
 }
 
-// Max fill vs net working capacity, per tank: the liquid bands between the floor and MDLL, with the
+// Max fill vs loadable volume, per tank: the liquid bands between the floor and MDLL, with the
 // freeboard above. Heights are to scale; the diameter is compressed so the thin bands stay visible.
 function drawGap(sz) {
   const host = $("gapChart"), sum = $("gapSum"), L = sz.L;
@@ -1523,7 +1524,7 @@ function drawGap(sz) {
   S.push(Ln(xT, y(sz.H), xT, yb, { w: 2 }), Ln(xR, y(sz.H), xR, yb, { w: 2 }), Ln(xT - 4, yb, xR + 4, yb, { w: 2.5 }));
   S.push(`<path d="M${n(xT)} ${n(y(sz.H))} A ${n(wT / 2)} 22 0 0 1 ${n(xR)} ${n(y(sz.H))}" style="fill:none;stroke:var(--steel);stroke-width:2"/>`);
   S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 - 2, `${fmt(sz.perTankT)} t`, { a: "middle", fs: 28, w: 700, c: "var(--brand2-ink)" }));
-  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 + 18, "net working capacity", { a: "middle", fs: 14, c: "var(--brand2-ink)" }));
+  S.push(T(xT + wT / 2, y(L.lah) + (sz.workH * s) / 2 + 18, "loadable volume", { a: "middle", fs: 14, c: "var(--brand2-ink)" }));
 
   // left: level ticks, spread so they never overlap
   const lv = [["Shell top", sz.H, "var(--steel)"], ["MDLL · max fill", L.mdll, "var(--danger)"],
@@ -1545,7 +1546,7 @@ function drawGap(sz) {
     { name: `Freeboard — empty`, val: "", c: "var(--steel)", h0: L.mdll, h1: sz.H, sub: `${fmt(fbH, 2)} m · ${fmt(sz.area * fbH)} m³ · would hold ${fmt(fbT)} t` },
     { name: "Top margin", val: `${fmt(topT)} t`, c: "var(--warn)", h0: L.lah, h1: L.mdll,
       sub: sz.lumped ? `${fmt(topH, 2)} m lumped margin to the PGS 12 limit` : `${fmt(topH, 2)} m · high alarm ${fmt(alarmT)} t + overfill trip ${fmt(tripT)} t` },
-    { name: "Net working capacity", val: `${fmt(sz.perTankT)} t`, c: "var(--brand2-ink)", h0: L.lal, h1: L.lah, sub: `${fmt(sz.workH, 2)} m · ${fmt(sz.perTankNetM3)} m³` },
+    { name: "Loadable volume", val: `${fmt(sz.perTankT)} t`, c: "var(--brand2-ink)", h0: L.lal, h1: L.lah, sub: `${fmt(sz.workH, 2)} m · ${fmt(sz.perTankNetM3)} m³` },
     { name: "Bottom", val: `${fmt(botT)} t`, c: "var(--cryo)", h0: 0, h1: L.lal,
       sub: sz.lumped ? `${fmt(botH, 2)} m lumped heel` : `${fmt(botH, 2)} m · pump heel ${fmt(heelT)} t + low alarm ${fmt(lowT)} t` },
   ];
@@ -1556,12 +1557,12 @@ function drawGap(sz) {
     S.push(T(lx, b.ly + 18, b.sub, { fs: 13 }));
   });
   S.push(T(xT + wT / 2, yb + 30, `inner Ø ${fmt(sz.D, 1)} m (diameter compressed)`, { a: "middle", fs: 13 }));
-  host.innerHTML = `<svg class="section-svg" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Tank section showing max fill at MDLL, net working capacity and the bands between them">${S.join("")}</svg>`;
+  host.innerHTML = `<svg class="section-svg" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Tank section showing max fill at MDLL, loadable volume and the bands between them">${S.join("")}</svg>`;
 
   const p = (x) => pct(gapT > 0 ? x / gapT : 0, 0);
   const heelShare = botT > 0 ? heelT / botT : 0;
   sum.innerHTML = `<h4>Unusable volume of ${fmt(gapT)} t${per} is due to:</h4>
-    <div class="sub">Max fill at MDLL ${fmt(mdllT)} t − net working capacity ${fmt(sz.perTankT)} t</div>
+    <div class="sub">Max fill at MDLL ${fmt(mdllT)} t − loadable volume ${fmt(sz.perTankT)} t</div>
     <ul>
       <li class="top"><b>Top: ${fmt(topT)} t (${p(topT)}).</b> ${sz.lumped
         ? `Lumped margin between the max working level and the PGS 12 max design level (TEPSA calibration), not split into alarms and trip.`
@@ -1695,7 +1696,7 @@ function capexRange(cx) {
 }
 function renderCapex(sz, cx) {
   const q = sz.thrT / 1000;
-  $("capexHeroSub").textContent = `${fmt(sz.gross)} t storage size · ${fmt(sz.net)} t net · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
+  $("capexHeroSub").textContent = `${fmt(sz.net)} t loadable volume · ${fmt(sz.gross)} t storage size (gross) · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
   $("capexKpis").innerHTML =
     kpi("Total CAPEX", "€" + fmt(cx.total), "M", `estimate accuracy ±${fmt(cx.acc * 100)} %` + capexRange(cx), true) +
     kpi("Incl. financing", "€" + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
@@ -1705,7 +1706,7 @@ function renderCapex(sz, cx) {
   const c = P.capex;
   $("capexTable").innerHTML = rows([
     { head: ["Item", "€M", "Basis"] },
-    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankGrossT)} t gross)`, fmt(cx.storage, 1), `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankGrossT)}/${fmt(num(c.refGrossT))})^${num(c.exponent)} × ${num(c.locationFactor)}`] },
+    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, fmt(cx.storage, 1), `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)}/${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`] },
     { cells: ["Jetty / marine", fmt(cx.marine, 1), `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder €${fmt(num(P.ships[sz.shipKey].marineAdderEurM))}M`] },
     { cells: ["Dredging, pipeline, other", fmt(cx.other, 1), ""] },
     { cls: "total", cells: ["Total, before financing", fmt(cx.total, 1), `±${fmt(cx.acc * 100)} %`] },
@@ -1894,7 +1895,7 @@ function sensSeries(d) {
     storage: [
       { name: stepT > 0 ? `Storage size (rounded ${dir})` : "Storage size", key: "gross", color: "s1", w: 2.5, marks: true, v: d.map((p) => p.sz.gross) },
       { name: "Required gross (unrounded)", key: "req", color: "s1", w: 1.5, dash: "6 4", v: d.map((p) => p.sz.req.gross) },
-      { name: "Net working capacity", key: "net", color: "s2", w: 2, marks: true, v: d.map((p) => p.sz.net) },
+      { name: "Loadable volume", key: "net", color: "s2", w: 2, marks: true, v: d.map((p) => p.sz.net) },
     ],
     capex: [{ name: "Total CAPEX", color: "s1", w: 2.5, marks: true, v: d.map((p) => p.cx.total) }],
     tariff: [{ name: "Break-even storage tariff", color: "s1", w: 2.5, marks: true, v: d.map((p) => p.cx.be.eurT) }],
@@ -1977,12 +1978,12 @@ function renderSensitivity(d) {
   mountChart("tarSensChart", sensSvg(d, ser.tariff, Object.assign({ hover: true, w: 560, h: 280, label: "Break-even storage tariff versus throughput" }, SENS_FMT.tariff), SENS_SCREEN));
   const row = (p, cells) => ({ cls: p.base ? "total" : "", cells });
   $("sensTable").innerHTML = rows([
-    { head: ["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Net working, t", "Inner Ø, m", "Stock cover, d"] },
+    { head: ["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Loadable volume, t", "Inner Ø, m", "Stock cover, d"] },
     ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.netReq), fmt(p.sz.req.gross), fmt(p.sz.gross), fmt(p.sz.net), fmt(p.sz.D, 1), fmt(p.sz.stockDays, 1)])),
   ]);
   $("capSensTable").innerHTML = rows([
-    { head: ["Throughput, ktpa", "Storage size, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range, €M", "Break-even tariff, €/t", "All-in tariff, €/t"] },
-    ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.gross), fmt(p.cx.storage, 1), fmt(p.cx.total, 1), `${fmt(p.cx.low)}–${fmt(p.cx.high)}`, fmt(p.cx.be.eurT, 2), fmt(p.cx.allIn, 2)])),
+    { head: ["Throughput, ktpa", "Loadable volume, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range, €M", "Break-even tariff, €/t", "All-in tariff, €/t"] },
+    ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.net), fmt(p.cx.storage, 1), fmt(p.cx.total, 1), `${fmt(p.cx.low)}–${fmt(p.cx.high)}`, fmt(p.cx.be.eurT, 2), fmt(p.cx.allIn, 2)])),
   ]);
 }
 // SVG → PNG data URL (2× for print sharpness) for the Excel images.
@@ -2029,7 +2030,7 @@ function drawInventory(sz) {
   svg += `<rect x="${L}" y="${y(sz.net)}" width="${W - L - R}" height="${Math.max(0, y(safety + sz.parcel) - y(sz.net))}" fill="var(--s3)" opacity="0.10"/>`;
   svg += `<path d="${area}" fill="var(--s1)" opacity="0.10"/><path d="${path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   const ref = (t, label) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--text3)" stroke-width="1"/><text class="lbl-txt" x="${W - R + 8}" y="${y(t) + 4}">${label}</text>`;
-  svg += ref(sz.net, `Net capacity ${fmt(sz.net / 1000, 1)}k t`);
+  svg += ref(sz.net, `Loadable ${fmt(sz.net / 1000, 1)}k t`);
   if (safety > 0) svg += ref(safety, `Safety stock ${fmt(safety / 1000, 1)}k t`);
   // Ullage label sits just under the net capacity label so it never collides, however thin the band.
   svg += `<text class="lbl-txt" x="${W - R + 8}" y="${Math.max(y(sz.net) + 20, (y(sz.net) + y(safety + sz.parcel)) / 2 + 4)}">Ullage reserve ${fmt(sz.ullageT / 1000, 1)}k t</text>`;
@@ -2259,7 +2260,7 @@ const INPUT_GROUPS = [
     ["levels.lallM", "Pump low-low trip (heel)", "m", "placeholder — pump vendor (M10/M30)"], ["levels.lowAlarmMin", "Low alarm → action", "min", "placeholder"]]],
   ["Plot area reference", [["site.refPlotHa", "Reference plot, incl. jetty", "ha", "user-supplied"], ["site.refTankT", "At tank size", "t"], ["site.jettyToTankM", "Jetty → tank distance", "m"]]],
   ["Utilities & boil-off", [["utilities.powerKWhPerT", "Power", "kWh/t"], ["utilities.powerPriceEurMWh", "Power price", "€/MWh"], ["utilities.markupPct", "Admin mark-up", "%"], ["utilities.bogPctPerDay", "Boil-off rate", "% of full tank / d"]]],
-  ["CAPEX basis", [["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refGrossT", "At reference storage size", "t gross", "TEPSA 69,557 m³ × 682 kg/m³"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
+  ["CAPEX basis", [["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refNetT", "At reference loadable volume", "t per tank", "TEPSA 40,000 t (58,651 m³ × 682 kg/m³)"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
     ["capex.marineEurM", "Jetty / marine", "€M"], ["capex.otherEurM", "Dredging, pipeline, other", "€M"], ["capex.accuracyPct", "Estimate accuracy", "± %"]]],
   ["Financial assumptions", [["fin.hurdlePct", "Operator return", "% nominal, post-tax"], ["fin.cpiPct", "CPI indexation", "%/yr"], ["fin.taxPct", "Corporate tax", "%"], ["fin.depYears", "Tax depreciation", "yrs, SL"],
     ["fin.opexPct", "Fixed OPEX", "% CAPEX/yr"], ["fin.termYears", "Contract term", "yrs"], ["fin.residualPct", "Residual value", "% CAPEX"], ["fin.buildYears", "Build period", "yrs"], ["fin.spendProfile", "Spend profile", "% per build year"]]],
@@ -2314,8 +2315,8 @@ async function exportExcel(full) {
     const R = (label, v, unit, note, kind, fmt) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fmt || XF.int] });
     S.section("Headline");
     S.header(["Result", "Value", "Unit", "Basis"], [0, 2, 3]);
-    R("Storage size (gross, to shell top)", sz.gross, "t", `${sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t from ${fmt(sz.req.gross)} t required` : "no rounding"} · basis for CAPEX`, "key");
-    R("Design net working capacity", sz.net, "t", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankT)} t · ${sz.rule.name.toLowerCase()}`, "key");
+    R("Storage size (gross, to shell top)", sz.gross, "t", `${sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t from ${fmt(sz.req.gross)} t required` : "no rounding"}`, "key");
+    R("Design loadable volume", sz.net, "t", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankT)} t · ${sz.rule.name.toLowerCase()} · basis for CAPEX`, "key");
     R("Inner diameter × shell height", sz.D, "m", `× ${fmt(sz.H, 1)} m shell · outer Ø ${fmt(sz.OD, 1)} m`, "key", XF.d1);
     R("Plot required, incl. jetty", sz.plot.ha, "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres · linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t`, "key", XF.d2);
     R("Total CAPEX, before financing", cx.total, "€M", `range €${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %)`, "key");
@@ -2332,8 +2333,8 @@ async function exportExcel(full) {
     R("Required net capacity", sz.netReq, "t", "parcel + buffer");
     R("Required gross tank size", sz.req.gross, "t", "net + top margin + bottom heel + freeboard, to shell top");
     R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
-    R("Net working capacity per tank", sz.perTankT, "t", `${fmt(sz.perTankNetM3)} m³`);
-    R("Nominal volume per tank", sz.nominalM3, "m³", `net = ${pct(sz.netToNominal)} of nominal`);
+    R("Loadable volume per tank", sz.perTankT, "t", `${fmt(sz.perTankNetM3)} m³`);
+    R("Nominal volume per tank", sz.nominalM3, "m³", `loadable = ${pct(sz.netToNominal)} of nominal`);
     R("Stock cover", sz.stockDays, "d", `at ${fmt(sz.qOp)} t/d operating-day send-out · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`, null, XF.d1);
     R("Boil-off at full tank", sz.bogTpd, "t/d", `${fmt(num(P.utilities.bogPctPerDay), 3)} %/d`, null, XF.d1);
 
@@ -2367,7 +2368,7 @@ async function exportExcel(full) {
 
     S.section("Economics");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    R("Storage CAPEX", cx.storage, "€M", `${sz.N} × ${fmt(sz.perTankGrossT)} t gross on the reference curve`, null, XF.d1);
+    R("Storage CAPEX", cx.storage, "€M", `${sz.N} × ${fmt(sz.perTankT)} t loadable on the reference curve`, null, XF.d1);
     R("Jetty / marine", cx.marine, "€M", "", null, XF.d1);
     R("Dredging, pipeline, other", cx.other, "€M", "", null, XF.d1);
     R("Total CAPEX, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} %`, "key", XF.d1);
@@ -2414,7 +2415,7 @@ async function exportExcel(full) {
     const bold = (p, s) => (p.base ? "total" : s);
     S.section("Storage size vs throughput");
     await img(sensSvg(d, ser.storage, Object.assign({ w: 820, h: 300, label: "Storage size versus throughput" }, SENS_FMT.storage), SENS_PRINT), 820, 300);
-    S.header(["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Net working, t", "Inner Ø, m", "Stock cover, d"]);
+    S.header(["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Loadable volume, t", "Inner Ø, m", "Stock cover, d"]);
     d.forEach((p) => S.row([p.t, p.sz.netReq, p.sz.req.gross, p.sz.gross, p.sz.net, p.sz.D, p.sz.stockDays], { kind: bold(p), fmt: [XF.int, XF.int, XF.int, XF.int, XF.int, XF.d1, XF.d1] }));
     S.section("CAPEX & break-even tariff vs throughput");
     const cap = (t) => { S.ws.addRow([t]).getCell(1).font = xfont({ size: 10, bold: true, color: XC.text2 }); };
@@ -2422,10 +2423,10 @@ async function exportExcel(full) {
     await img(sensSvg(d, ser.capex, Object.assign({ w: 820, h: 280, label: "Total CAPEX versus throughput" }, SENS_FMT.capex), SENS_PRINT), 820, 280);
     cap("Break-even storage tariff, €/t");
     await img(sensSvg(d, ser.tariff, Object.assign({ w: 820, h: 280, label: "Break-even storage tariff versus throughput" }, SENS_FMT.tariff), SENS_PRINT), 820, 280);
-    S.header(["Throughput, ktpa", "Storage size, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range low, €M", "Range high, €M", "Break-even tariff, €/t"]);
-    d.forEach((p) => S.row([p.t, p.sz.gross, p.cx.storage, p.cx.total, p.cx.low, p.cx.high, p.cx.be.eurT], { kind: bold(p), fmt: [XF.int, XF.int, XF.d1, XF.d1, XF.int, XF.int, XF.d2] }));
+    S.header(["Throughput, ktpa", "Loadable volume, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range low, €M", "Range high, €M", "Break-even tariff, €/t"]);
+    d.forEach((p) => S.row([p.t, p.sz.net, p.cx.storage, p.cx.total, p.cx.low, p.cx.high, p.cx.be.eurT], { kind: bold(p), fmt: [XF.int, XF.int, XF.d1, XF.d1, XF.int, XF.int, XF.d2] }));
     S.ws.addRow([]);
-    S.note("Each row re-runs the full sizing (required net → required gross → rounded storage size → net working capacity) and the CAPEX and tariff model at that throughput, with every other input as in this workbook. The current case is highlighted.");
+    S.note("Each row re-runs the full sizing (required net → required gross → rounded storage size → loadable volume) and the CAPEX and tariff model at that throughput, with every other input as in this workbook. The current case is highlighted.");
   }
 
   if (full) {
@@ -2457,7 +2458,7 @@ async function exportExcel(full) {
       const S = xSheet(wb, "Sizing", [44, 16, 10, 58]);
       S.title("Tank sizing", subtitle);
       const R = (label, v, unit, note, kind, fmtS) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fmtS || XF.int] });
-      S.section("Net working capacity build-up", `${shipName(sz.shipKey)} · ${sz.rule.name}`);
+      S.section("Loadable volume build-up", `${shipName(sz.shipKey)} · ${sz.rule.name}`);
       S.header(["Component", "Value", "Unit", "Note"], [0, 2, 3]);
       const b = P.buffer;
       R(`Ship parcel (${shipName(sz.shipKey)})`, sz.parcel, "t", `${fmt(sz.parcelM3)} m³ × ${fmt(sz.dens, 1)} kg/m³`);
@@ -2472,13 +2473,13 @@ async function exportExcel(full) {
       R("+ Freeboard", sz.req.fbT, "t", "", "sub");
       R("Required gross tank size", sz.req.gross, "t", "to shell top");
       R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
-      R("Design net working capacity", sz.net, "t", sz.netReq - sz.net > 0.5 ? `${fmt(sz.netReq - sz.net)} t below required` : `${fmt(sz.net - sz.netReq)} t above required`, "key");
+      R("Design loadable volume", sz.net, "t", sz.netReq - sz.net > 0.5 ? `${fmt(sz.netReq - sz.net)} t below required` : `${fmt(sz.net - sz.netReq)} t above required`, "key");
 
       S.section("Tank dimensions, per tank", "vs TEPSA Scenario D datasheet");
       S.header(["Item", "This design", "TEPSA D", "Note"], [0, 3]);
       const D2 = (l, v, t, fm, kind, note) => S.row([l, v, t, note || ""], { kind, fmt: [null, fm, fm] });
-      D2("Net capacity, t", sz.perTankT, 40000, XF.int);
-      D2("Net volume, m³", sz.perTankNetM3, 58651, XF.int);
+      D2("Loadable volume, t", sz.perTankT, 40000, XF.int);
+      D2("Loadable volume, m³", sz.perTankNetM3, 58651, XF.int);
       D2("Nominal volume, m³", sz.nominalM3, 69557, XF.int);
       D2("Inner diameter, m", sz.D, 55.0, XF.d1, "key");
       D2("Outer diameter, m", sz.OD, 58.0, XF.d1);
@@ -2543,7 +2544,7 @@ async function exportExcel(full) {
         const sk = tagStatus(x.tag);
         S.row([x.name, x.h, x.h * sz.area, sz.levelT(x.h), xstrip(x.basis), x.tag], { kind: keyL.has(x.k) ? "key" : null, fmt: [null, XF.d2, XF.int, XF.int], status: sk ? { 5: sk } : null });
       });
-      S.row(["Working range (max − min working level)", sz.workH, sz.workH * sz.area, sz.levelT(sz.workH), `= net working capacity per tank (${fmt(sz.perTankT)} t)`, ""], { kind: "total", fmt: [null, XF.d2, XF.int, XF.int] });
+      S.row(["Working range (max − min working level)", sz.workH, sz.workH * sz.area, sz.levelT(sz.workH), `= loadable volume per tank (${fmt(sz.perTankT)} t)`, ""], { kind: "total", fmt: [null, XF.d2, XF.int, XF.int] });
       S.row(["Unusable above max working level", sz.H - L.lah, (sz.H - L.lah) * sz.area, sz.levelT(sz.H - L.lah), "shell volume kept empty", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
       S.row(["Unusable below min working level", L.lal, L.lal * sz.area, sz.levelT(L.lal), "never sent out — keeps the tank cold", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
       S.freeze(hdr);
@@ -2560,7 +2561,7 @@ async function exportExcel(full) {
       const c = P.capex;
       S.section("CAPEX", "€M, before financing");
       S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
-      R(`Storage (${sz.N} × ${fmt(sz.perTankGrossT)} t gross)`, cx.storage, "€M", `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankGrossT)} ÷ ${fmt(num(c.refGrossT))})^${num(c.exponent)} × ${num(c.locationFactor)}`);
+      R(`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, cx.storage, "€M", `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)} ÷ ${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`);
       R("Jetty / marine", cx.marine, "€M", `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder`);
       R("Dredging, pipeline, other", cx.other, "€M");
       R("Total, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} % → €${fmt(cx.low)}–${fmt(cx.high)}M`, "key");
