@@ -261,6 +261,12 @@
 </head>
 <body>
 
+<div id="crackerLinkBanner" class="hidden" style="background:var(--info-bg);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text2);">
+  <span id="crackerLinkText" style="flex:1;min-width:240px;"></span>
+  <button class="icon-btn primary" id="crackerLinkApply">Apply throughput</button>
+  <button class="icon-btn" id="crackerLinkDismiss">Dismiss</button>
+</div>
+
 <div class="header">
   <span class="header-badge">Storage Design</span>
   <h1>NH₃ Refrigerated Storage — Tank Sizing, CAPEX &amp; Tariff</h1>
@@ -2683,6 +2689,32 @@ function applyTheme(t) {
 $("themeToggle").addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
 
 // ═══════════════════════════════════════════════════════════════
+//   LINKED MODEL: cracker → storage demand
+// ═══════════════════════════════════════════════════════════════
+const CRACKER_LINK_KEY = "gentari.link.crackerToStorage.v1";
+function checkCrackerLink() {
+  let link = null;
+  try { link = JSON.parse(localStorage.getItem(CRACKER_LINK_KEY) || "null"); } catch (e) { link = null; }
+  if (!link || !link.throughputKtpa) return;
+  const banner = $("crackerLinkBanner");
+  const src = link.licensor ? `${link.licensor}${link.fuelMode ? " / " + link.fuelMode : ""}` : "the cracker model";
+  $("crackerLinkText").innerHTML = `Linked from <b>NH₃ Cracker Design</b> (${src}): required feed <b>${fmt(link.throughputKtpa, 1)} ktpa NH₃</b> for ${fmt(link.h2OutputKtpa || 0, 1)} ktpa H₂ output. This is the cracker's demand on this storage/terminal.`;
+  banner.classList.remove("hidden");
+  $("crackerLinkApply").onclick = () => {
+    setPath(P, "demand.throughputKtpa", num(link.throughputKtpa));
+    syncInputs();
+    recalc();
+    save();
+    banner.classList.add("hidden");
+    try { localStorage.removeItem(CRACKER_LINK_KEY); } catch (e) {}
+  };
+  $("crackerLinkDismiss").onclick = () => {
+    banner.classList.add("hidden");
+    try { localStorage.removeItem(CRACKER_LINK_KEY); } catch (e) {}
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
 //   INIT
 // ═══════════════════════════════════════════════════════════════
 (function init() {
@@ -2694,6 +2726,7 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
   let tab = null; try { tab = localStorage.getItem("nh3StorageTab"); } catch (e) {}
   const btn = tab && document.querySelector(`.tab[data-tab="${tab}"]`);
   if (btn) btn.click(); else recalc();
+  checkCrackerLink();
 })();
 </script>
 </body>
