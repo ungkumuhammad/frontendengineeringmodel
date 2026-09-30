@@ -355,11 +355,7 @@
       <summary>Voyage &amp; fleet<span class="sum-note" id="sumVoyage"></span></summary>
       <div class="grp-body">
         <div class="row2">
-          <div class="field"><label>Distance, load port → terminal <span class="hint">nm, one way</span></label><input type="number" step="50" min="1" data-path="voyage.distanceNm"/></div>
-          <div class="field"><label>Service speed <span class="hint">knots</span></label><input type="number" step="0.5" min="1" data-ship-field="speedKn"/></div>
-          <div class="field"><label>Sea margin <span class="hint">% weather/routing</span></label><input type="number" step="1" min="0" data-path="voyage.seaMarginPct"/></div>
-          <div class="field"><label>Load port time <span class="hint">days</span></label><input type="number" step="0.25" min="0" data-path="voyage.loadPortDays"/></div>
-          <div class="field"><label>Canal / waiting <span class="hint">days per round trip</span></label><input type="number" step="0.5" min="0" data-path="voyage.canalWaitDays"/></div>
+          <div class="field"><label>Round trip <span class="hint">days, all-in (sea, ports, canal/waiting)</span></label><input type="number" step="0.5" min="1" data-path="voyage.roundTripDays"/></div>
           <div class="field"><label>Off-hire <span class="hint">days/yr per vessel</span></label><input type="number" step="1" min="0" max="200" data-path="voyage.offHireDays"/></div>
         </div>
         <div class="row2">
@@ -746,15 +742,16 @@ const DEFAULTS = {
   demand: { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" },
   shipClass: "CUSTOM",
   ships: {
-    MGC:    { label: "MGC",  m3: 40000, fillPct: 98,  speedKn: 15,   tcUsdDay: 35000, seaFuelTpd: 32, portFuelTpd: 6, portCostUsdK: 150, freightEurT: 55, marineAdderEurM: 0 },
-    LGC:    { label: "LGC",  m3: 60000, fillPct: 98,  speedKn: 15.5, tcUsdDay: 45000, seaFuelTpd: 40, portFuelTpd: 7, portCostUsdK: 190, freightEurT: 45, marineAdderEurM: 0 },
-    VLAC:   { label: "VLAC", m3: 90000, fillPct: 98,  speedKn: 16,   tcUsdDay: 55000, seaFuelTpd: 50, portFuelTpd: 8, portCostUsdK: 230, freightEurT: 38, marineAdderEurM: 0 },
-    CUSTOM: { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100, speedKn: 15, tcUsdDay: 38000, seaFuelTpd: 34, portFuelTpd: 6, portCostUsdK: 160, freightEurT: 50, marineAdderEurM: 0 },
+    MGC:    { label: "MGC",  m3: 40000, fillPct: 98,  tcUsdDay: 35000, seaFuelTpd: 32, portFuelTpd: 6, portCostUsdK: 150, freightEurT: 55, marineAdderEurM: 0 },
+    LGC:    { label: "LGC",  m3: 60000, fillPct: 98,  tcUsdDay: 45000, seaFuelTpd: 40, portFuelTpd: 7, portCostUsdK: 190, freightEurT: 45, marineAdderEurM: 0 },
+    VLAC:   { label: "VLAC", m3: 90000, fillPct: 98,  tcUsdDay: 55000, seaFuelTpd: 50, portFuelTpd: 8, portCostUsdK: 230, freightEurT: 38, marineAdderEurM: 0 },
+    CUSTOM: { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100, tcUsdDay: 38000, seaFuelTpd: 34, portFuelTpd: 6, portCostUsdK: 160, freightEurT: 50, marineAdderEurM: 0 },
   },
-  voyage: { distanceNm: 5000, seaMarginPct: 5, loadPortDays: 1.5, canalWaitDays: 0, offHireDays: 10, bunkerUsdT: 600, fxUsdPerEur: 1.10, freightMethod: "voyage", charterBasis: "share",
+  voyage: { roundTripDays: 33, offHireDays: 10, bunkerUsdT: 600, fxUsdPerEur: 1.10, freightMethod: "voyage", charterBasis: "share",
+    // roundTripDays is the all-in round trip of one vessel (sea legs, load port, discharge, canal/waiting), entered directly.
+    // fleetMode "chartered" (default): the number of ships is an input; round trip and fleet set the interval, the interval sets the parcel.
     // fleetMode "auto": ships needed is an output (demand sets the arrival interval).
-    // fleetMode "chartered": the number of ships is an input; distance, speed and fleet set the interval, the interval sets the parcel.
-    fleetMode: "auto", chartered: 2 },
+    fleetMode: "chartered", chartered: 2 },
   jetty: { unloadRateTph: 650, berthHours: 12 },
   buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000, roundDir: "up", ullage: "include" },
   geometry: { tanks: 1, innerHeightM: 29.3, levelBasis: "pgs12", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
@@ -793,7 +790,7 @@ const DEFAULTS = {
       "Vopak: is '40 kt' net (usable) or gross capacity?",
       "Vopak: confirm utility pass-through basis equals TEPSA",
       "Titan: year of estimate; dredging / marine civil scope",
-      "Supply load port and distance to Le Havre (default 5,000 nm placeholder)",
+      "Supply load port: round trip days to Le Havre, all-in (default 33 d placeholder)",
       "Charter hire, fuel consumption and port costs by ship class (placeholders)",
       "TEPSA: level set-point schedule (max design level, overfill trip, high/low alarms, pump trip) behind the 3.1 m top / 1.5 m heel calibration",
       "Pump vendor: minimum submergence of the in-tank pumps — sets the unusable heel (PGS 12 M10/M30)",
@@ -811,6 +808,7 @@ const DEFAULTS = {
       { date: "2026-09-27", text: "Plot required scales linearly from 3.7 ha at 60 kt (incl. jetty, jetty 500 m from tank); shown in ha, m², sq ft and acres" },
       { date: "2026-09-27", text: "Tank levels follow PGS 12: max design level ≥ 0.5 m below shell top, then independent overfill trip, high alarm, low alarm and pump heel; density from PGS 12:2025 Tabel 7" },
       { date: "2026-09-28", text: "Storage CAPEX scales on loadable volume per tank (TEPSA €185M = 40,000 t loadable), not gross tank size" },
+      { date: "2026-09-30", text: "Voyage & fleet inputs reduced to round trip days (all-in) and ships chartered; chartered fleet is the default. Distance, speed, sea margin, load-port and canal days removed" },
       { date: "2026-09-30", text: "Fleet basis switch: number of chartered ships can be an input; arrival interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only)" },
     ],
   },
@@ -966,15 +964,15 @@ const RULES = {
   },
 };
 
-// One vessel's round trip: laden + ballast sea legs (with margin), load port, discharge, canal/waiting.
+// One vessel's round trip is an input (all-in days). For the fuel split only, one berth stay at each end
+// (load port = discharge time) counts as port time and the rest as sea time.
 function roundTrip(s, callH) {
-  const v = P.voyage, spd = Math.max(0.1, num(s.speedKn));
-  const seaOneWay = num(v.distanceNm) / (spd * 24);
-  const seaDays = 2 * seaOneWay * (1 + num(v.seaMarginPct) / 100);
-  const loadD = num(v.loadPortDays), dischD = callH / 24, waitD = num(v.canalWaitDays);
+  const v = P.voyage;
+  const rt = Math.max(1, num(v.roundTripDays, 1));
+  const dischD = Math.min(callH / 24, rt / 2), loadD = dischD;
+  const seaDays = Math.max(0, rt - loadD - dischD), waitD = 0;
   const availDays = Math.max(1, 365 - num(v.offHireDays));
-  const rt = seaDays + loadD + dischD + waitD;
-  return { seaOneWay, seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel: availDays / rt };
+  return { seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel: availDays / rt };
 }
 
 function size(shipKey = P.shipClass) {
@@ -1111,7 +1109,7 @@ function capexFor(sz) {
 // and the round trip decides how many vessels are needed. Chartered mode: the fleet is an input and sets the interval.
 function voyage(sz) {
   const v = P.voyage, s = P.ships[sz.shipKey];
-  const { seaOneWay, seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel } = roundTrip(s, sz.callHRt);
+  const { seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel } = roundTrip(s, sz.callHRt);
   // Vessels needed to move the demand in full cargoes (auto mode: the fleet; chartered mode: compared with what is chartered).
   const fleetExact = sz.thrT / sz.parcelFull / cargoesPerVessel;
   const fleet = sz.chartered ? sz.fleetChartered : Math.max(1, Math.ceil(fleetExact - 1e-9));
@@ -1125,7 +1123,7 @@ function voyage(sz) {
   const dedicatedEurT = dedicatedUsdYr / sz.delivT / fx;
   const calcEurT = v.charterBasis === "dedicated" ? dedicatedEurT : shareEurT;
   const manual = v.freightMethod === "manual";
-  return { seaOneWay, seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel, fleetExact, fleet,
+  return { seaDays, loadD, dischD, waitD, rt, availDays, cargoesPerVessel, fleetExact, fleet,
     fleetUse: fleetExact / fleet, fx, hireUsd, fuelUsd, portUsd, voyUsd, shareEurT, dedicatedEurT, dedicatedUsdYr,
     calcEurT, freight: manual ? num(s.freightEurT) : calcEurT, manual };
 }
@@ -1239,8 +1237,8 @@ function renderSummaries(sz, cx) {
   $("sumVoyage").textContent = `${fmt(vy.rt, 1)} d · ${vy.fleet} vsl${sz.chartered ? " chartered" : ""} · €${fmt(vy.freight, 1)}/t`;
   $("charteredField").classList.toggle("hidden", P.voyage.fleetMode !== "chartered");
   $("fleetNote").innerHTML = P.voyage.fleetMode === "chartered"
-    ? `Arrival interval = round trip ÷ ships chartered (after off-hire). Each call brings send-out × interval, up to one full ${shipName(sz.shipKey)} cargo; that cargo plus the buffer sets the loadable volume. Applies to the selected ship class only; the <b>Optimum size</b> tab still sizes the other classes from demand.`
-    : `Ships needed follows from demand: parcel ÷ send-out sets the arrival interval, the round trip sets how many vessels keep that rhythm. Switch to <b>chartered</b> to enter the fleet and let distance and fleet size set the loadable volume.`;
+    ? `Arrival interval = round trip ÷ ships chartered (after off-hire). Each call brings send-out × interval, up to one full ${shipName(sz.shipKey)} cargo; that cargo plus the buffer sets the loadable volume. The fleet applies to the selected ship class only; the <b>Optimum size</b> tab uses the same round trip but sizes the other classes from demand.`
+    : `Ships needed follows from demand: parcel ÷ send-out sets the arrival interval, the round trip sets how many vessels keep that rhythm. Switch to <b>chartered</b> to enter the fleet and let round trip and fleet size set the loadable volume.`;
   $("voyageCostFields").classList.toggle("hidden", vy.manual);
   $("manualFreightField").classList.toggle("hidden", !vy.manual);
   $("sumBuffer").textContent = `${fmt(sz.bufferDays, 1)} d`;
@@ -1382,15 +1380,12 @@ function renderPlot(sz) {
 
 function renderVoyage(sz) {
   const vy = voyage(sz), v = P.voyage, s = P.ships[sz.shipKey];
-  $("voySub").textContent = `${fmt(num(v.distanceNm))} nm · ${fmt(num(s.speedKn), 1)} kn`;
+  $("voySub").textContent = `${fmt(vy.rt, 1)} d round trip · ${sz.chartered ? `${sz.fleetChartered} chartered` : "fleet from demand"}`;
   $("voyTable").innerHTML = rows([
     { head: ["Leg", "Days", "Basis"] },
-    { cells: ["Laden voyage", fmt(vy.seaDays / 2, 1), `${fmt(num(v.distanceNm))} nm ÷ ${fmt(num(s.speedKn), 1)} kn, +${fmt(num(v.seaMarginPct))} % margin`] },
-    { cells: ["Ballast return", fmt(vy.seaDays / 2, 1), "same distance and speed"] },
-    { cells: ["Load port", fmt(vy.loadD, 1), "input"] },
-    { cells: ["Discharge at terminal", fmt(vy.dischD, 1), `${fmt(sz.callHRt, 1)} h berth time (full cargo)`] },
-    { cells: ["Canal / waiting", fmt(vy.waitD, 1), "input"] },
-    { cls: "total", cells: ["Round trip per vessel", fmt(vy.rt, 1), `${fmt(vy.cargoesPerVessel, 1)} cargoes / vessel / yr (${fmt(vy.availDays)} d available)`] },
+    { cls: "total", cells: ["Round trip per vessel", fmt(vy.rt, 1), `input · ${fmt(vy.cargoesPerVessel, 1)} cargoes / vessel / yr (${fmt(vy.availDays)} d available)`] },
+    { cells: ["→ at sea (fuel split)", fmt(vy.seaDays, 1), "round trip − port days"] },
+    { cells: ["→ in port (fuel split)", fmt(vy.loadD + vy.dischD, 1), `load port + discharge, ${fmt(sz.callHRt, 1)} h berth time each (full cargo)`] },
     { cells: [sz.chartered ? "Arrival interval" : "Required arrival interval", fmt(sz.intervalD, 1), sz.chartered ? `${fmt(sz.shipsYr, 1)} cargoes / yr from ${sz.fleetChartered} chartered` : `${fmt(sz.shipsYr, 1)} cargoes / yr from demand`] },
     sz.chartered
       ? { cls: "total", cells: ["Vessels chartered", `${sz.fleetChartered} (need ${fmt(vy.fleetExact, 2)})`, `delivers ${fmt(sz.supplyT / 1000)} kt/yr vs ${fmt(sz.thrT / 1000)} kt/yr demand · cargo ${pct(sz.fillOfShip, 0)} of ship`] }
@@ -1828,12 +1823,11 @@ function renderOptimum() {
 // Editable tables are built once so typing never loses focus; values come from syncInputs().
 function buildStaticTables() {
   $("shipEditTable").innerHTML =
-    `<tr><th>Class</th><th class="num">Capacity m³</th><th class="num">Fill %</th><th class="num">Parcel t</th><th class="num">Speed kn</th><th class="num">Hire USD/d</th><th class="num">Sea fuel t/d</th><th class="num">Port fuel t/d</th><th class="num">Port USD k</th><th class="num">Calc. freight €/t</th><th class="num">Manual freight €/t</th><th class="num">Marine adder €M</th></tr>` +
+    `<tr><th>Class</th><th class="num">Capacity m³</th><th class="num">Fill %</th><th class="num">Parcel t</th><th class="num">Hire USD/d</th><th class="num">Sea fuel t/d</th><th class="num">Port fuel t/d</th><th class="num">Port USD k</th><th class="num">Calc. freight €/t</th><th class="num">Manual freight €/t</th><th class="num">Marine adder €M</th></tr>` +
     SHIP_KEYS.map((k) => `<tr><td class="lbl">${k === "CUSTOM" ? `<input type="text" data-path="ships.CUSTOM.label" style="width:170px"/>` : k}</td>
       <td class="num"><input type="number" step="500" data-path="ships.${k}.m3"/></td>
       <td class="num"><input type="number" step="0.5" data-path="ships.${k}.fillPct"/></td>
       <td class="num" id="parcel-${k}"></td>
-      <td class="num"><input type="number" step="0.5" data-path="ships.${k}.speedKn" style="width:64px"/></td>
       <td class="num"><input type="number" step="1000" data-path="ships.${k}.tcUsdDay"/></td>
       <td class="num"><input type="number" step="1" data-path="ships.${k}.seaFuelTpd" style="width:64px"/></td>
       <td class="num"><input type="number" step="0.5" data-path="ships.${k}.portFuelTpd" style="width:64px"/></td>
@@ -2161,7 +2155,7 @@ $("btnPreset").addEventListener("click", () => {
   Object.assign(P.demand, { throughputKtpa: 520, operatingDays: 341, rateBasis: "average" });
   Object.assign(P.product, { densityBasis: "manual", density: 682, tempC: -33 }); P.shipClass = "CUSTOM";
   Object.assign(P.ships.CUSTOM, { label: "TEPSA 30 kt parcel", m3: 44000, fillPct: 100 });
-  Object.assign(P.jetty, { unloadRateTph: 650 });
+  Object.assign(P.jetty, { unloadRateTph: 650 }); P.voyage.fleetMode = "auto";
   // TEPSA quotes 40,000 t net, so the check case sizes to the required net without rounding the gross size.
   Object.assign(P.buffer, { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 0, roundDir: "up", ullage: "include" });
   Object.assign(P.geometry, { tanks: 1, innerHeightM: 29.3, levelBasis: "lumped", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5 });
@@ -2301,8 +2295,8 @@ const INPUT_GROUPS = [
   ["Demand (send-out) — receiving terminal", [["demand.throughputKtpa", "Throughput", "ktpa"], ["demand.operatingDays", "Downstream operating days", "d/yr"], ["demand.rateBasis", "Daily send-out used for buffers"]]],
   ["Product", [["product.densityBasis", "Liquid density basis"], ["product.tempC", "Storage temperature", "°C"], ["product.density", "Liquid density", "kg/m³", "PGS 12:2025 Tabel 7 when the basis is PGS 12"], ["product.pressure", "Design pressure", "mbarg"]]],
   ["Shipping (import)", [["jetty.unloadRateTph", "Unloading rate", "t/h"], ["jetty.berthHours", "Berth overhead", "h/call", "mooring, arm connection, cool-down, paperwork, unmooring"]]],
-  ["Voyage & fleet", [["voyage.distanceNm", "Distance, load port → terminal", "nm", "placeholder"], ["voyage.seaMarginPct", "Sea margin", "%"], ["voyage.loadPortDays", "Load port time", "d"],
-    ["voyage.canalWaitDays", "Canal / waiting", "d per round trip"], ["voyage.offHireDays", "Off-hire", "d/yr per vessel"], ["voyage.bunkerUsdT", "Bunker price", "USD/t", "placeholder"],
+  ["Voyage & fleet", [["voyage.roundTripDays", "Round trip, all-in", "d", "sea, ports, canal/waiting; placeholder"],
+    ["voyage.offHireDays", "Off-hire", "d/yr per vessel"], ["voyage.bunkerUsdT", "Bunker price", "USD/t", "placeholder"],
     ["voyage.fxUsdPerEur", "FX", "USD per EUR"], ["voyage.fleetMode", "Fleet basis", "", "auto = ships needed from demand; chartered = fleet is an input"], ["voyage.chartered", "Ships chartered", "vessels", "used when the fleet basis is chartered"],
     ["voyage.freightMethod", "Freight cost"], ["voyage.charterBasis", "Charter basis"]]],
   ["Buffer rule", [["buffer.rule", "How buffer events combine"], ["buffer.noSendoutDays", "No send-out", "d"], ["buffer.earlyDays", "Ship early", "d"], ["buffer.lateDays", "Ship late", "d"],
@@ -2416,7 +2410,7 @@ async function exportExcel(full) {
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
     R("Ships per year", sz.shipsYr, "", `${fmt(sz.shipsMonth, 2)} per month`, null, XF.d1);
     R("Arrival interval", sz.intervalD, "d", "parcel ÷ average send-out", null, XF.d1);
-    R("Round trip per vessel", vy.rt, "d", `${fmt(num(P.voyage.distanceNm))} nm at ${fmt(num(P.ships[sz.shipKey].speedKn), 1)} kn`, null, XF.d1);
+    R("Round trip per vessel", vy.rt, "d", "input, all-in", null, XF.d1);
     R("Vessels needed", vy.fleet, "", `${fmt(vy.fleetExact, 2)} exact · ${pct(vy.fleetUse, 0)} utilised`, "total");
     R("Jetty occupancy", sz.jettyOcc, "", `${fmt(sz.callH, 1)} h per call`, null, XF.pct);
     R("Freight", vy.freight, "€/t", vy.manual ? "manual input" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share (COA / spot)", null, XF.d1);
@@ -2499,10 +2493,10 @@ async function exportExcel(full) {
         }
       }
       S.section("Ship classes", `selected: ${shipName(P.shipClass)}`);
-      S.header(["Class", "Capacity m³ · fill %", "Speed kn · hire USD/d", "Fuel sea/port t/d · port USD k · manual €/t · marine adder €M"], [0, 3]);
+      S.header(["Class", "Capacity m³ · fill %", "Hire USD/d", "Fuel sea/port t/d · port USD k · manual €/t · marine adder €M"], [0, 3]);
       SHIP_KEYS.forEach((k) => {
         const s = P.ships[k];
-        S.row([shipName(k), `${fmt(num(s.m3))} · ${fmt(num(s.fillPct), 1)} %`, `${fmt(num(s.speedKn), 1)} · ${fmt(num(s.tcUsdDay))}`,
+        S.row([shipName(k), `${fmt(num(s.m3))} · ${fmt(num(s.fillPct), 1)} %`, `${fmt(num(s.tcUsdDay))}`,
           `${fmt(num(s.seaFuelTpd))} / ${fmt(num(s.portFuelTpd), 1)} · ${fmt(num(s.portCostUsdK))} · €${fmt(num(s.freightEurT), 1)} · €${fmt(num(s.marineAdderEurM))}M`],
           { kind: k === P.shipClass ? "total" : null });
       });
@@ -2566,15 +2560,12 @@ async function exportExcel(full) {
       R("Boil-off (full tank)", sz.bogTpd, "t/d", "", null, XF.d1);
       R("Level rise while unloading", sz.riseMh, "m/h", `${fmt(sz.qInM3h)} m³/h into one tank`, null, XF.d2);
 
-      S.section("Vessel round trip & fleet", `${fmt(num(P.voyage.distanceNm))} nm`);
+      S.section("Vessel round trip & fleet", `${fmt(vy.rt, 1)} d round trip`);
       S.header(["Leg", "Days", "", "Basis"], [0, 3]);
-      R("Laden voyage", vy.seaDays / 2, "", `${fmt(num(P.voyage.distanceNm))} nm, +${fmt(num(P.voyage.seaMarginPct))} % margin`, null, XF.d1);
-      R("Ballast return", vy.seaDays / 2, "", "same distance and speed", null, XF.d1);
-      R("Load port", vy.loadD, "", "input", null, XF.d1);
-      R("Discharge at terminal", vy.dischD, "", `${fmt(sz.callH, 1)} h berth time`, null, XF.d1);
-      R("Canal / waiting", vy.waitD, "", "input", null, XF.d1);
-      R("Round trip per vessel", vy.rt, "", `${fmt(vy.cargoesPerVessel, 1)} cargoes / vessel / yr`, "total", XF.d1);
-      R("Vessels needed", vy.fleet, "", `${fmt(vy.fleetExact, 2)} exact · ${pct(vy.fleetUse, 0)} utilised`, "key");
+      R("Round trip per vessel", vy.rt, "", `input · ${fmt(vy.cargoesPerVessel, 1)} cargoes / vessel / yr`, "total", XF.d1);
+      R("→ at sea (fuel split)", vy.seaDays, "", "round trip − port days", null, XF.d1);
+      R("→ in port (fuel split)", vy.loadD + vy.dischD, "", `load port + discharge, ${fmt(sz.callHRt, 1)} h berth time each`, null, XF.d1);
+      R(sz.chartered ? "Vessels chartered" : "Vessels needed", vy.fleet, "", sz.chartered ? `need ${fmt(vy.fleetExact, 2)} · delivers ${fmt(sz.supplyT / 1000)} kt/yr vs ${fmt(sz.thrT / 1000)} kt/yr` : `${fmt(vy.fleetExact, 2)} exact · ${pct(vy.fleetUse, 0)} utilised`, "key");
 
       S.section("Freight per voyage");
       S.header(["Item", "USD k / voyage", "€/t", "Note"], [0, 3]);
@@ -2653,7 +2644,7 @@ async function exportExcel(full) {
       const cols = ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Plot acres", "Plot sq ft", "Inner Ø m", "Ships / yr", "Jetty occ.", "Round trip d", "Vessels", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"];
       const S = xSheet(wb, "Ship Options", [26, 10, 11, 9, 10, 12, 10, 10, 10, 11, 9, 10, 11, 11, 11, 11]);
       S.title("Optimum size by ship class", subtitle);
-      S.section("Cost per tonne by ship class", `freight: ${P.voyage.freightMethod === "manual" ? "manual €/t" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share (COA / spot)"} · ${fmt(num(P.voyage.distanceNm))} nm`);
+      S.section("Cost per tonne by ship class", `freight: ${P.voyage.freightMethod === "manual" ? "manual €/t" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share (COA / spot)"} · ${fmt(num(P.voyage.roundTripDays), 1)} d round trip`);
       S.header(cols, [0]);
       const hdr = S.headerRow;
       od.forEach((d) => {

@@ -124,24 +124,25 @@ TEPSA check (lumped level basis, 682 kg/m³): 30,000 t + (5 + 2) d × 1,425 t/d 
 
 ## Voyage & fleet
 
-The arrival interval at the terminal is set by demand (parcel ÷ send-out). Distance and
-speed set each vessel's round trip, which decides the fleet size and the freight cost:
+The round trip of one vessel is entered directly, in days, all-in (sea legs, load port, discharge,
+canal and waiting). Distance, speed and sea margin are no longer inputs. Off-hire, hire, fuel,
+port costs, bunker price and FX are unchanged.
 
 ```
-round trip  = 2 × distance ÷ (speed × 24) × (1 + sea margin) + load port + discharge + canal/waiting
-vessels     = cargoes per year ÷ ((365 − off-hire) ÷ round trip), rounded up
-freight €/t = voyage share:   (hire × round trip + fuel + port costs) ÷ parcel ÷ FX
-              dedicated fleet: (vessels × hire × 365 + fuel & port per voyage × cargoes) ÷ throughput ÷ FX
+round trip      = input (days)
+vessels         = chartered fleet (default) or, in "size from demand" mode,
+                  cargoes per year ÷ ((365 − off-hire) ÷ round trip), rounded up
+freight €/t     = voyage share:   (hire × round trip + fuel + port costs) ÷ parcel ÷ FX
+                  dedicated fleet: (vessels × hire × 365 + fuel & port per voyage × cargoes) ÷ delivered tonnes ÷ FX
+fuel split      = port days = load port + discharge (one berth stay at each end); sea days = round trip − port days
 ```
 
-### Fleet basis: size from demand, or charter a number of ships
+### Fleet basis: chartered fleet (default) or size from demand
 
-`Fleet` under Voyage & fleet has two modes. **Size from demand** (default) is the calculation above:
-the number of vessels is an output. **Number of ships chartered** makes it an input, so vessel size,
-distance, speed and fleet together set the loadable volume:
+`Fleet` under Voyage & fleet has two modes. **Number of ships chartered** (default) makes the
+fleet an input, so vessel size, round trip and fleet together set the loadable volume:
 
 ```
-round trip      = as above (berth time based on a full cargo)
 calls per year  = ships chartered × (365 − off-hire) ÷ round trip
 arrival interval = 365 ÷ calls per year
 parcel per call = min( full cargo , average send-out × arrival interval )
@@ -149,15 +150,14 @@ required net    = parcel per call + buffer days × send-out          (buffer rul
 deliverable     = calls per year × full cargo   (flagged if below throughput)
 ```
 
-More ships or a shorter route → shorter interval → smaller parcel per call → smaller tank and
+More ships or a shorter round trip → shorter interval → smaller parcel per call → smaller tank and
 CAPEX, at the cost of more hire. Too few ships → the fleet cannot deliver the throughput (error
 shown; storage is then sized on a full cargo every interval). Applies to the selected ship class
-only; the Optimum size tab still sizes every class from demand. Default project with 2 × 30 kt-class
-vessels at 5,000 nm and 520 ktpa: 36,861 t loadable. The buffer days (ship late, port closure) are
-still inputs and are not derived from the route.
-
-Freight can also be entered manually per ship class. Default distance (5,000 nm), hire, fuel
-and port costs are placeholders.
+only; the Optimum size tab uses the same round trip but sizes every class from demand.
+**Size from demand** makes the number of vessels an output: parcel ÷ send-out sets the arrival
+interval and the round trip sets how many vessels keep that rhythm. The TEPSA check case switches
+to this mode. The buffer days (ship late, port closure) are still inputs and are not derived from
+the round trip. Default round trip (33 d) and hire, fuel and port costs are placeholders.
 
 ## Economics method
 
