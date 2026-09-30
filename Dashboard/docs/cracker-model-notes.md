@@ -105,7 +105,7 @@ on the tab; emergency power keeps the repo owner's ×2 load allowance and flags 
 
 Technical sizing now shows **plot footprint, ISBL + OSBL**. ISBL comes from licensor plot data: KBR §3.6
 (power-law fit, 1,225.8 × ktpa^0.41 m²) or Duiker §3.10 (two-point fit, 162.6 × ktpa^0.69 m²). No OSBL
-area exists in the KBR, Duiker or Casale packages, so OSBL is an input, **% of ISBL, default 50 %, an
+area exists in the KBR, Duiker or Casale packages, so OSBL is an input, **% of ISBL, default 200 % (was 50 %), an
 assumption to replace with a site layout**. KBR ISBL excludes offsites and utilities; Duiker excludes NH₃
 storage and H₂ compression above 50 barg.
 
@@ -124,3 +124,5 @@ diagrams. With the Duiker basis the process flow switches to a Duiker AHC diagra
 Tables 5–6 flows per kg H₂ (NH₃ pump and vaporiser, convective cracking reactor, SCO combustor, heat recovery, PSA,
 optional SCR, stack with CEMS; NG stream in NG-fired mode). Duiker's own Figure 3 is not extractable from the converted
 package, so the drawing follows the text.
+
+OSBL plot area default is now 200 % of ISBL (owner instruction, still an assumption). Footprint fits and sources are quoted in sqft first, m² in brackets.
