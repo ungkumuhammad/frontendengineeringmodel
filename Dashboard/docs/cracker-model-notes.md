@@ -100,3 +100,17 @@ utility maxima scale linearly from 12 ktpa. 160 ktpa is extrapolated. Six items 
 flare KO drum heater, off-spec tank, oil-water package, ammoniacal drain drum and pumps). The list is
 KBR's, so for Duiker or Custom it is only an indicative OSBL reference. Assumptions A1–A14 are editable
 on the tab; emergency power keeps the repo owner's ×2 load allowance and flags KBR I.F Note 9 (0.3 MW).
+
+## Footprint and CO₂ mass balance (added 2026-09-30)
+
+Technical sizing now shows **plot footprint, ISBL + OSBL**. ISBL comes from licensor plot data: KBR §3.6
+(power-law fit, 1,225.8 × ktpa^0.41 m²) or Duiker §3.10 (two-point fit, 162.6 × ktpa^0.69 m²). No OSBL
+area exists in the KBR, Duiker or Casale packages, so OSBL is an input, **% of ISBL, default 50 %, an
+assumption to replace with a site layout**. KBR ISBL excludes offsites and utilities; Duiker excludes NH₃
+storage and H₂ compression above 50 barg.
+
+Technical sizing also shows **direct CO₂ from a carbon balance** next to the licensor figure: NG burned ×
+carbon fraction × 44.01/12.011. NG composition is KBR I.A §5 (MW 16.95, 75.1 wt % C) giving 2.752 kg CO₂/kg NG,
+identical to KBR I.E (1,150 kg/h ÷ 417.9 kg/h). It reproduces KBR's 0.81 / 0.45 / 0.00. For Duiker NG-fired
+the NG energy implied by its 90.6 % efficiency gives ≈0.24 vs Duiker's stated 0.21 (flagged). CO₂ only; N₂O and
+CH₄ slip are not in any source, so CO₂e = CO₂.

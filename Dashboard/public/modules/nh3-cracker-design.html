@@ -227,6 +227,7 @@
           <div class="field"><label for="inFx">FX <span class="hint">USD per EUR</span></label><input type="number" step="0.01" min="0.01" id="inFx" value="1.1448"/></div>
           <div class="field"><label for="inRate">Discount rate <span class="hint">%</span></label><input type="number" step="0.5" min="0" id="inRate" value="8"/></div>
           <div class="field"><label for="inLife">Plant life <span class="hint">years</span></label><input type="number" step="1" min="1" id="inLife" value="25"/></div>
+          <div class="field"><label for="inOsblPct">OSBL plot area <span class="hint">% of ISBL — assumption</span></label><input type="number" step="5" min="0" id="inOsblPct" value="50"/></div>
         </div>
         <p class="note">Defaults are KBR's own cost basis (NH₃ 500 USD/t, power 140 USD/MWh, NG 30 USD/MWh, 8 %, 25 years, 350 d/yr), so a KBR case reproduces KBR's published LCOH. Gas price unit conversion is energy only (1 MWh = 3.4121 MMBtu); gas quoted per MMBtu is normally on an HHV basis while this model consumes LHV energy, so adjust the price if you need that basis. FX default is the ECB reference rate of 3 Jul 2026 used in the Gentari cracker workbook (an assumption).</p>
       </div>
@@ -578,6 +579,17 @@ const STOICH_KBR = 33.8 / 500 * 1e6 / (34.3 * 350);          // 5.63: KBR §4.2 
 const FIRING_NH3EQ = 1.54;                                  // kg NH3-eq / kg H2, Gentari basis
 const MMBTU_PER_MWH = 3.6 / 1.055056;                       // 1 MWh = 3.6 GJ; 1 MMBtu = 1.055056 GJ (energy-unit conversion only)
 
+// Natural gas composition, mol %, KBR I.A §5 (also I.C stream 13). Carbon balance: every C atom leaves as CO2.
+const NG_COMP = [["CH4", 94.464, 1, 16.043], ["C2H6", 4.564, 2, 30.070], ["C3H8", 0.484, 3, 44.097], ["i-C4H10", 0.116, 4, 58.123], ["n-C4H10", 0.119, 4, 58.123], ["i-C5H12", 0.002, 5, 72.150], ["N2", 0.250, 0, 28.014]];
+const NG_MW = NG_COMP.reduce((a, c) => a + c[1] / 100 * c[3], 0);                 // kg/kmol, ~16.95 (I.C: 16.95)
+const NG_C_KMOL = NG_COMP.reduce((a, c) => a + c[1] / 100 * c[2], 0);             // kmol C per kmol NG
+const CO2_PER_KG_NG_MB = NG_C_KMOL * 44.01 / NG_MW;                                // kg CO2 / kg NG, mass balance
+const NG_C_FRAC = NG_C_KMOL * 12.011 / NG_MW;                                     // kg C / kg NG
+const SQFT_PER_M2 = 10.7639;                                                      // international foot
+// ISBL plot footprints: KBR §3.6 (70x50, 80x55, 95x75, 100x75 m at 12/24/68/80 ktpa); Duiker §3.10 (900 m2 at 12 ktpa; 3,660 m2 for a 276 tpd train = 92 ktpa at Duiker's implied 333.3 d/yr)
+const FP_KBR_PTS = [[12, 70 * 50], [24, 80 * 55], [68, 95 * 75], [80, 100 * 75]];
+const FP_DUIKER_PTS = [[12, 900], [276 / 36 * 12, 3660]];
+
 // KBR H2ACT — KPI table §3.3, OPEX/LCOH §4.2, ISBL §4.1 (Rev 0, 23 Dec 2025)
 const KBR = {
   tpd: { 12: 34.3, 24: 68.6, 68: 194.3, 80: 228.6 },
@@ -717,6 +729,8 @@ for (const c of caps(KBR.modes.NG100.opex)) {
   const cons = KBR.consumablesUsdPerT * h / 1e6;
   KBR_FIXED[c] = { v: rest - ng - el - cons, stated: false };
 }
+const FIT_FP_KBR = fitPower(FP_KBR_PTS.map(([x, y]) => ({ x, y })));
+const FIT_FP_DUIKER = fitPower(FP_DUIKER_PTS.map(([x, y]) => ({ x, y })));
 const FIT_FIXED = fitPower(caps(KBR_FIXED).map((c) => ({ x: c, y: KBR_FIXED[c].v })));
 const FIT_EL = {};
 for (const [k, m] of Object.entries(KBR.modes)) FIT_EL[k] = fitPower(caps(m.el).map((c) => ({ x: c, y: m.el[c] })));
@@ -749,10 +763,11 @@ function inputs() {
     pNh3: num($("inPNh3").value), pEl: num($("inPEl").value),
     pNg: num($("inPNg").value) * ($("inPNgUnit").value === "mmbtu" ? MMBTU_PER_MWH : 1),   // USD/MWh (LHV energy)
     fx: num($("inFx").value, 1.1448), rate: num($("inRate").value, 8) / 100, life: Math.max(1, num($("inLife").value, 25)),
-    duikerExp: num($("inDuikerExp").value, FIT_KBR.b),
+    duikerExp: num($("inDuikerExp").value, FIT_KBR.b), osblPct: Math.max(0, num($("inOsblPct").value, 50)) / 100,
   };
 }
 
+const m_dk_eff = (I) => DUIKER.modes[I.mode].eff;
 function duikerCapexUsdM(cap, I) { return DUIKER.capexEurM * I.fx * Math.pow(cap / DUIKER.cap, I.duikerExp); }
 
 function model(I) {
@@ -796,6 +811,19 @@ function model(I) {
   r.elMWh = r.el * h2t / 1000;
   r.elMW = r.elMWh / (I.days * 24);
   r.co2t = r.co2 * h2t;
+  // CO2 from the carbon balance: NG burned x carbon fraction x 44.01/12.011. NH3, H2 and PSA tail gas carry no carbon.
+  r.ngKgMB = r.ngKgPerKg;
+  if (I.basis === "duiker" && I.mode === "NG") {   // Duiker NG mode: NG energy implied by its 90.6 % LHV efficiency (feed NH3 + NG + power)
+    const mjIn = LHV.h2 / (m_dk_eff(I) / 100) - r.ratio * LHV.nh3 - r.el / 1000 * 3.6;
+    r.ngKgMB = Math.max(0, mjIn) / LHV.ng;
+  }
+  r.co2mb = r.ngKgMB * CO2_PER_KG_NG_MB;
+  r.co2Stated = I.basis === "custom" ? null : r.co2;
+  // Footprint: ISBL from the licensor plot data, OSBL as a user percentage of ISBL
+  const fpFit = ref === "kbr" ? FIT_FP_KBR : FIT_FP_DUIKER;
+  r.fpIsbl = fpFit.f(I.cap); r.fpOsbl = r.fpIsbl * I.osblPct; r.fp = r.fpIsbl + r.fpOsbl;
+  if (ref === "kbr" && (I.cap < 12 || I.cap > 80)) r.flags.push(`ISBL footprint at ${fmt(I.cap, 0)} ktpa extrapolates KBR's 12–80 ktpa plot data along the power-law fit.`);
+  if (ref === "duiker" && I.cap > FP_DUIKER_PTS[1][0]) r.flags.push(`Duiker's largest documented train is 276 tpd (≈${fmt(FP_DUIKER_PTS[1][0], 0)} ktpa); the footprint above that extends the two-point fit and does not model multiple trains.`);
   r.cwt = ref === "kbr" ? KBR.cw * h2t : 0;
   r.dnwt = ref === "kbr" ? KBR.dnw * h2t : null;
 
@@ -861,11 +889,15 @@ function recalc() {
     kpi("NH₃ used as fuel", fmt(r.nh3FuelEq * I.cap, 1), `ktpa NH₃-eq (${fmt(r.nh3FuelEq, 2)} t/t)`),
     kpi("Natural gas", fmt(r.ngt / 1000, 1), `ktpa · ${fmt(r.ngMWh / 1000, 0)} GWh/yr LHV (${fmt(r.ngMJ, 1)} MJ/kg H₂)`),
     kpi("Electricity", fmt(r.elMWh / 1000, 1), `GWh/yr · ${fmt(r.elMW, 2)} MW avg (${fmt(r.el, 0)} kWh/t H₂)`),
-    kpi("Direct CO₂", fmt(r.co2t / 1000, 1), `kt/yr · ${fmt(r.co2, 2)} kg CO₂/kg H₂`),
+    kpi("Direct CO₂ — " + (r.co2Stated === null ? "model basis" : "licensor stated"), fmt(r.co2t / 1000, 1), `kt/yr · ${fmt(r.co2, 2)} kgCO₂e/kg H₂`),
+    kpi("Direct CO₂ — mass balance", fmt(r.co2mb * r.h2t / 1000, 1), `kt/yr · ${fmt(r.co2mb, 2)} kgCO₂e/kg H₂ · ${fmt(r.ngKgMB, 3)} kg NG/kg H₂ × ${fmt(CO2_PER_KG_NG_MB, 3)}`, true),
+    kpi("Plot footprint, ISBL + OSBL", fmt(r.fp, 0), `m² · ${fmt(r.fp * SQFT_PER_M2, 0)} sqft · ${fmt(r.fp / 10000, 2)} ha`, true),
+    kpi("of which ISBL / OSBL", `${fmt(r.fpIsbl, 0)} / ${fmt(r.fpOsbl, 0)}`, `m² · ISBL licensor curve; OSBL = ${fmt(I.osblPct * 100, 0)} % of ISBL (assumption)`),
     kpi("Energy efficiency", fmt(r.eff, 1), "% LHV, incl. power"),
     kpi("Cooling / demin water", r.ref === "kbr" ? fmt(r.cwt / 1e6, 2) : "—", r.ref === "kbr" ? `Mt/yr CW · ${fmt(r.dnwt / 1000, 1)} kt/yr demin` : "Duiker: no steam or cooling water"),
   ].join("");
-  $("techFlags").innerHTML = r.flags.map((f) => `<div class="flag">${f}</div>`).join("");
+  const mbNote = `<div class="ok">CO₂ mass balance: natural gas (KBR I.A composition, ${fmt(NG_MW, 2)} kg/kmol, ${fmt(NG_C_FRAC * 100, 1)} wt % carbon) × 44.01/12.011 = ${fmt(CO2_PER_KG_NG_MB, 3)} kg CO₂ per kg NG (KBR I.E implies ${fmt(CO2_PER_KG_NG, 3)}). This case burns ${fmt(r.ngKgMB, 3)} kg NG per kg H₂, giving ${fmt(r.co2mb, 3)} kgCO₂e/kg H₂${r.co2Stated === null ? "" : ` against the licensor's ${fmt(r.co2Stated, 2)}`}. Cracking and NH₃, H₂ or tail-gas firing carry no carbon. CO₂ only: N₂O and unburnt CH₄ from firing are not in any source package, so CO₂e equals CO₂ here.</div>`;
+  $("techFlags").innerHTML = mbNote + r.flags.map((f) => `<div class="flag">${f}</div>`).join("");
   $("linkStatus").textContent = "";
 
   // BFD sync
@@ -1046,6 +1078,11 @@ function renderSources() {
     ["Custom tail gas 0.84", "implies 87.1 % PSA recovery", "Discrepancy", "Earlier Gentari basis said 88 % (tail gas 0.77); the 0.07 difference can be read as NH₃ slip"],
     ["Double-PSA uplift", "10 % default", "Assumption", "Gentari input; not from a licensor quote"],
     ["Maximum-NG power", "KBR NG100 or Duiker figure", "Assumption", "No licensor data for a double-PSA configuration"],
+    ["NG carbon factor (mass balance)", `${fmt(CO2_PER_KG_NG_MB, 3)} kg CO₂/kg NG`, "Derived", `KBR I.A §5 composition (${NG_COMP.map((c) => c[0] + " " + c[1]).join(", ")} mol %), C atoms × 44.01 ÷ MW ${fmt(NG_MW, 2)}. Matches KBR I.E 1,150 kg/h ÷ 417.9 kg/h = ${fmt(CO2_PER_KG_NG, 3)}`],
+    ["Duiker NG-mode CO₂, mass balance", "≈0.24 kgCO₂/kg H₂", "Discrepancy", "NG energy implied by Duiker's 90.6 % LHV efficiency (≈4.4 MJ/kg H₂) gives ≈0.24; Duiker states 0.21 (§3.11.2)"],
+    ["ISBL footprint, KBR", `${fmt(FIT_FP_KBR.a, 1)} × ktpa^${fmt(FIT_FP_KBR.b, 2)} m²`, "Derived", "Power-law fit to KBR §3.6: 3,500 / 4,400 / 7,125 / 7,500 m² at 12 / 24 / 68 / 80 ktpa. KBR excludes offsites and utilities"],
+    ["ISBL footprint, Duiker", `${fmt(FIT_FP_DUIKER.a, 1)} × ktpa^${fmt(FIT_FP_DUIKER.b, 2)} m²`, "Derived", "Two points, Duiker §3.10: 900 m² at 12 ktpa (Duiker's own scale-down) and 3,660 m² for 276 tpd (≈92 ktpa at the implied 333.3 d/yr). Excludes NH₃ storage and H₂ compression above 50 barg"],
+    ["OSBL plot area", "50 % of ISBL default", "Assumption", "No OSBL area appears in the KBR, Duiker or Casale packages (KBR I.I plot plan gives ISBL layout only). Placeholder, replace with a site layout"],
     ["Natural gas price unit", "1 MWh = 3.4121 MMBtu", "Derived", "3.6 GJ/MWh ÷ 1.055056 GJ/MMBtu. Energy-unit conversion only; MMBtu prices are usually HHV, the model uses LHV energy"],
     ["Custom fuel mode (user)", "user-entered NH₃ feed, NH₃ cracked, NG firing", "Assumption", "Not licensor-quoted. Tail gas = cracked − 5.66; direct NH₃ = feed − cracked; NG CO₂ from the KBR I.E factor"],
     ["OSBL equipment list", "KBR I.H, Units 101–114 (40 items)", "Stated / derived", "Gentari-PR-GEN-LST-0002 Rev 0 (issued for info). Sizing by tools/kbr_osbl_workbook.py rules; scaling S1–S4 are assumptions, 160 ktpa is extrapolated"],
@@ -1325,12 +1362,12 @@ $("inPNgUnit").addEventListener("change", (e) => {     // keep the same price, s
   }
   recalc();
 });
-["inCap", "inDays", "inPsaUplift", "inPNh3", "inPEl", "inPNg", "inFx", "inRate", "inLife", "inDuikerExp"].forEach((id) => $(id).addEventListener("input", recalc));
+["inCap", "inDays", "inOsblPct", "inPsaUplift", "inPNh3", "inPEl", "inPNg", "inFx", "inRate", "inLife", "inDuikerExp"].forEach((id) => $(id).addEventListener("input", recalc));
 $("inH2KtpaToll").addEventListener("input", recalcToll);
 $("inTolling").addEventListener("change", recalcToll);
 document.querySelectorAll(".seg button[data-path]").forEach((b) => b.addEventListener("click", () => setBfd(b.dataset.path, false)));
 
-const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inH2KtpaToll: 70, inUFeed: 7.2, inUCracked: 6.5, inUNgEq: 0, inUPsa: "single" };
+const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inOsblPct: 50, inH2KtpaToll: 70, inUFeed: 7.2, inUCracked: 6.5, inUNgEq: 0, inUPsa: "single" };
 $("btnReset").addEventListener("click", () => {
   for (const [k, v] of Object.entries(DEFAULTS)) $(k).value = v;
   $("inPNgUnit").value = "mwh"; prevNgUnit = "mwh"; $("inPNg").value = 30; $("inPNg").step = "1";
