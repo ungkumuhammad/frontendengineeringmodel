@@ -114,3 +114,4 @@ carbon fraction × 44.01/12.011. NG composition is KBR I.A §5 (MW 16.95, 75.1 w
 identical to KBR I.E (1,150 kg/h ÷ 417.9 kg/h). It reproduces KBR's 0.81 / 0.45 / 0.00. For Duiker NG-fired
 the NG energy implied by its 90.6 % efficiency gives ≈0.24 vs Duiker's stated 0.21 (flagged). CO₂ only; N₂O and
 CH₄ slip are not in any source, so CO₂e = CO₂.
+Footprint is also shown in acres (1 acre = 4,046.86 m²).

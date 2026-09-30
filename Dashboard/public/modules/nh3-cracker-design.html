@@ -585,6 +585,7 @@ const NG_MW = NG_COMP.reduce((a, c) => a + c[1] / 100 * c[3], 0);               
 const NG_C_KMOL = NG_COMP.reduce((a, c) => a + c[1] / 100 * c[2], 0);             // kmol C per kmol NG
 const CO2_PER_KG_NG_MB = NG_C_KMOL * 44.01 / NG_MW;                                // kg CO2 / kg NG, mass balance
 const NG_C_FRAC = NG_C_KMOL * 12.011 / NG_MW;                                     // kg C / kg NG
+const M2_PER_ACRE = 4046.8564224;                                                // international acre
 const SQFT_PER_M2 = 10.7639;                                                      // international foot
 // ISBL plot footprints: KBR §3.6 (70x50, 80x55, 95x75, 100x75 m at 12/24/68/80 ktpa); Duiker §3.10 (900 m2 at 12 ktpa; 3,660 m2 for a 276 tpd train = 92 ktpa at Duiker's implied 333.3 d/yr)
 const FP_KBR_PTS = [[12, 70 * 50], [24, 80 * 55], [68, 95 * 75], [80, 100 * 75]];
@@ -891,7 +892,7 @@ function recalc() {
     kpi("Electricity", fmt(r.elMWh / 1000, 1), `GWh/yr · ${fmt(r.elMW, 2)} MW avg (${fmt(r.el, 0)} kWh/t H₂)`),
     kpi("Direct CO₂ — " + (r.co2Stated === null ? "model basis" : "licensor stated"), fmt(r.co2t / 1000, 1), `kt/yr · ${fmt(r.co2, 2)} kgCO₂e/kg H₂`),
     kpi("Direct CO₂ — mass balance", fmt(r.co2mb * r.h2t / 1000, 1), `kt/yr · ${fmt(r.co2mb, 2)} kgCO₂e/kg H₂ · ${fmt(r.ngKgMB, 3)} kg NG/kg H₂ × ${fmt(CO2_PER_KG_NG_MB, 3)}`, true),
-    kpi("Plot footprint, ISBL + OSBL", fmt(r.fp, 0), `m² · ${fmt(r.fp * SQFT_PER_M2, 0)} sqft · ${fmt(r.fp / 10000, 2)} ha`, true),
+    kpi("Plot footprint, ISBL + OSBL", fmt(r.fp, 0), `m² · ${fmt(r.fp * SQFT_PER_M2, 0)} sqft · ${fmt(r.fp / 10000, 2)} ha · ${fmt(r.fp / M2_PER_ACRE, 2)} acre`, true),
     kpi("of which ISBL / OSBL", `${fmt(r.fpIsbl, 0)} / ${fmt(r.fpOsbl, 0)}`, `m² · ISBL licensor curve; OSBL = ${fmt(I.osblPct * 100, 0)} % of ISBL (assumption)`),
     kpi("Energy efficiency", fmt(r.eff, 1), "% LHV, incl. power"),
     kpi("Cooling / demin water", r.ref === "kbr" ? fmt(r.cwt / 1e6, 2) : "—", r.ref === "kbr" ? `Mt/yr CW · ${fmt(r.dnwt / 1000, 1)} kt/yr demin` : "Duiker: no steam or cooling water"),
