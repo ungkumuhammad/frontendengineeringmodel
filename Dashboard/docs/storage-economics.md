@@ -134,6 +134,28 @@ freight €/t = voyage share:   (hire × round trip + fuel + port costs) ÷ parc
               dedicated fleet: (vessels × hire × 365 + fuel & port per voyage × cargoes) ÷ throughput ÷ FX
 ```
 
+### Fleet basis: size from demand, or charter a number of ships
+
+`Fleet` under Voyage & fleet has two modes. **Size from demand** (default) is the calculation above:
+the number of vessels is an output. **Number of ships chartered** makes it an input, so vessel size,
+distance, speed and fleet together set the loadable volume:
+
+```
+round trip      = as above (berth time based on a full cargo)
+calls per year  = ships chartered × (365 − off-hire) ÷ round trip
+arrival interval = 365 ÷ calls per year
+parcel per call = min( full cargo , average send-out × arrival interval )
+required net    = parcel per call + buffer days × send-out          (buffer rule unchanged)
+deliverable     = calls per year × full cargo   (flagged if below throughput)
+```
+
+More ships or a shorter route → shorter interval → smaller parcel per call → smaller tank and
+CAPEX, at the cost of more hire. Too few ships → the fleet cannot deliver the throughput (error
+shown; storage is then sized on a full cargo every interval). Applies to the selected ship class
+only; the Optimum size tab still sizes every class from demand. Default project with 2 × 30 kt-class
+vessels at 5,000 nm and 520 ktpa: 36,861 t loadable. The buffer days (ship late, port closure) are
+still inputs and are not derived from the route.
+
 Freight can also be entered manually per ship class. Default distance (5,000 nm), hire, fuel
 and port costs are placeholders.
 
@@ -186,3 +208,4 @@ throughout, gridlines off, frozen table headers and landscape/portrait print set
 | 2026-09-27 | Tank levels follow PGS 12 (freeboard ≥ 0.5 m, overfill trip, alarms, pump heel); density from PGS 12:2025 Tabel 7 |
 | 2026-09-27 | Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t) |
 | 2026-09-27 | Freight calculated from voyage; fleet sized from round trip vs arrival interval |
+| 2026-09-30 | Fleet basis switch: number of chartered ships can be an input; interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only) |
