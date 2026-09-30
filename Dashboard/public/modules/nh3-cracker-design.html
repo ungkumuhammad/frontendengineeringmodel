@@ -140,7 +140,16 @@
   .bfd { display: block; width: 100%; min-width: 900px; height: auto; }
   .bfd .blk { fill: var(--bg3); stroke: var(--text2); stroke-width: 1.4; }
   .bfd .blk.core { fill: var(--brand); stroke: var(--brand); stroke-width: 2.4; }
+  .bfd .blk.core2 { fill: #8f5bb8; stroke: var(--brand); stroke-width: 2.4; }
   .bfd .inv { fill: #ffffff !important; }
+  .bfd .sk-ink { stroke: var(--text); } .bfd .sk-sec { stroke: var(--brand2); } .bfd .sk-fuel { stroke: var(--fuel); } .bfd .sk-mut { stroke: var(--text3); }
+  .bfd .dots { stroke-dasharray: 2 4; }
+  .bfd .ah-ink { fill: var(--text); } .bfd .ah-sec { fill: var(--brand2); } .bfd .ah-mut { fill: var(--text3); }
+  .bfd .t2s { font: 10px var(--mono); fill: var(--text2); }
+  .bfd .m.sec { fill: var(--brand2-ink); stroke: none; }
+  .bfd.tight .t2 { font-size: 10px; }
+  .bfd.tight .t1 { font-size: 12.5px; }
+  .bfd.tight .t3 { font-size: 10px; }
   .bfd .blk.osbl { stroke-dasharray: 5 4; }
   .bfd .isbl { fill: none; stroke: var(--text3); stroke-width: 1.2; stroke-dasharray: 10 6; }
   .bfd .t1 { font: 700 13px var(--sans); fill: var(--text); }
@@ -285,6 +294,13 @@
           <span><i style="border-color:var(--flue)"></i>Flue gas</span>
           <span><i class="dash" style="border-color:var(--water)"></i>Water / steam / cooling</span>
         </div>
+        <div class="legend hidden" id="bfdLegend2" aria-hidden="true">
+          <span><i style="border-color:var(--text)"></i>Process stream (NH₃ → H₂)</span>
+          <span><i style="border-color:var(--brand2)"></i>Heating side (air → flue gas)</span>
+          <span><i class="dash" style="border-color:var(--fuel)"></i>Fuel to burners</span>
+          <span><i style="border-color:var(--brand2);border-top-style:dotted"></i>Heat recovery</span>
+          <span><i class="dot" style="background:var(--brand)"></i>NH₃ cracker</span>
+        </div>
         <div class="chart-wrap" id="bfdCustomWrap">
           <svg class="bfd" viewBox="0 0 1380 660" role="img" aria-label="Block flow diagram of the selected custom cracker pathway">
             <defs>
@@ -398,93 +414,123 @@
             <text class="t1" x="850" y="559" text-anchor="middle">condensate tank</text>
           </svg>
         </div>
-        <div class="chart-wrap hidden" id="dkWrap">
-          <svg class="bfd" viewBox="0 0 1380 660" role="img" aria-label="Block flow diagram of the Duiker AHC ammonia cracker">
-            <defs><marker id="d-nh3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-nh3" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-gas" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-gas" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-fuel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-fuel" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-flue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-flue" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-water" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-water" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-air" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-air" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ng" d="M0 0 L10 5 L0 10 z"/></marker></defs>
-            <rect class="isbl" x="188" y="36" width="1082" height="604" rx="4"/>
-            <text class="t3" x="202" y="628">CRACKER ISBL (Duiker AHC)</text>
-            <text class="t2" id="dkPower" x="1258" y="58" text-anchor="end"></text>
-
-            <path class="ln nh3" d="M144 270 H197" marker-end="url(#d-nh3)"/>
-            <path class="ln nh3" d="M310 270 H347" marker-end="url(#d-nh3)"/>
-            <path class="ln nh3" d="M480 270 H537" marker-end="url(#d-nh3)"/>
-            <path class="ln thin nh3" d="M350 270 V440 H537" marker-end="url(#d-nh3)"/>
-            <circle class="dot" cx="350" cy="270" r="3.5"/>
-            <text class="m nh3" id="dkFeedLbl2" x="340" y="360" text-anchor="end"></text>
-            <path class="ln gas" d="M740 270 H787" marker-end="url(#d-gas)"/>
-            <path class="ln gas" d="M920 270 H947" marker-end="url(#d-gas)"/>
-            <path class="ln gas" d="M1060 270 H1097" marker-end="url(#d-gas)"/>
-            <path class="ln gas" d="M1230 270 H1366" marker-end="url(#d-gas)"/>
-            <path class="ln thin water dash" d="M1005 302 V352" marker-end="url(#d-water)"/>
-            <text class="t2" x="1005" y="370" text-anchor="middle">glycol, closed loop</text>
-
-            <path class="ln flue" d="M640 410 V337" marker-end="url(#d-flue)"/>
-            <text class="t2" x="652" y="380">hot gas, convective heat</text>
-            <path class="ln flue" d="M640 206 V143" marker-end="url(#d-flue)"/>
-            <text class="m flue" id="dkFlueLbl" x="652" y="176"></text>
-            <path class="ln flue" d="M575 110 H503" marker-end="url(#d-flue)"/>
-            <path class="ln flue" d="M428 80 V46" marker-end="url(#d-flue)"/>
-            <text class="t2" x="441" y="52">to atmosphere</text>
-            <text class="m flue" id="dkCo2" x="441" y="68"></text>
-
-            <path class="ln thin air dash" d="M190 525 H367" marker-end="url(#d-air)"/>
-            <text class="m" id="dkAir" x="280" y="515" text-anchor="middle" style="fill:var(--text3)"></text>
-            <path class="ln thin air dash" d="M480 525 H600 V482" marker-end="url(#d-air)"/>
-            <path class="ln fuel" d="M1165 302 V620 H720 V482" marker-end="url(#d-fuel)"/>
-            <text class="m fuel" id="dkTailLbl" x="940" y="610" text-anchor="middle"></text>
-            <text class="m fuel" id="dkFuel" x="752" y="432"></text>
-            <g id="dkNg">
-              <path class="ln ngl" d="M144 590 H660 V482" marker-end="url(#d-ng)"/>
-              <text class="m ngl" id="dkNgLbl" x="400" y="580" text-anchor="middle"></text>
-              <text class="t3" x="82" y="550" text-anchor="middle">OSBL</text>
-              <rect class="blk osbl" x="20" y="560" width="124" height="60" rx="4"/>
-              <text class="t1" x="82" y="586" text-anchor="middle">Natural gas</text>
-              <text class="t2" x="82" y="604" text-anchor="middle">optional fuel</text>
+        <div class="chart-wrap hidden" id="kbrWrap">
+          <svg class="bfd tight" viewBox="0 60 1380 600" role="img" aria-label="Block flow diagram of the KBR H2ACT ammonia cracker">
+            <defs><marker id="k-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ink" d="M0 0 L10 5 L0 10 z"/></marker><marker id="k-sec" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-sec" d="M0 0 L10 5 L0 10 z"/></marker><marker id="k-fuel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-fuel" d="M0 0 L10 5 L0 10 z"/></marker><marker id="k-mut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-mut" d="M0 0 L10 5 L0 10 z"/></marker></defs>
+            <rect class="isbl" x="142.3" y="123.2" width="1078.1" height="481.2" rx="8"/>
+            <text class="t3" text-anchor="start"><tspan x="159.6" y="136.3">ISBL (KBR scope)</tspan></text>
+            <rect class="blk osbl" x="6.9" y="161.7" width="120.8" height="92.4" rx="6"/><text class="t1" x="67.3" y="178.7" text-anchor="middle">NH₃ storage</text><text class="t2" x="67.3" y="233.1" text-anchor="middle">OSBL</text><text class="t2" x="67.3" y="246.1" text-anchor="middle">liquid, −33 °C</text>
+            <rect class="blk" x="172.5" y="161.7" width="120.8" height="92.4" rx="6"/><text class="t1" x="232.9" y="178.7" text-anchor="middle">Feed drum</text><text class="t1" x="232.9" y="193.7" text-anchor="middle">&amp; pump</text><text class="t2" x="232.9" y="233.1" text-anchor="middle">300-D · 301-J</text><text class="t2" x="232.9" y="246.1" text-anchor="middle">→ ~44 bar(g)</text>
+            <rect class="blk" x="336.4" y="161.7" width="181.1" height="207.9" rx="6"/><text class="t1" x="426.9" y="178.7" text-anchor="middle">Preheat train</text><text class="t2" x="426.9" y="244.60000000000002" text-anchor="middle">301-C liquid preheater</text><text class="t2" x="426.9" y="257.6" text-anchor="middle">302-C vaporizer</text><text class="t2" x="426.9" y="270.6" text-anchor="middle">303-C start-up vaporizer</text><text class="t2" x="426.9" y="283.6" text-anchor="middle">(LP steam)</text><text class="t2" x="426.9" y="296.6" text-anchor="middle">300-L oil filter</text><text class="t2" x="426.9" y="309.6" text-anchor="middle">304-C feed/effluent</text><text class="t2" x="426.9" y="322.6" text-anchor="middle">exchanger</text><text class="t2" x="426.9" y="335.6" text-anchor="middle"></text><text class="t2" x="426.9" y="348.6" text-anchor="middle">heated by cracker</text><text class="t2" x="426.9" y="361.6" text-anchor="middle">effluent</text>
+            <rect class="blk core" x="595.1" y="161.7" width="146.6" height="92.4" rx="6"/><text class="t1 inv" x="668.4" y="178.7" text-anchor="middle">Adiabatic</text><text class="t1 inv" x="668.4" y="193.7" text-anchor="middle">pre-cracker</text><text class="t2 inv" x="668.4" y="246.1" text-anchor="middle">301-D · Ni catalyst</text>
+            <rect class="blk core" x="828.0" y="161.7" width="250.1" height="107.8" rx="6"/><text class="t1 inv" x="953.0" y="178.7" text-anchor="middle">Fired cracker 301-B</text><text class="t2 inv" x="953.0" y="248.5" text-anchor="middle">radiant box · down-fired burners</text><text class="t2 inv" x="953.0" y="261.5" text-anchor="middle">Ni catalyst tubes · 2NH₃ → N₂ + 3H₂</text>
+            <rect class="blk core2" x="828.0" y="292.6" width="250.1" height="107.8" rx="6"/><text class="t1 inv" x="953.0" y="309.6" text-anchor="middle">Convection section</text><text class="t2 inv" x="953.0" y="366.40000000000003" text-anchor="middle">heat recovered to:</text><text class="t2 inv" x="953.0" y="379.40000000000003" text-anchor="middle">NH₃ superheat &amp; reheat · MP steam</text><text class="t2 inv" x="953.0" y="392.40000000000003" text-anchor="middle">BFW · combustion air · tail-gas fuel</text>
+            <rect class="blk osbl" x="1250.6" y="161.7" width="122.5" height="92.4" rx="6"/><text class="t1" x="1311.8" y="178.7" text-anchor="middle">Air</text><text class="t2" x="1311.8" y="246.1" text-anchor="middle">ambient</text>
+            <rect class="blk" x="1108.3" y="161.7" width="99.2" height="92.4" rx="6"/><text class="t1" x="1157.9" y="178.7" text-anchor="middle">FD fan</text><text class="t2" x="1157.9" y="246.1" text-anchor="middle">301-BJ1</text>
+            <rect class="blk" x="1108.3" y="300.3" width="99.2" height="84.7" rx="6"/><text class="t1" x="1157.9" y="317.3" text-anchor="middle">SCR</text><text class="t2" x="1157.9" y="364.0" text-anchor="middle">301-BSCR</text><text class="t2" x="1157.9" y="377.0" text-anchor="middle">NOx &lt; 10 ppmv</text>
+            <rect class="blk" x="1108.3" y="411.9" width="99.2" height="77.0" rx="6"/><text class="t1" x="1157.9" y="428.9" text-anchor="middle">ID fan</text><text class="t1" x="1157.9" y="443.9" text-anchor="middle">&amp; stack</text><text class="t2" x="1157.9" y="480.9" text-anchor="middle">301-BJ</text>
+            <rect class="blk osbl" x="1250.6" y="411.9" width="122.5" height="77.0" rx="6"/><text class="t1" x="1311.8" y="428.9" text-anchor="middle">Flue gas</text>
+            <rect class="blk" x="172.5" y="462.0" width="120.8" height="100.1" rx="6"/><text class="t1" x="232.9" y="479.0" text-anchor="middle">NH₃</text><text class="t1" x="232.9" y="494.0" text-anchor="middle">distillation</text><text class="t2" x="232.9" y="541.1" text-anchor="middle">325-D + reboiler</text><text class="t2" x="232.9" y="554.1" text-anchor="middle">360-C (MP steam)</text>
+            <rect class="blk" x="336.4" y="462.0" width="129.4" height="100.1" rx="6"/><text class="t1" x="401.1" y="479.0" text-anchor="middle">HP NH₃</text><text class="t1" x="401.1" y="494.0" text-anchor="middle">scrubber</text><text class="t2" x="401.1" y="541.1" text-anchor="middle">324-D</text><text class="t2" x="401.1" y="554.1" text-anchor="middle">water wash</text>
+            <rect class="blk" x="513.2" y="462.0" width="112.1" height="100.1" rx="6"/><text class="t1" x="569.2" y="479.0" text-anchor="middle">PSA</text><text class="t2" x="569.2" y="541.1" text-anchor="middle">301-L</text><text class="t2" x="569.2" y="554.1" text-anchor="middle">removes N₂</text>
+            <rect class="blk" x="651.2" y="462.0" width="181.1" height="104.0" rx="6"/><text class="t1" x="741.8" y="479.0" text-anchor="middle">Steam system</text><text class="t2" x="741.8" y="532.0" text-anchor="middle">MP steam raised in convection</text><text class="t2" x="741.8" y="545.0" text-anchor="middle">deaerator 301-U · BFW pump</text><text class="t2" x="741.8" y="558.0" text-anchor="middle">drum 341-D, 23.5 bar(g)</text>
+            <rect class="blk" x="858.2" y="462.0" width="163.9" height="104.0" rx="6"/><text class="t1" x="940.2" y="479.0" text-anchor="middle">Fuel system</text><text class="t2" x="940.2" y="545.0" text-anchor="middle">tail-gas compressor 311-J</text><text class="t2" x="940.2" y="558.0" text-anchor="middle">separate fuel headers</text>
+            <rect class="blk osbl" x="1250.6" y="535.1" width="122.5" height="84.7" rx="6"/><text class="t1" x="1311.8" y="552.1" text-anchor="middle">H₂ product</text><text class="t2" x="1311.8" y="611.8000000000001" text-anchor="middle">99.97 mol%</text>
+            <path class="ln sk-ink" d="M127.7 207.9 L172.5 207.9" marker-end="url(#k-ink)"/>
+            <path class="ln sk-ink" d="M293.2 207.9 L336.4 207.9" marker-end="url(#k-ink)"/>
+            <path class="ln sk-ink" d="M517.5 207.9 L595.1 207.9" marker-end="url(#k-ink)"/>
+            <text class="t2s" text-anchor="middle"><tspan x="556.3" y="176.0">superheat in</tspan><tspan x="556.3" y="189.0">convection</tspan></text>
+            <path class="ln sk-ink" d="M741.8 207.9 L828.0 207.9" marker-end="url(#k-ink)"/>
+            <text class="t2s" text-anchor="middle"><tspan x="784.9" y="176.0">reheat in</tspan><tspan x="784.9" y="189.0">convection</tspan></text>
+            <path class="ln sk-ink" d="M828.0 242.6 L780.6 242.6 L780.6 331.1 L517.5 331.1" marker-end="url(#k-ink)"/>
+            <text class="t2" text-anchor="middle"><tspan x="646.9" y="304.6">cracker effluent: H₂/N₂ + few % NH₃</tspan><tspan x="646.9" y="317.6">→ cools against incoming feed</tspan></text>
+            <path class="ln sk-ink" d="M426.9 369.6 L426.9 462.0" marker-end="url(#k-ink)"/>
+            <text class="t2s" text-anchor="start"><tspan x="435.6" y="409.3">cooled</tspan><tspan x="435.6" y="422.3">effluent</tspan></text>
+            <path class="ln sk-ink" d="M336.4 512.1 L293.2 512.1" marker-end="url(#k-ink)"/>
+            <text class="t2s" text-anchor="middle"><tspan x="314.8" y="491.3">aq. NH₃</tspan></text>
+            <path class="ln sk-ink" d="M232.9 462.0 L232.9 254.1" marker-end="url(#k-ink)"/>
+            <text class="t2s" text-anchor="start"><tspan x="243.2" y="409.3">recovered NH₃</tspan><tspan x="243.2" y="422.3">recycled to feed</tspan></text>
+            <path class="ln sk-ink" d="M465.8 512.1 L513.2 512.1" marker-end="url(#k-ink)"/>
+            <path class="ln sk-ink" d="M569.2 562.1 L569.2 581.4 L1250.6 581.4" marker-end="url(#k-ink)"/>
+            <text id="kbrH2" class="t2" text-anchor="middle"><tspan x="1035.0" y="599.1">1.00 kg H₂ · 27–28 bar(g)*, 30 °C</tspan></text>
+            <path class="ln sk-sec" d="M1250.6 207.9 L1207.5 207.9" marker-end="url(#k-sec)"/>
+            <path class="ln sk-sec" d="M1108.3 207.9 L1078.1 207.9" marker-end="url(#k-sec)"/>
+            <path class="ln sk-sec" d="M953.1 269.5 L953.1 292.6" marker-end="url(#k-sec)"/>
+            <text class="t2s" style="fill:var(--brand2-ink)" text-anchor="start"><tspan x="961.7" y="281.1">flue gas</tspan></text>
+            <path class="ln sk-sec" d="M1078.1 342.7 L1108.3 342.7" marker-end="url(#k-sec)"/>
+            <path class="ln sk-sec" d="M1157.9 385.0 L1157.9 411.9" marker-end="url(#k-sec)"/>
+            <path class="ln sk-sec" d="M1207.5 450.4 L1250.6 450.4" marker-end="url(#k-sec)"/>
+            <g id="kbrTail">
+            <path class="ln sk-fuel dash" d="M595.1 462.0 L595.1 446.6 L888.4 446.6 L888.4 462.0" marker-end="url(#k-fuel)"/>
+            <text class="m fuel" text-anchor="start"><tspan x="612.4" y="436.6">PSA tail gas (main fuel)</tspan></text>
+            </g><g id="kbrSplit">
+            <path class="ln sk-fuel dash" d="M489.9 512.1 L489.9 419.7 L931.5 419.7 L931.5 462.0" marker-end="url(#k-fuel)"/>
+            <text class="m fuel" text-anchor="start"><tspan x="508.9" y="409.6">cracked-gas split (clean-fuel top-up)</tspan></text>
             </g>
-
-            <text class="m nh3" id="dkFeed" x="170" y="258" text-anchor="middle"></text>
-            <text class="m gas" x="1316" y="258" text-anchor="middle">1.00 kg H₂</text>
-            <text class="t2" x="1300" y="292" text-anchor="middle">30 °C · 50 barg</text>
-
-            <text class="t3" x="82" y="226" text-anchor="middle">OSBL</text>
-            <rect class="blk osbl" x="20" y="236" width="124" height="68" rx="4"/>
-            <text class="t1" x="82" y="262" text-anchor="middle">NH₃ storage</text>
-            <text class="t2" x="82" y="280" text-anchor="middle">−33 °C · 0.04 barg</text>
-            <text class="t2" x="82" y="294" text-anchor="middle">liquid</text>
-            <rect class="blk" x="200" y="238" width="110" height="64" rx="4"/>
-            <text class="t1" x="255" y="264" text-anchor="middle">NH₃ pump</text>
-            <text class="t2" x="255" y="284" text-anchor="middle">to 50 barg</text>
-            <rect class="blk" x="350" y="238" width="130" height="64" rx="4"/>
-            <text class="t1" x="415" y="259" text-anchor="middle">Vaporiser /</text>
-            <text class="t1" x="415" y="275" text-anchor="middle">feed pre-heat</text>
-            <text class="t2" x="415" y="293" text-anchor="middle">heat integrated</text>
-            <rect class="blk core" x="540" y="206" width="200" height="128" rx="4"/>
-            <text class="inv t1 big" x="640" y="246" text-anchor="middle">NH₃ cracker</text>
-            <text class="inv t2" x="640" y="268" text-anchor="middle">convective reactor</text>
-            <text class="inv t2" x="640" y="285" text-anchor="middle">counter-current · 50 barg</text>
-            <text class="inv t2" x="640" y="310" text-anchor="middle">2NH₃ → N₂ + 3H₂</text>
-            <rect class="blk" x="790" y="238" width="130" height="64" rx="4"/>
-            <text class="t1" x="855" y="264" text-anchor="middle">Heat recovery</text>
-            <text class="t2" x="855" y="284" text-anchor="middle">heat exchangers</text>
-            <rect class="blk" x="950" y="238" width="110" height="64" rx="4"/>
-            <text class="t1" x="1005" y="264" text-anchor="middle">Gas cooler</text>
-            <text class="t2" x="1005" y="284" text-anchor="middle">to 30 °C</text>
-            <rect class="blk" x="1100" y="238" width="130" height="64" rx="4"/>
-            <text class="t1" x="1165" y="259" text-anchor="middle">PSA</text>
-            <text class="t2" x="1165" y="275" text-anchor="middle">NH₃ + N₂ removal</text>
-            <text class="t2" x="1165" y="291" text-anchor="middle">H₂ purification</text>
-            <rect class="blk" x="353" y="80" width="150" height="60" rx="4"/>
-            <text class="t1" x="428" y="106" text-anchor="middle">Stack</text>
-            <text class="t2" x="428" y="124" text-anchor="middle">with CEMS</text>
-            <rect class="blk" x="575" y="80" width="130" height="60" rx="4"/>
-            <text class="t1" x="640" y="106" text-anchor="middle">SCR</text>
-            <text class="t2" x="640" y="124" text-anchor="middle">optional, NOₓ to 5 ppm</text>
-            <rect class="blk" x="540" y="410" width="200" height="70" rx="4"/>
-            <text class="t1" x="640" y="438" text-anchor="middle">SCO combustor</text>
-            <text class="t2" x="640" y="456" text-anchor="middle">stoichiometry-controlled</text>
-            <text class="t2" x="640" y="470" text-anchor="middle">oxidation</text>
-            <rect class="blk" x="370" y="500" width="110" height="50" rx="4"/>
-            <text class="t1" x="425" y="530" text-anchor="middle">Air blower</text>
+            <path class="ln sk-fuel dash" d="M978.9 462.0 L978.9 400.4" marker-end="url(#k-fuel)"/>
+            <text class="t2s" style="fill:var(--fuel)" text-anchor="start"><tspan x="987.6" y="424.7">preheated →</tspan><tspan x="987.6" y="437.7">burners</tspan></text>
+            <g id="kbrNg">
+            <path class="ln sk-fuel dash" d="M1069.5 515.9 L1022.1 515.9" marker-end="url(#k-fuel)"/>
+            <text id="kbrNgLbl" class="t2s" text-anchor="start"><tspan x="1073.8" y="509.4"></tspan><tspan x="1073.8" y="522.4"></tspan></text>
+            </g>
+            <text id="kbrFeed" class="t2s" text-anchor="middle"><tspan x="67.3" y="274.6"></tspan><tspan x="67.3" y="287.6"></tspan></text>
+            <text id="kbrFlueLbl" class="t2s" text-anchor="middle"><tspan x="1311.0" y="513.3"></tspan><tspan x="1311.0" y="526.3"></tspan></text>
+            <text id="kbrUtil" class="t2" text-anchor="middle"><tspan x="690.0" y="637.6"></tspan></text>
+          </svg>
+        </div>
+        <div class="chart-wrap hidden" id="dkWrap">
+          <svg class="bfd tight" viewBox="0 60 1380 600" role="img" aria-label="Block flow diagram of the Duiker AHC ammonia cracker">
+            <defs><marker id="d-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ink" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-sec" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-sec" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-fuel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-fuel" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-mut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-mut" d="M0 0 L10 5 L0 10 z"/></marker></defs>
+            <rect class="isbl" x="138.0" y="123.2" width="1078.1" height="423.5" rx="8"/>
+            <text class="t3" text-anchor="start"><tspan x="155.2" y="136.3">ISBL (Duiker scope)</tspan></text>
+            <rect class="blk osbl" x="6.9" y="200.2" width="120.8" height="92.4" rx="6"/><text class="t1" x="67.3" y="217.2" text-anchor="middle">NH₃ storage</text><text class="t2" x="67.3" y="271.6" text-anchor="middle">OSBL</text><text class="t2" x="67.3" y="284.6" text-anchor="middle">liquid, −33 °C</text>
+            <rect class="blk" x="172.5" y="200.2" width="146.6" height="92.4" rx="6"/><text class="t1" x="245.8" y="217.2" text-anchor="middle">NH₃ pump &amp;</text><text class="t1" x="245.8" y="232.2" text-anchor="middle">vaporizer</text>
+            <rect class="blk" x="379.5" y="200.2" width="138.0" height="92.4" rx="6"/><text class="t1" x="448.5" y="217.2" text-anchor="middle">NH₃ preheat</text><text class="t2" x="448.5" y="284.6" text-anchor="middle">gas–gas exchanger</text>
+            <rect class="blk core" x="577.9" y="200.2" width="224.2" height="277.2" rx="6"/>
+            <rect class="blk core2" x="577.9" y="338.8" width="224.2" height="138.6" rx="6"/>
+            <text class="t1 inv" text-anchor="middle"><tspan x="690.0" y="228.3">NH₃ cracker</tspan><tspan x="690.0" y="241.3">(ammonia cracking reactor)</tspan></text>
+            <text class="t2 inv" text-anchor="middle"><tspan x="690.0" y="289.9">Tube side: 2NH₃ → N₂ + 3H₂</tspan><tspan x="690.0" y="302.9">over catalyst</tspan></text>
+            <text class="t2 inv" text-anchor="middle"><tspan x="690.0" y="383.6">Shell side: hot gas heats</tspan><tspan x="690.0" y="396.6">tubes by convection only —</tspan><tspan x="690.0" y="409.6">no flame, no radiant box</tspan></text>
+            <text class="t1 inv" text-anchor="middle"><tspan x="690.0" y="443.9">counter-current</tspan><tspan x="690.0" y="456.9">1,000 → 600 °C</tspan></text>
+            <rect class="blk" x="862.5" y="200.2" width="146.6" height="92.4" rx="6"/><text class="t1" x="935.8" y="217.2" text-anchor="middle">Cracked-gas</text><text class="t1" x="935.8" y="232.2" text-anchor="middle">cooling</text><text class="t2" x="935.8" y="271.6" text-anchor="middle">H₂ + N₂ + trace NH₃</text><text class="t2" x="935.8" y="284.6" text-anchor="middle">heat integrated</text>
+            <rect class="blk" x="1052.2" y="200.2" width="120.8" height="92.4" rx="6"/><text class="t1" x="1112.6" y="217.2" text-anchor="middle">PSA</text><text class="t2" x="1112.6" y="271.6" text-anchor="middle">removes N₂ + NH₃</text><text class="t2" x="1112.6" y="284.6" text-anchor="middle">in one step</text>
+            <rect class="blk osbl" x="1250.6" y="200.2" width="122.5" height="92.4" rx="6"/><text class="t1" x="1311.8" y="217.2" text-anchor="middle">H₂ product</text><text class="t2" x="1311.8" y="284.6" text-anchor="middle">99.97 mol%</text>
+            <rect class="blk" x="853.9" y="385.0" width="172.5" height="92.4" rx="6"/><text class="t1" x="940.1" y="402.0" text-anchor="middle">SCO combustor</text><text class="t2" x="940.1" y="456.4" text-anchor="middle">Stoichiometry-Controlled</text><text class="t2" x="940.1" y="469.4" text-anchor="middle">Oxidation · one burner</text>
+            <rect class="blk" x="1069.5" y="385.0" width="112.1" height="92.4" rx="6"/><text class="t1" x="1125.5" y="402.0" text-anchor="middle">Air blower</text>
+            <rect class="blk osbl" x="1250.6" y="385.0" width="122.5" height="92.4" rx="6"/><text class="t1" x="1311.8" y="402.0" text-anchor="middle">Air</text><text class="t2" x="1311.8" y="469.4" text-anchor="middle">12.5 °C</text>
+            <rect class="blk" x="379.5" y="385.0" width="138.0" height="92.4" rx="6"/><text class="t1" x="448.5" y="402.0" text-anchor="middle">Flue-gas</text><text class="t1" x="448.5" y="417.0" text-anchor="middle">heat recovery</text><text class="t2" x="448.5" y="469.4" text-anchor="middle">heats NH₃ feed</text>
+            <rect class="blk" x="254.4" y="385.0" width="94.9" height="92.4" rx="6"/><text class="t1" x="301.9" y="402.0" text-anchor="middle">SCR</text><text class="t2" x="301.9" y="456.4" text-anchor="middle">small unit</text><text class="t2" x="301.9" y="469.4" text-anchor="middle">NOx → 5 ppm</text>
+            <rect class="blk" x="163.9" y="385.0" width="73.3" height="92.4" rx="6"/><text class="t1" x="200.6" y="402.0" text-anchor="middle">Stack</text><text class="t2" x="200.6" y="469.4" text-anchor="middle">+ CEMS</text>
+            <rect class="blk osbl" x="6.9" y="385.0" width="120.8" height="92.4" rx="6"/><text class="t1" x="67.3" y="402.0" text-anchor="middle">Flue gas</text><text class="t2" x="67.3" y="469.4" text-anchor="middle">to atmosphere</text>
+            <path class="ln sk-ink" d="M127.7 246.4 L172.5 246.4" marker-end="url(#d-ink)"/>
+            <path class="ln sk-ink" d="M319.1 246.4 L379.5 246.4" marker-end="url(#d-ink)"/>
+            <path class="ln sk-ink" d="M517.5 246.4 L577.9 246.4" marker-end="url(#d-ink)"/>
+            <path class="ln sk-ink" d="M802.1 246.4 L862.5 246.4" marker-end="url(#d-ink)"/>
+            <path class="ln sk-ink" d="M1009.1 246.4 L1052.2 246.4" marker-end="url(#d-ink)"/>
+            <path class="ln sk-ink" d="M1173.0 246.4 L1250.6 246.4" marker-end="url(#d-ink)"/>
+            <text class="t2s" text-anchor="middle"><tspan x="349.3" y="269.5">NH₃ gas</tspan></text>
+            <path class="ln sk-sec" d="M1250.6 431.2 L1181.6 431.2" marker-end="url(#d-sec)"/>
+            <path class="ln sk-sec" d="M1069.5 431.2 L1026.4 431.2" marker-end="url(#d-sec)"/>
+            <path class="ln sk-sec" d="M853.9 431.2 L802.1 431.2" marker-end="url(#d-sec)"/>
+            <path class="ln sk-sec" d="M577.9 431.2 L517.5 431.2" marker-end="url(#d-sec)"/>
+            <path class="ln sk-sec" d="M379.5 431.2 L349.3 431.2" marker-end="url(#d-sec)"/>
+            <path class="ln sk-sec" d="M254.4 431.2 L237.2 431.2" marker-end="url(#d-sec)"/>
+            <path class="ln sk-sec" d="M163.9 431.2 L127.7 431.2" marker-end="url(#d-sec)"/>
+            <text class="t2s" style="fill:var(--brand2-ink)" text-anchor="middle"><tspan x="828.0" y="408.1">1,000 °C</tspan></text>
+            <text class="t2s" style="fill:var(--brand2-ink)" text-anchor="middle"><tspan x="547.7" y="408.1">~600 °C</tspan></text>
+            <path class="ln sk-sec dots" d="M448.5 385.0 L448.5 292.6" marker-end="url(#d-sec)"/>
+            <text class="m sec" text-anchor="start"><tspan x="458.9" y="338.8">heat</tspan></text>
+            <path class="ln sk-fuel dash" d="M349.3 246.4 L349.3 161.7 L832.3 161.7 L832.3 354.2 L888.4 354.2 L888.4 385.0" marker-end="url(#d-fuel)"/>
+            <text class="m fuel" text-anchor="middle"><tspan x="590.8" y="147.8">small share of NH₃ feed burned as fuel</tspan></text>
+            <path class="ln sk-fuel dash" d="M1112.6 292.6 L1112.6 338.8 L983.2 338.8 L983.2 385.0" marker-end="url(#d-fuel)"/>
+            <text class="m fuel" text-anchor="end"><tspan x="1102.3" y="320.0">PSA tail gas (N₂, H₂, some NH₃)</tspan><tspan x="1102.3" y="333.0">recycled as fuel</tspan></text>
+            <path id="dkNgPath" class="ln sk-mut dash" d="M940.1 531.3 L940.1 477.4" marker-end="url(#d-mut)"/>
+            <text id="dkNgLbl" class="t2s" text-anchor="end"><tspan x="927.2" y="527.5"></tspan></text>
+            <text id="dkFeed" class="t2s" text-anchor="middle"><tspan x="67.3" y="313.1"></tspan><tspan x="67.3" y="326.1"></tspan></text>
+            <text class="t2s" text-anchor="end"><tspan x="1373.1" y="314.2">1.00 kg H₂</tspan><tspan x="1373.1" y="327.2">50 bar(g), 30 °C</tspan><tspan x="1373.1" y="340.2">let down to 20 bar(g)</tspan></text>
+            <text id="dkAir" class="t2s" text-anchor="middle"><tspan x="1311.0" y="500.5"></tspan></text>
+            <text id="dkFlueLbl" class="t2s" text-anchor="start"><tspan x="6.9" y="499.1"></tspan><tspan x="6.9" y="512.1"></tspan><tspan x="6.9" y="525.1"></tspan></text>
+            <text id="dkUtil" class="t2" text-anchor="middle"><tspan x="690.0" y="600.6"></tspan></text>
           </svg>
         </div>
         <p class="note" id="bfdCaption"></p>
@@ -1000,7 +1046,8 @@ function recalc() {
   showBfd(I);
   if (I.basis === "custom") setBfd(I.mode, true);
   if (I.basis === "duiker") setDuikerBfd(I, r);
-  $("bfdSync").textContent = I.basis === "custom" ? "Following the Custom fuel mode above." : I.basis === "duiker" ? "Following the Duiker fuel mode above." : "Reference diagram. KBR fires cracked gas (NG50, CF100) rather than NH₃ vapour, so its flow differs in detail.";
+  if (I.basis === "kbr") setKbrBfd(I, r);
+  $("bfdSync").textContent = I.basis === "custom" ? "Following the Custom fuel mode above." : I.basis === "duiker" ? "Following the Duiker fuel mode above." : "Following the KBR fuel mode above.";
 
   renderCapex(I, r);
   renderOpex(I, r);
@@ -1042,27 +1089,41 @@ function setBfd(path, fromModel) {
   if (!fromModel && $("inBasis").value === "custom") { $("inMode").value = path; recalc(); }
 }
 
+const setT = (id, lines) => { const t = document.querySelectorAll("#" + id + " tspan"); t.forEach((e, i) => { e.textContent = lines[i] || ""; }); };
+function setKbrBfd(I, r) {
+  const m = I.mode, ng = m === "NG100" || m === "NG50", split = m === "CF100" || m === "NG50";
+  setT("kbrFeed", [`${fmt(r.ratio, 2)} kg NH₃`, "2 bar(g)"]);
+  setT("kbrH2", ["1.00 kg H₂ · 27–28 bar(g)*, 30 °C"]);
+  $("kbrSplit").style.display = split ? "" : "none";
+  $("kbrNg").style.opacity = ng ? "1" : "0.4";
+  setT("kbrNgLbl", ng ? [`Natural gas`, `${fmt(r.ngKgPerKg, 3)} kg/kg H₂`] : ["Natural gas", "(NG modes only)"]);
+  setT("kbrFlueLbl", r.co2 > 0 ? ["Flue gas", `CO₂ ${fmt(r.co2, 2)} kg/kg H₂`] : ["Flue gas", "no CO₂ (clean fuel)"]);
+  setT("kbrUtil", [`Utilities: electricity ${fmt(r.el, 0)} kWh/t H₂ (all motor drives) · cooling water 30 → 40 °C, ${fmt(KBR.cw, 0)} t/t H₂ · demin water make-up to deaerator · no steam import`]);
+  $("bfdCaption").textContent = `KBR H2ACT®, from KBR's Process Description I.D (Gentari-PR-GEN-PSD-001, Rev 0, 22 Dec 2025) §1–6, with tags as given by KBR; the same drawing as tcoedatabase/figures/kbr_h2act_block_diagram.png in Gentari-ammoniacracker. Flows are per kg H₂ for the selected mode and capacity. The diagram is the clean-fuel layout; fuel streams follow the mode: PSA tail gas always, cracked-gas split in CF100 and NG50, natural gas in NG100 and NG50. Start-up system omitted. *H₂ battery-limit pressure differs across KBR documents (28 I.D, 27 I.E, 20 minimum main package).`;
+}
 function setDuikerBfd(I, r) {
   const d = DK_MB[I.mode] || DK_MB.NH3, k = 1 / d.h2, ng = d.ng > 0;
-  $("dkFeed").textContent = fmt(d.feed * k, 2);
-  $("dkFeedLbl2").textContent = fmt(d.feed * k, 2) + " kg NH₃";
-  $("dkAir").textContent = `air ${fmt(d.air * k, 1)} kg`;
-  $("dkFlueLbl").textContent = `flue gas ${fmt(d.flue * k, 1)} kg · ${fmt(d.flueT, 0)} °C`;
-  $("dkNg").style.display = ng ? "" : "none";
-  $("dkNgLbl").textContent = ng ? `${fmt(d.ng * k, 3)} kg NG (Table 6)` : "";
-  $("dkTailLbl").textContent = `PSA tail gas: H₂ + N₂ + NH₃ slip → SCO`;
-  $("dkFuel").textContent = `fuel ≡ ${fmt(r.nh3FuelEq, 2)} kg NH₃-eq (tail gas + NH₃${ng ? " + NG" : ""})`;
-  $("dkCo2").textContent = ng ? `direct CO₂ ≈ ${fmt(r.co2mb, 2)} kg (mass balance)` : "direct CO₂: 0";
-  $("dkPower").textContent = `power ≈ ${fmt(DUIKER.el / 1000, 3)} kWh (Duiker §3.9)`;
-  $("bfdCaption").textContent = `Duiker AHC, from Duiker's process description (§3.2, §3.6) and Tables 5–6 (12 ktpa, per kg H₂). NH₃ is pumped and vaporised, cracked at 50 barg in a convective reactor heated counter-current by hot gas from the SCO combustor, and purified in one PSA step that also removes NH₃ and N₂. PSA tail gas is recycled to the SCO. ${ng ? "Natural gas replaces part of the ammonia fuel. " : "Ammonia and tail gas are the only fuel. "}No steam and no cooling water (closed glycol loop). The block diagram itself (Duiker Figure 3) is not extractable from the converted package, so this drawing follows the text.`;
+  setT("dkFeed", [`${fmt(d.feed * k, 2)} kg NH₃`, "0.04 bar(g)"]);
+  setT("dkAir", [`${fmt(d.air * k, 1)} kg air/kg H₂`]);
+  setT("dkFlueLbl", [`${fmt(d.flue * k, 1)} kg/kg H₂, ${fmt(d.flueT, 0)} °C`, ng ? `CO₂ ${fmt(r.co2mb, 2)} kg/kg H₂` : "no CO₂", "NOx < 5 ppm"]);
+  const p = $("dkNgPath");
+  p.setAttribute("class", "ln " + (ng ? "sk-fuel" : "sk-mut") + " dash");
+  p.setAttribute("marker-end", `url(#d-${ng ? "fuel" : "mut"})`);
+  setT("dkNgLbl", [ng ? `Natural gas ${fmt(d.ng * k, 3)} kg/kg H₂ (Table 6)` : "Alternative fuel: natural gas (adds 0.21 kgCO₂/kgH₂)"]);
+  setT("dkUtil", [`Utilities: electricity ${fmt(DUIKER.el / 1000, 2)} kWh/kg H₂ (blowers, pumps, instruments) · purge N₂ · closed-loop glycol · no steam system, no cooling water`]);
+  $("bfdCaption").textContent = `Duiker AHC, reconstructed from Duiker's text (§2 and Table 2, §3.2, §3.4, §3.6, §3.9, Tables 5–7); the same drawing as tcoedatabase/figures/duiker_ahc_block_diagram.png in Gentari-ammoniacracker. Flows are Table ${ng ? "6 (NG-fired)" : "5 (NH₃-fired)"} per kg H₂, 12 ktpa. Duiker's Figure 3 is not reproduced and the heat-exchanger arrangement is indicative. OSBL: NH₃ storage, loading/unloading, flare, control room.`;
 }
 function showBfd(I) {
-  const dk = I.basis === "duiker";
-  $("bfdCustomWrap").classList.toggle("hidden", dk);
-  $("dkWrap").classList.toggle("hidden", !dk);
-  $("bfdSeg").classList.toggle("hidden", dk);
-  $("bfdTitle").textContent = dk ? "Process flow — Duiker AHC" : "Process flow — Custom pathways";
-  $("bfdSub").textContent = dk ? "per 1 kg H₂ delivered · " + (I.mode === "NG" ? "natural-gas-fired" : "NH₃-fired") : "per 1 kg H₂ delivered";
+  const b = I.basis;
+  $("bfdCustomWrap").classList.toggle("hidden", b !== "custom");
+  $("kbrWrap").classList.toggle("hidden", b !== "kbr");
+  $("dkWrap").classList.toggle("hidden", b !== "duiker");
+  $("bfdSeg").classList.toggle("hidden", b !== "custom");
+  $("bfdLegend2").classList.toggle("hidden", b === "custom");
+  document.querySelector("#pane-tech .legend").classList.toggle("hidden", b !== "custom");
+  $("bfdTitle").textContent = b === "duiker" ? "Process flow — Duiker AHC" : b === "kbr" ? "Process flow — KBR H2ACT®" : "Process flow — Custom pathways";
+  const modeLbl = b === "duiker" ? (I.mode === "NG" ? "natural-gas-fired" : "NH₃-fired") : b === "kbr" ? KBR.modes[I.mode].label : "";
+  $("bfdSub").textContent = "per 1 kg H₂ delivered" + (modeLbl ? " · " + modeLbl : "");
 }
 
 // ---------- CAPEX ----------

@@ -126,3 +126,13 @@ optional SCR, stack with CEMS; NG stream in NG-fired mode). Duiker's own Figure 
 package, so the drawing follows the text.
 
 OSBL plot area default is now 200 % of ISBL (owner instruction, still an assumption). Footprint fits and sources are quoted in sqft first, m² in brackets.
+
+## Process flow follows the licensor basis (added 2026-09-30)
+
+The Process flow panel follows the Licensor / fuel mode basis: KBR H2ACT® draws the KBR diagram, Duiker AHC draws the Duiker
+diagram, Custom keeps the original pathway diagram with its pathway buttons. The KBR and Duiker drawings reproduce
+`tcoedatabase/figures/kbr_h2act_block_diagram.png` and `duiker_ahc_block_diagram.png` from Gentari-ammoniacracker (KBR I.D
+Process Description; Duiker §2–3.9 and Tables 5–7), with the NH₃ cracker units in purple. Labels are per kg H₂ and follow the fuel
+mode: KBR shows PSA tail gas always, the cracked-gas split in CF100 and NG50, natural gas in NG100 and NG50; Duiker shows the
+Table 5 (NH₃-fired) or Table 6 (NG-fired) flows. KBR's drawing is the clean-fuel layout; Duiker's heat-exchanger network is
+indicative and its Figure 3 is not reproduced.
