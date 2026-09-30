@@ -87,6 +87,14 @@
   .dt td.n, .dt th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .dt tr.active td { background: var(--brand-bg); }
   .dt tr.total td { font-weight: 700; border-top: 2px solid var(--border-hi); }
+  .cf { display:inline-block; min-width:22px; text-align:center; border-radius:4px; padding:0 5px; font-size:11px; font-weight:700; color:#1c1e26; }
+  .cf-H { background:#C6E0B4; } .cf-M { background:#FFE699; } .cf-L { background:#FCE4D6; } .cf-TBD { background:#F8CBAD; }
+  .dt td.tbd { color: var(--danger); font-weight: 700; }
+  .dt td.unit-h { font-weight: 700; color: var(--brand-ink); white-space: nowrap; }
+  details.adv > summary { cursor: pointer; font-weight: 700; color: var(--text2); font-size: 12.5px; }
+  details.adv[open] > summary { margin-bottom: 10px; }
+  .field.row2 { display: flex; gap: 6px; }
+  .field.row2 select { width: auto; }
   .link-box { background: var(--info-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .link-box .txt { flex: 1; min-width: 260px; font-size: 13px; color: var(--text2); }
   .link-box .txt b { color: var(--text); }
@@ -200,18 +208,27 @@
           </div>
           <div class="field"><label for="inPsaUplift">Double-PSA CAPEX uplift <span class="hint">% of CAPEX</span></label><input type="number" step="1" min="0" id="inPsaUplift" value="10"/></div>
         </div>
+        <div class="grid-inputs hidden" id="userInputs">
+          <div class="field"><label for="inUFeed">NH₃ drawn from storage <span class="hint">t NH₃ / t H₂</span></label><input type="number" step="0.05" min="5.6" id="inUFeed" value="7.2"/></div>
+          <div class="field"><label for="inUCracked">NH₃ cracked to gas <span class="hint">t NH₃ / t H₂</span></label><input type="number" step="0.05" min="5.6" id="inUCracked" value="6.5"/></div>
+          <div class="field"><label for="inUNgEq">Natural gas firing <span class="hint">kg NH₃-eq / kg H₂ (0 = none)</span></label><input type="number" step="0.05" min="0" id="inUNgEq" value="0"/></div>
+          <div class="field"><label for="inUPsa">PSA configuration</label>
+            <select id="inUPsa"><option value="single">Single PSA</option><option value="double">Double PSA (CAPEX uplift applies)</option></select></div>
+        </div>
         <p class="note" id="modeNote"></p>
 
         <div class="sub-h">Prices &amp; finance</div>
         <div class="grid-inputs">
           <div class="field"><label for="inPNh3">Ammonia price <span class="hint">USD/t</span></label><input type="number" step="10" min="0" id="inPNh3" value="500"/></div>
           <div class="field"><label for="inPEl">Electricity price <span class="hint">USD/MWh</span></label><input type="number" step="5" min="0" id="inPEl" value="140"/></div>
-          <div class="field"><label for="inPNg">Natural gas price <span class="hint">USD/MWh (LHV)</span></label><input type="number" step="1" min="0" id="inPNg" value="30"/></div>
+          <div class="field"><label for="inPNg">Natural gas price <span class="hint">energy basis</span></label>
+            <div class="row2" style="display:flex;gap:6px"><input type="number" step="1" min="0" id="inPNg" value="30" style="flex:1;min-width:0"/>
+              <select id="inPNgUnit" aria-label="Natural gas price unit" style="width:auto"><option value="mwh">USD/MWh</option><option value="mmbtu">USD/MMBtu</option></select></div></div>
           <div class="field"><label for="inFx">FX <span class="hint">USD per EUR</span></label><input type="number" step="0.01" min="0.01" id="inFx" value="1.1448"/></div>
           <div class="field"><label for="inRate">Discount rate <span class="hint">%</span></label><input type="number" step="0.5" min="0" id="inRate" value="8"/></div>
           <div class="field"><label for="inLife">Plant life <span class="hint">years</span></label><input type="number" step="1" min="1" id="inLife" value="25"/></div>
         </div>
-        <p class="note">Defaults are KBR's own cost basis (NH₃ 500 USD/t, power 140 USD/MWh, NG 30 USD/MWh, 8 %, 25 years, 350 d/yr), so a KBR case reproduces KBR's published LCOH. FX default is the ECB reference rate of 3 Jul 2026 used in the Gentari cracker workbook (an assumption).</p>
+        <p class="note">Defaults are KBR's own cost basis (NH₃ 500 USD/t, power 140 USD/MWh, NG 30 USD/MWh, 8 %, 25 years, 350 d/yr), so a KBR case reproduces KBR's published LCOH. Gas price unit conversion is energy only (1 MWh = 3.4121 MMBtu); gas quoted per MMBtu is normally on an HHV basis while this model consumes LHV energy, so adjust the price if you need that basis. FX default is the ECB reference rate of 3 Jul 2026 used in the Gentari cracker workbook (an assumption).</p>
       </div>
 
       <div id="tollInputs" class="grid-inputs hidden">
@@ -227,6 +244,7 @@
       <button type="button" class="tab active" role="tab" data-tab="tech" aria-selected="true">Technical &amp; process</button>
       <button type="button" class="tab" role="tab" data-tab="capex" aria-selected="false">CAPEX</button>
       <button type="button" class="tab" role="tab" data-tab="opex" aria-selected="false">OPEX &amp; LCOH</button>
+      <button type="button" class="tab" role="tab" data-tab="osbl" aria-selected="false">OSBL equipment</button>
     </div>
     <div class="tabpane active" id="pane-tech" role="tabpanel">
 
@@ -253,6 +271,7 @@
             <button type="button" data-path="cf" aria-pressed="true">100 % clean fuel · 7.2</button>
             <button type="button" data-path="ng" aria-pressed="false">Natural gas · 6.5</button>
             <button type="button" data-path="maxng" aria-pressed="false">Maximum NG · 5.7</button>
+            <button type="button" data-path="user" aria-pressed="false">Custom · your numbers</button>
           </div>
           <span class="note" id="bfdSync"></span>
         </div>
@@ -418,6 +437,38 @@
       </div>
     </div>
     </div>
+    <div class="tabpane" id="pane-osbl" role="tabpanel">
+    <div class="panel">
+      <div class="panel-h"><span class="t">OSBL equipment list</span><span class="s" id="osblSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="osblKpis"></div>
+        <div id="osblFlags"></div>
+        <details class="adv"><summary>OSBL sizing assumptions (editable)</summary>
+          <div class="grid-inputs" id="osblInputs"></div>
+        </details>
+        <div class="tbl-wrap"><table class="dt" id="osblTable"></table></div>
+        <p class="note" id="osblNote"></p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="t">OSBL scaling with H₂ capacity</span><span class="s">selected item versus H₂ output</span></div>
+      <div class="panel-b">
+        <div class="grid-inputs" style="max-width:520px">
+          <div class="field"><label for="inOsblItem">Equipment item</label><select id="inOsblItem"></select></div>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i style="border-color:var(--s-kbr)"></i>Sized OSBL item</span>
+          <span><i class="dot" style="background:var(--text2)"></i>KBR-data capacity (12 / 24 / 80 ktpa)</span>
+          <span><i class="dot" style="border:2px solid var(--text2);background:transparent"></i>extrapolated (160 ktpa)</span>
+        </div>
+        <div class="chart-wrap" id="osblChartWrap">
+          <svg class="chart" id="osblChart" viewBox="0 0 760 340" role="img" aria-label="Selected OSBL equipment design capacity versus H2 capacity"></svg>
+          <div class="tip hidden" id="osblTip"></div>
+        </div>
+        <p class="note" id="osblChartNote"></p>
+      </div>
+    </div>
+    </div>
   </div>
 
   <!-- ================= TOLLING ================= -->
@@ -525,6 +576,7 @@ const CO2_PER_KG_NG = 1150 / 417.9;                         // kg CO2 / kg NG, K
 const STOICH = 5.66;                                        // kg NH3 / kg H2, Gentari and Duiker basis (Duiker Table 1: 5.66/7.03)
 const STOICH_KBR = 33.8 / 500 * 1e6 / (34.3 * 350);          // 5.63: KBR §4.2 "ammonia cracked for product" 33.8 MM$ at 500 USD/t, 12 ktpa
 const FIRING_NH3EQ = 1.54;                                  // kg NH3-eq / kg H2, Gentari basis
+const MMBTU_PER_MWH = 3.6 / 1.055056;                       // 1 MWh = 3.6 GJ; 1 MMBtu = 1.055056 GJ (energy-unit conversion only)
 
 // KBR H2ACT — KPI table §3.3, OPEX/LCOH §4.2, ISBL §4.1 (Rev 0, 23 Dec 2025)
 const KBR = {
@@ -573,13 +625,17 @@ const CUSTOM = {
   cf:    { label: "100 % clean fuel (7.2 t/t)",           feed: 7.20, cracked: 6.50, ngEq: 0.00 },
   ng:    { label: "Natural gas main fuel (6.5 t/t)",      feed: 6.50, cracked: 6.50, ngEq: 0.70 },
   maxng: { label: "Maximum natural gas (5.7 t/t, double PSA)", feed: 5.70, cracked: 5.70, ngEq: 1.50 },
+  // user-defined: starts as the 100 % clean-fuel numbers, overwritten from the inputs
+  user:  { label: "Custom — enter your own numbers",     feed: 7.20, cracked: 6.50, ngEq: 0.00, dpsa: false },
 };
-for (const p of Object.values(CUSTOM)) {
+function deriveCustom(p) {
   p.tail = p.cracked - STOICH;
   p.direct = p.feed - p.cracked;
   p.ngMJ = p.ngEq * LHV.nh3;
   p.co2 = p.ngMJ / LHV.ng * CO2_PER_KG_NG;
+  return p;
 }
+Object.values(CUSTOM).forEach(deriveCustom);
 
 // Tolling references
 const TOLLING = [
@@ -674,12 +730,24 @@ const MODE_OPTIONS = {
   custom: Object.entries(CUSTOM).map(([k, m]) => [k, m.label]),
 };
 
+function readUserCustom() {
+  const u = CUSTOM.user, adj = [];
+  let feed = num($("inUFeed").value, 7.2), cracked = num($("inUCracked").value, 6.5);
+  const ngEq = Math.max(0, num($("inUNgEq").value, 0));
+  if (cracked < STOICH) { adj.push(`NH₃ cracked (${fmt(cracked, 2)} t/t) is below the ${fmt(STOICH, 2)} t/t needed for 1 t H₂; ${fmt(STOICH, 2)} used.`); cracked = STOICH; }
+  if (feed < cracked) { adj.push(`NH₃ drawn from storage (${fmt(feed, 2)} t/t) is below the NH₃ cracked; set equal to it (${fmt(cracked, 2)} t/t).`); feed = cracked; }
+  Object.assign(u, { feed, cracked, ngEq, dpsa: $("inUPsa").value === "double", adj });
+  return deriveCustom(u);
+}
+
 function inputs() {
+  readUserCustom();
   return {
     cap: Math.max(0.1, num($("inCap").value, 12)), days: Math.min(366, Math.max(1, num($("inDays").value, 350))),
     basis: $("inBasis").value, mode: $("inMode").value, ref: $("inRef").value,
     uplift: num($("inPsaUplift").value, 10) / 100,
-    pNh3: num($("inPNh3").value), pEl: num($("inPEl").value), pNg: num($("inPNg").value),
+    pNh3: num($("inPNh3").value), pEl: num($("inPEl").value),
+    pNg: num($("inPNg").value) * ($("inPNgUnit").value === "mmbtu" ? MMBTU_PER_MWH : 1),   // USD/MWh (LHV energy)
     fx: num($("inFx").value, 1.1448), rate: num($("inRate").value, 8) / 100, life: Math.max(1, num($("inLife").value, 25)),
     duikerExp: num($("inDuikerExp").value, FIT_KBR.b),
   };
@@ -705,10 +773,15 @@ function model(I) {
   } else {
     const p = CUSTOM[I.mode];
     ref = I.ref;
-    const el = ref === "kbr" ? FIT_EL[I.mode === "cf" ? "CF100" : "NG100"].f(I.cap) : DUIKER.el;
+    const usesNg = I.mode === "user" ? p.ngEq > 0 : I.mode !== "cf";
+    const el = ref === "kbr" ? FIT_EL[usesNg ? "NG100" : "CF100"].f(I.cap) : DUIKER.el;
     const eff = LHV.h2 / (p.feed * LHV.nh3 + p.ngMJ + el / 1000 * 3.6) * 100;
     Object.assign(r, { ratio: p.feed, ngMJ: p.ngMJ, co2: p.co2, eff, el, custom: p });
     r.basisLabel = "Custom"; r.modeLabel = p.label;
+    if (I.mode === "user") {
+      (p.adj || []).forEach((a) => r.flags.push(a));
+      r.flags.push(`Custom fuel mode: your ratios are applied to the ${ref === "kbr" ? "KBR" : "Duiker"} reference for CAPEX, power and fixed O&M. Nothing here is licensor-quoted; PSA recovers ${fmt(STOICH / p.cracked * 100, 1)} % of the H₂ produced.${p.dpsa ? ` Double PSA selected: CAPEX includes the ${fmt(I.uplift * 100, 0)} % uplift.` : ""}`);
+    }
     if (I.mode === "maxng") r.flags.push(`Maximum-NG pathway: 5.70 t/t means the PSA train recovers ${fmt(STOICH / p.cracked * 100, 1)} % of the H₂, which needs a double PSA. CAPEX includes the ${fmt(I.uplift * 100, 0)} % uplift. Power is taken from the ${ref === "kbr" ? "KBR NG100 curve" : "Duiker figure"}; a second PSA may add load not captured here.`);
   }
   r.ref = ref;
@@ -729,7 +802,7 @@ function model(I) {
   // CAPEX
   r.capexIsbl = ref === "kbr" ? FIT_ISBL.f(I.cap) : null;
   r.capexBase = ref === "kbr" ? FIT_KBR.f(I.cap) : duikerCapexUsdM(I.cap, I);
-  r.upliftUsd = I.basis === "custom" && I.mode === "maxng" ? r.capexBase * I.uplift : 0;
+  r.upliftUsd = I.basis === "custom" && (I.mode === "maxng" || (I.mode === "user" && CUSTOM.user.dpsa)) ? r.capexBase * I.uplift : 0;
   r.capex = r.capexBase + r.upliftUsd;
   r.accuracy = ref === "kbr" ? 0.5 : 0.4;
 
@@ -771,10 +844,11 @@ function populateModes() {
 function recalc() {
   const I = inputs();
   $("customInputs").classList.toggle("hidden", I.basis !== "custom");
-  $("inPsaUplift").disabled = !(I.basis === "custom" && I.mode === "maxng");
+  $("userInputs").classList.toggle("hidden", !(I.basis === "custom" && I.mode === "user"));
+  $("inPsaUplift").disabled = !(I.basis === "custom" && (I.mode === "maxng" || (I.mode === "user" && CUSTOM.user.dpsa)));
   const r = model(I);
   $("modeNote").textContent = I.basis === "custom"
-    ? `Custom pathway on Gentari's basis: ${fmt(STOICH, 2)} kg NH₃ to product, ${fmt(FIRING_NH3EQ, 2)} kg NH₃-eq of firing, of which ${fmt(r.custom.tail, 2)} from PSA tail gas, ${fmt(r.custom.direct, 2)} direct NH₃ and ${fmt(r.custom.ngEq, 2)} as natural gas. CAPEX, power and O&M follow the ${I.ref === "kbr" ? "KBR" : "Duiker"} reference.`
+    ? `Custom pathway (${fmt(STOICH, 2)} kg NH₃ per kg H₂ stoichiometry, Gentari basis): ${fmt(STOICH, 2)} kg NH₃ to product, ${fmt(r.custom.tail + r.custom.direct + r.custom.ngEq, 2)} kg NH₃-eq of firing, of which ${fmt(r.custom.tail, 2)} from PSA tail gas, ${fmt(r.custom.direct, 2)} direct NH₃ and ${fmt(r.custom.ngEq, 2)} as natural gas. CAPEX, power and O&M follow the ${I.ref === "kbr" ? "KBR" : "Duiker"} reference.`
     : I.basis === "kbr" ? "KBR H2ACT® figures, interpolated between the 12, 24, 68 and 80 ktpa data points."
     : "Duiker AHC figures at the 12 ktpa data point.";
 
@@ -800,6 +874,7 @@ function recalc() {
 
   renderCapex(I, r);
   renderOpex(I, r);
+  renderOsbl(I);
   renderCi(r);
   renderSources();
   lastOwn = { I, r };
@@ -822,12 +897,14 @@ function setBfd(path, fromModel) {
   $("bfdNg").style.display = p.ngEq > 0 ? "" : "none";
   $("bfdNgLbl").textContent = `${fmt(p.ngMJ / LHV.ng, 2)} kg NG ≡ ${fmt(p.ngEq, 2)} kg NH₃ (${fmt(p.ngMJ, 1)} MJ)`;
   $("bfdTailLbl").textContent = `PSA tail gas: ${fmt(tailH2, 3)} kg H₂ + ${fmt(n2, 2)} kg N₂ ≡ ${fmt(p.tail, 2)} kg NH₃-eq`;
-  $("bfdPsa").textContent = path === "maxng" ? "Double PSA" : "PSA";
+  $("bfdPsa").textContent = path === "maxng" || (path === "user" && p.dpsa) ? "Double PSA" : "PSA";
   $("bfdPsaSub").textContent = `recovers ${fmt(1 / h2made * 100, 1)} %`;
   $("bfdCo2").textContent = p.co2 > 0 ? `direct CO₂ ≈ ${fmt(p.co2, 2)} kg` : "direct CO₂: 0";
-  const elKey = path === "cf" ? "CF100" : "NG100";
+  const elKey = path === "cf" || (path === "user" && !(p.ngEq > 0)) ? "CF100" : "NG100";
   $("bfdPower").textContent = `power ≈ ${fmt(FIT_EL[elKey].f(12) / 1000, 3)} kWh (KBR ${elKey}, 12 ktpa)`;
-  $("bfdCaption").textContent = path === "cf"
+  $("bfdCaption").textContent = path === "user"
+    ? `Your numbers: ${fmt(p.feed, 2)} kg NH₃ drawn from storage, ${fmt(p.cracked, 2)} kg cracked. The burner takes ${fmt(p.tail, 2)} kg NH₃-eq of PSA tail gas${p.direct > 0 ? `, ${fmt(p.direct, 2)} kg NH₃ vapour drawn at the pre-heater outlet` : ""}${p.ngEq > 0 ? ` and ${fmt(p.ngMJ / LHV.ng, 2)} kg natural gas (${fmt(p.ngEq, 2)} kg NH₃-eq)` : ""}. Direct CO₂ ${fmt(p.co2, 2)} kg.`
+    : path === "cf"
     ? "Clean fuel: burner takes 0.84 kg NH₃-eq of PSA tail gas plus 0.70 kg NH₃ vapour drawn at the pre-heater outlet. No direct CO₂."
     : path === "ng"
     ? "Natural gas: burner takes the same 0.84 kg NH₃-eq of tail gas; 0.26 kg of natural gas replaces the 0.70 kg direct NH₃ draw. All 6.50 kg from storage is cracked."
@@ -923,7 +1000,7 @@ function drawCapexChart(I, r) {
 
 // ---------- OPEX ----------
 function renderOpex(I, r) {
-  $("opexSub").textContent = `${fmt(I.cap, 1)} ktpa · NH₃ ${fmt(I.pNh3, 0)} USD/t · power ${fmt(I.pEl, 0)} USD/MWh · NG ${fmt(I.pNg, 0)} USD/MWh`;
+  $("opexSub").textContent = `${fmt(I.cap, 1)} ktpa · NH₃ ${fmt(I.pNh3, 0)} USD/t · power ${fmt(I.pEl, 0)} USD/MWh · NG ${fmt(I.pNg, 1)} USD/MWh (${fmt(I.pNg / MMBTU_PER_MWH, 2)} USD/MMBtu)`;
   const perKg = (v) => v * 1e6 / (r.h2t * 1000);
   $("opexKpis").innerHTML = [
     kpi("OPEX", fmt(r.opexTotal, 1), `MM USD/yr · ${fmt(perKg(r.opexTotal), 2)} USD/kg H₂`, true),
@@ -969,9 +1046,220 @@ function renderSources() {
     ["Custom tail gas 0.84", "implies 87.1 % PSA recovery", "Discrepancy", "Earlier Gentari basis said 88 % (tail gas 0.77); the 0.07 difference can be read as NH₃ slip"],
     ["Double-PSA uplift", "10 % default", "Assumption", "Gentari input; not from a licensor quote"],
     ["Maximum-NG power", "KBR NG100 or Duiker figure", "Assumption", "No licensor data for a double-PSA configuration"],
+    ["Natural gas price unit", "1 MWh = 3.4121 MMBtu", "Derived", "3.6 GJ/MWh ÷ 1.055056 GJ/MMBtu. Energy-unit conversion only; MMBtu prices are usually HHV, the model uses LHV energy"],
+    ["Custom fuel mode (user)", "user-entered NH₃ feed, NH₃ cracked, NG firing", "Assumption", "Not licensor-quoted. Tail gas = cracked − 5.66; direct NH₃ = feed − cracked; NG CO₂ from the KBR I.E factor"],
+    ["OSBL equipment list", "KBR I.H, Units 101–114 (40 items)", "Stated / derived", "Gentari-PR-GEN-LST-0002 Rev 0 (issued for info). Sizing by tools/kbr_osbl_workbook.py rules; scaling S1–S4 are assumptions, 160 ktpa is extrapolated"],
     ["FX", "1.1448 USD/EUR default", "Assumption", "ECB reference rate 3 Jul 2026, as in the cracker workbook"],
   ];
   $("srcTable").innerHTML = `<thead><tr><th>Item</th><th>Value</th><th>Status</th><th>Source / derivation</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td class="note">${x[3]}</td></tr>`).join("")}</tbody>`;
+}
+
+// ---------- OSBL equipment list ----------
+// KBR I.H (Gentari-PR-GEN-LST-0002) list, sized with the rules of tools/kbr_osbl_workbook.py in Gentari-ammoniacracker.
+const OSBL = {
+  caps: [12, 24, 80],                                        // I.E capacities carrying power / NG / NH3 / H2 data
+  pNorm: [487, 870, 2760], ngNorm: [417.9, 831.4, 2759.3],   // kW, kg/h   (I.E)
+  nh3: [10290, 18102, 68470], h2: [1426, 2851, 9505],        // kg/h       (I.E, highest-feed firing mode)
+  pMax12: 540, pNorm12: 487, ngMax12: 450, ngNorm12: 418,    // I.F, 12 ktpa: maximum and normal
+  cwMax12: 40, deminMax12: 270, paMax12: 250, iaMax12: 350, n2Nor12: 150, n2Max12: 500,   // t/h, kg/h, Nm3/h  (I.F, 12 ktpa)
+  bdRatio: 0.06, cwSupT: 30, cwRetT: 40, deminP: 5, airP: 7.5, n2P: 7,
+  ngMW: 16.95, h2MW: 2.02, h2Rho: 2.21, nh3MW: 17.031, turndown: 0.40,
+};
+const OSBL_C = { dieselLHV: 43.0, dieselRho: 820, pf: 0.8, cp: 4.186, hfg: 2430, showerLpm: 75.7, showerMin: 15, potableLpd: 100, domPeak: 3,
+  cwDp: 5.5, pumpEff: 0.70, dryerPurge: 0.15, compDisch: 8.5, isoEff: 0.65, iaHoldMin: 15, iaMinP: 4.0, wetHoldMin: 2, n2StartH: 24,
+  ln2Rho: 806.6, n2GasRho: 1.2506, nm3: 22.414, patm: 1.01325 };
+const OSBL_FIELDS = [   // id, label, default, step, min
+  ["margin", "Design margin on KBR maximum flows (×)", 1.10, 0.01, 1], ["storeH", "Tank storage autonomy (h)", 24, 1, 1],
+  ["fill", "Net ÷ nominal tank volume", 0.90, 0.01, 0.5], ["powerMult", "Emergency power load allowance (× KBR max ISBL power)", 2, 0.1, 1],
+  ["backupH", "Emergency backup duration (h)", 24, 1, 1], ["genEff", "Genset efficiency", 0.50, 0.01, 0.2],
+  ["coc", "Cooling-tower cycles of concentration", 5, 0.5, 1.5], ["deminRec", "Demin plant recovery", 0.80, 0.01, 0.5],
+  ["headcount", "Persons on site", 30, 1, 1], ["showers", "Simultaneous safety showers", 2, 1, 1], ["pipeV", "Max H₂ export line velocity (m/s)", 20, 1, 5],
+];
+const OSBL_DEF = Object.fromEntries(OSBL_FIELDS.map((f) => [f[0], f[2]]));
+const PIPES = [["DN100", 102.3], ["DN150", 154.1], ["DN200", 202.7], ["DN250", 254.5], ["DN300", 303.2], ["DN350", 333.4], ["DN400", 381.0], ["DN450", 428.7], ["DN500", 477.8], ["DN600", 574.6]];   // ASME B36.10M Sch 40 ID, mm
+const TBD = "TBD";
+
+function osblAt(arr, x) {       // linear between I.E points; proportional below 12 ktpa and above 80 ktpa
+  const k = OSBL.caps;
+  if (x <= k[0]) return arr[0] * x / k[0];
+  if (x >= k[2]) return arr[2] * x / k[2];
+  for (let i = 0; i < 2; i++) if (x <= k[i + 1]) return arr[i] + (arr[i + 1] - arr[i]) * (x - k[i]) / (k[i + 1] - k[i]);
+}
+function osblInputs() {
+  const A = {};
+  for (const [id, , def, , min] of OSBL_FIELDS) A[id] = Math.max(min, num($("os_" + id).value, def));
+  A.fill = Math.min(1, A.fill); A.genEff = Math.min(0.6, A.genEff); A.deminRec = Math.min(1, A.deminRec);
+  A.coc = Math.max(1.01, A.coc);
+  return A;
+}
+function osblSize(cap, A) {
+  const K = OSBL, C = OSBL_C, o = {}, s = cap / K.caps[0];
+  const pNorm = osblAt(K.pNorm, cap), ngNorm = osblAt(K.ngNorm, cap), nh3 = osblAt(K.nh3, cap), h2 = osblAt(K.h2, cap);
+  o.pMax = pNorm * K.pMax12 / K.pNorm12; o.ngMax = ngNorm * K.ngMax12 / K.ngNorm12;
+  const cwMax = K.cwMax12 * s, deminMax = K.deminMax12 * s, paMax = K.paMax12 * s, iaMax = K.iaMax12 * s, n2Nor = K.n2Nor12 * s, n2Max = K.n2Max12 * s;
+  // 101 emergency power
+  o.genKw = o.pMax * A.powerMult; o.genKva = o.genKw / C.pf;
+  o.dieselKg = o.genKw * A.backupH / A.genEff * 3.6 / C.dieselLHV;
+  o.dieselNet = o.dieselKg / C.dieselRho; o.dieselNom = o.dieselNet / A.fill;
+  o.dieselN9 = 300 * s * A.backupH / A.genEff * 3.6 / C.dieselLHV / C.dieselRho;   // I.F Note 9 (0.3 MW) scaled linearly, sensitivity only
+  // 107 cooling water
+  o.cwDes = cwMax * A.margin; o.cwEach = o.cwDes / 2;
+  o.cwDuty = o.cwDes * 1000 * C.cp * (K.cwRetT - K.cwSupT) / 3600;
+  o.evap = o.cwDuty * 3600 / C.hfg; o.ctBd = o.evap / (A.coc - 1); o.ctMu = o.evap + o.ctBd;
+  // 103/104 demin and polishing
+  o.deminDes = deminMax * A.margin / 1000; o.deminNet = o.deminDes * A.storeH; o.deminNom = o.deminNet / A.fill;
+  o.deminFeed = o.deminDes / A.deminRec; o.deminWaste = o.deminFeed - o.deminDes;
+  o.neutNet = o.deminWaste * A.storeH; o.neutNom = o.neutNet / A.fill;
+  // 105 potable
+  o.potDay = A.headcount * C.potableLpd / 1000; o.potAvg = o.potDay / 24;
+  o.potNet = o.potAvg * A.storeH + A.showers * C.showerLpm * C.showerMin / 1000; o.potNom = o.potNet / A.fill;
+  o.potPump = A.showers * C.showerLpm * 60 / 1000 + C.domPeak * o.potAvg;
+  // 102 raw water
+  o.raw = o.ctMu / 1000 + o.deminFeed + o.potAvg; o.rawNet = o.raw * A.storeH; o.rawNom = o.rawNet / A.fill;
+  // 108 flare and fuel gas
+  o.flareKg = nh3 * A.margin; o.flareNm3 = nh3 / K.nh3MW * 2 * C.nm3 * A.margin;
+  o.ngDes = o.ngMax * A.margin; o.ngNm3 = o.ngDes / K.ngMW * C.nm3;
+  // 109 air
+  o.iaDes = iaMax * A.margin; o.dryerIn = o.iaDes / (1 - C.dryerPurge);
+  o.compTot = paMax * A.margin + o.dryerIn; o.compEach = o.compTot / 2;
+  const dp = K.airP - C.iaMinP;
+  o.iaRcv = iaMax * C.iaHoldMin / 60 * C.patm / dp; o.wetRcv = o.compTot * C.wetHoldMin / 60 * C.patm / dp;
+  // 110 nitrogen
+  o.n2Gen = n2Nor * A.margin;
+  o.ln2Net = Math.max(n2Max - o.n2Gen, 0) * C.n2StartH / (C.ln2Rho / C.n2GasRho); o.ln2Nom = o.ln2Net / A.fill; o.vapEach = n2Max * A.margin;
+  // 112 waste water
+  o.effluent = K.bdRatio * h2 / 1000 + o.ctBd / 1000 + o.deminWaste;
+  // 113 hydrogen export
+  o.h2Des = h2 * A.margin; o.h2Nm3 = o.h2Des / K.h2MW * C.nm3; o.h2Am3 = o.h2Des / K.h2Rho;
+  o.pipeId = Math.sqrt(4 * (o.h2Am3 / 3600) / Math.PI / A.pipeV) * 1000;
+  const pp = PIPES.find((x) => x[1] >= o.pipeId); o.pipeDn = pp ? pp[0] : "> DN600 — check";
+  o.h2 = h2; o.nh3 = nh3;
+  return o;
+}
+const up = (v) => Math.ceil(v - 1e-9);
+// unit, tag, item, qty, primary, unit, secondary, unit, basis, confidence
+function osblRows(o, A) {
+  const R = (...a) => a;
+  return [
+    R("101 Emergency power / sub-station", "111-L", "Emergency Power Package", "1", o.genKw, "kWe", o.genKva, "kVA @ 0.8 pf", `KBR max ISBL power × ${fmt(A.powerMult, 1)} load allowance (not redundancy)`, "H"),
+    R("", "111-F", "Emergency Power Diesel Tank", "1", up(o.dieselNom), "m³ nominal", o.dieselNet, "m³ net", `${fmt(A.backupH, 0)} h backup at ${fmt(A.genEff * 100, 0)} % genset efficiency, diesel LHV 43.0 MJ/kg`, "H"),
+    R("102 Raw water", "121-F", "Raw Water Tank", "1", up(o.rawNom), "m³ nominal + fire reserve (TBD)", o.rawNet, "m³ net", `${fmt(A.storeH, 0)} h × (CT make-up + demin feed + potable)`, "M"),
+    R("", "121-JA/B", "Service Water Pumps", "2 (1+1)", o.raw, "m³/h each", null, "", "Continuous raw water demand; hose allowance TBD", "M"),
+    R("103 Demineralized water", "131-L", "Demineralised Water Package", "1", o.deminDes, "m³/h product", o.deminFeed, "m³/h raw feed", "KBR demin maximum × margin", "M"),
+    R("", "131-F", "Demineralised Water Tank", "1", up(o.deminNom), "m³ nominal", o.deminNet, "m³ net", `${fmt(A.storeH, 0)} h × design flow`, "M"),
+    R("", "131-JA/B", "Demineralised Water Pumps", "2 (1+1)", o.deminDes, "m³/h each", null, "", "Design flow", "M"),
+    R("", "132-F", "Neutralization Tank", "1", up(o.neutNom), "m³ nominal", o.neutNet, "m³ net", `${fmt(A.storeH, 0)} h × regeneration waste`, "L"),
+    R("", "132-JA/B", "Waste Water Pumps", "2 (1+1)", o.deminWaste, "m³/h each", null, "", "Regeneration waste (vendor minimum governs)", "L"),
+    R("104 Polishing water", "141-L", "Mixed Bed Polishing Package", "1", o.deminDes, "m³/h", null, "", "Demin maximum × margin", "M"),
+    R("", "141-F", "Polished Water Tank", "1", up(o.deminNom), "m³ nominal", o.deminNet, "m³ net", `${fmt(A.storeH, 0)} h × design flow`, "M"),
+    R("", "141-JA/B", "Polished Water Pumps", "2 (1+1)", o.deminDes, "m³/h each", OSBL.deminP, "barg at ISBL battery limit", "Design flow at BL pressure", "M"),
+    R("105 Potable water", "151-F", "Potable Water Tank", "1", up(o.potNom), "m³ nominal", o.potNet, "m³ net", `${fmt(A.headcount, 0)} persons × 100 L/p/d + safety showers`, "L"),
+    R("", "151-JA/B", "Potable Water Pumps", "1 in I.H (recommend 2)", o.potPump, "m³/h each", null, "", "Safety showers + domestic peak", "L"),
+    R("", "151-L", "Chlorination Package", "1", o.potAvg, "m³/h average fill", null, "", "Dose to ≥ 0.5 mg/L free Cl₂ after 30 min (WHO GDWQ)", "L"),
+    R("106 Fire water", "161-JA/B", "Fire Water Pumps (I.H: “Service Water Pumps”)", "2", TBD, "", null, "", "Needs a fire & explosion risk assessment and authority requirement", "TBD"),
+    R("107 Cooling water system", "171-JA/B/C", "Cooling Water Pumps", "3 (2+1)", o.cwEach, "m³/h each", o.cwDes, "m³/h total", "KBR CW maximum × margin; ≥ 5.0 barg discharge", "H"),
+    R("", "171-DA/B", "Cooling Water Towers", "2 cells", o.cwDuty / 2, "kW per cell", o.cwEach, "m³/h per cell", "Q = ṁ cp ΔT, 30 → 40 °C", "M"),
+    R("", "171-L", "Chemical Injection Package", "1", o.ctMu / 1000, "m³/h make-up", o.cwDes, "m³/h circulation", "Dosing rates by water-treatment vendor", "L"),
+    R("108 Ammonia cracking flare / fuel gas", "181-L", "HP Flare Package", "1", o.flareKg, "kg/h", o.flareNm3, "Nm³/h", "PROXY: full cracked gas; replace with a relief study", "L"),
+    R("", "181-D", "HP Flare KO Drum", "1", o.flareKg, "kg/h gas", null, "", "Dimension per API Std 521 at FEED", "L"),
+    R("", "181-C", "HP Flare KO Drum Heater", "1", TBD, "", null, "", "Depends on liquid inventory; no KBR data", "TBD"),
+    R("", "182-L", "Fuel Gas Metering Package", "1", o.ngDes, "kg/h", o.ngNm3, "Nm³/h", "KBR NG maximum × margin at 7.5 barg", "H"),
+    R("", "182-D", "Fuel Gas KO Drum", "1", o.ngDes, "kg/h", o.ngNm3, "Nm³/h", "As 182-L", "H"),
+    R("109 Air systems", "191-JA/B/C", "Air Compressor Package A/B/C", "3 (2+1)", o.compEach, "Nm³/h each", o.compTot, "Nm³/h total", "Plant air + IA dryer inlet, ≥ 8.5 barg", "M"),
+    R("", "191-D", "Wet Air Receiver", "1", o.wetRcv, "m³", null, "", "2 min hold-up of compressor output", "L"),
+    R("", "191-L", "Instrument Air Dryer Package", "1", o.iaDes, "Nm³/h dry", o.dryerIn, "Nm³/h inlet", "KBR IA maximum × margin, 15 % purge", "M"),
+    R("", "192-D", "Instrument Air Receiver", "1", o.iaRcv, "m³", null, "", "15 min hold-up, 7.5 → 4.0 barg", "M"),
+    R("110 Nitrogen system", "201-L", "Nitrogen Generation Package", "1", o.n2Gen, "Nm³/h", OSBL.n2P, "barg", "N₂ normal × margin (purity TBD)", "M"),
+    R("", "201-D", "Liquid Nitrogen Storage Vessel", "1", up(o.ln2Nom), "m³ nominal", o.ln2Net, "m³ net LN₂", "(Start-up peak − generator) × 24 h", "L"),
+    R("", "201-CA/B", "Nitrogen Ambient Vaporisers A/B", "2 (2×100%)", o.vapEach, "Nm³/h each", null, "", "N₂ maximum × margin", "M"),
+    R("111 Off-spec tank", "211-F", "Off-Spec Tank", "1", TBD, "", null, "", "Service not defined by KBR", "TBD"),
+    R("112 Waste water treatment", "221-JA/B", "Neutralization Sump Pump A/B", "2 (1+1)", o.deminWaste, "m³/h each", null, "", "Regeneration waste (may duplicate 132-JA/B)", "L"),
+    R("", "221-L", "Oil Water Treatment Package", "1", TBD, "", null, "", "Needs rainfall intensity and paved area", "TBD"),
+    R("", "222-L", "Sanitary Lifting Station", "1", o.potDay, "m³/d", null, "", "Equal to potable use", "L"),
+    R("", "222-JA/B", "Waste Water Effluent Sump Pump A/B", "2 (1+1)", o.effluent, "m³/h + storm (TBD)", null, "", "Steam BD + CT BD + demin waste", "M"),
+    R("113 Hydrogen export", "232-L", "Hydrogen Metering Package", "1", o.h2Des, "kg/h", o.h2Nm3, "Nm³/h", "H₂ × margin; 40 % turndown (I.A §9)", "H"),
+    R("", "231-L", "Hydrogen Pipeline Pig Launcher Package", "1", o.pipeDn, "indicative line", o.pipeId, "mm min ID", `Velocity ≤ ${fmt(A.pipeV, 0)} m/s, ASME B36.10M Sch 40`, "L"),
+    R("114 Ammoniacal water drain system", "241-D", "Ammoniacal Drain Underground Drum", "1", TBD, "", null, "", "ISBL drain inventories not in KBR package", "TBD"),
+    R("", "241-JA/B", "Submerged Ammoniacal Drain Drum Pump", "2 (1+1)", TBD, "", null, "", "Follows 241-D", "TBD"),
+  ];
+}
+const nf = (v) => typeof v !== "number" ? v : Math.abs(v) >= 100 ? fmt(v, 0) : Math.abs(v) >= 10 ? fmt(v, 1) : fmt(v, 2);
+
+function buildOsblInputs() {
+  $("osblInputs").innerHTML = OSBL_FIELDS.map(([id, label, def, step, min]) => `<div class="field"><label for="os_${id}">${label}</label><input type="number" id="os_${id}" step="${step}" min="${min}" value="${def}"/></div>`).join("");
+  OSBL_FIELDS.forEach(([id]) => $("os_" + id).addEventListener("input", () => { if (lastOwn) renderOsbl(inputs()); }));
+}
+
+function renderOsbl(I) {
+  const A = osblInputs(), o = osblSize(I.cap, A), rows = osblRows(o, A);
+  $("osblSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · KBR I.H list, Units 101–114`;
+  const k = [
+    kpi("Emergency genset", nf(o.genKw), `kWe · ${nf(o.genKva)} kVA`, true),
+    kpi("Diesel tank", String(up(o.dieselNom)), "m³ nominal"),
+    kpi("Cooling water", nf(o.cwDes), `m³/h circulation · ${nf(o.cwDuty / 1000)} MW duty`),
+    kpi("Raw water tank", String(up(o.rawNom)), "m³ nominal, excl. fire reserve"),
+    kpi("HP flare (proxy)", fmt(o.flareKg / 1000, 1), "t/h full cracked gas"),
+    kpi("H₂ export line", o.pipeDn, `indicative · ${nf(o.h2Des)} kg/h design`),
+  ];
+  $("osblKpis").innerHTML = k.join("");
+  const fl = [];
+  if (I.basis !== "kbr") fl.push(`The OSBL list is KBR's (I.H) and is sized on KBR's utility basis. It is shown as an indicative OSBL reference for the ${I.basis === "duiker" ? "Duiker" : "Custom"} basis too; Duiker has no OSBL equipment list, and a Custom case has no licensor OSBL package.`);
+  if (I.cap > 80) fl.push(`${fmt(I.cap, 0)} ktpa is above KBR's largest published case (80 ktpa). Every KBR-derived value is scaled linearly from 80 ktpa (assumption). Equipment quantities stay as listed in I.H; more cooling-tower cells or compressors may be preferred.`);
+  if (I.cap < 12) fl.push(`${fmt(I.cap, 0)} ktpa is below KBR's smallest case (12 ktpa); values are scaled proportionally from 12 ktpa.`);
+  fl.push(`Emergency power follows the repo owner's method (KBR max ISBL power × ${fmt(A.powerMult, 1)}). On KBR's own I.F Note 9 estimate (0.3 MW at 12 ktpa, scaled linearly) the diesel tank would be ${nf(o.dieselN9)} m³ net instead of ${nf(o.dieselNet)} m³. Not reconciled.`);
+  const nTbd = rows.filter((r) => r[4] === TBD).length;
+  fl.push(`${nTbd} of ${rows.length} items cannot be sized from the KBR package (shown as TBD): fire water, flare KO drum heater, off-spec tank, oil-water package and the ammoniacal drain drum and pumps.`);
+  $("osblFlags").innerHTML = fl.map((f) => `<div class="flag">${f}</div>`).join("");
+  $("osblTable").innerHTML = `<thead><tr><th>Unit</th><th>Tag</th><th>Item</th><th>Qty</th><th class="n">Design capacity</th><th>Unit</th><th class="n">Secondary</th><th>Unit</th><th>Basis</th><th>Conf.</th></tr></thead><tbody>${rows.map((r) => `
+    <tr><td class="unit-h">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td>
+    <td class="n${r[4] === TBD ? " tbd" : ""}"><b>${nf(r[4])}</b></td><td class="note">${r[5]}</td><td class="n">${r[6] === null ? "" : nf(r[6])}</td><td class="note">${r[7]}</td><td class="note">${r[8]}</td><td><span class="cf cf-${r[9]}">${r[9]}</span></td></tr>`).join("")}</tbody>`;
+  $("osblNote").innerHTML = `Sized for ${fmt(I.cap, 1)} ktpa H₂ from KBR's Rev 0 package (I.A, I.C, I.E, I.F, I.H, Dec 2025), with the scaling rules of the Gentari-ammoniacracker workbook <code>tools/kbr_osbl_workbook.py</code>: power and natural gas from I.E at the capacity × the I.F maximum/normal ratio at 12 ktpa; cooling water, demin water, air and nitrogen scaled linearly from the I.F 12 ktpa maxima; power and NH₃ feed use KBR's highest-feed published firing mode. All results are derived, preliminary and not a KBR deliverable. Confidence: H mostly KBR data · M KBR data plus material assumptions · L mostly assumptions · TBD not sizable from the package.`;
+  drawOsblChart(I, A, rows);
+}
+
+let osblItemsBuilt = false;
+function drawOsblChart(I, A, rows) {
+  const sel = $("inOsblItem");
+  if (!osblItemsBuilt) {
+    sel.innerHTML = rows.map((r, i) => typeof r[4] === "number" ? `<option value="${i}">${r[1]} — ${r[2]} (${r[5]})</option>` : "").join("");
+    const d = rows.findIndex((r) => r[1] === "111-L"); if (d >= 0) sel.value = String(d);
+    osblItemsBuilt = true;
+  }
+  const idx = num(sel.value, 0), row = rows[idx], yu = row[5];
+  const f = (x) => osblRows(osblSize(Math.max(0.5, x), A), A)[idx][4];
+  const svg = $("osblChart"), W = 760, H = 340, m = { l: 62, r: 40, t: 30, b: 44 };
+  const xmax = niceCeil(Math.max(160, I.cap * 1.15));
+  const pts = [12, 24, 80, 160].map((c) => ({ c, v: f(c) }));
+  const ymax = niceCeil(Math.max(f(xmax), f(I.cap), ...pts.map((p) => p.v)) * 1.05);
+  const sx = (x) => m.l + x / xmax * (W - m.l - m.r), sy = (y) => H - m.b - y / ymax * (H - m.t - m.b);
+  let s = "";
+  for (let i = 0; i <= 5; i++) { const v = ymax * i / 5, y = sy(v); s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/><text class="tick" x="${m.l - 8}" y="${y + 4}" text-anchor="end">${nf(v)}</text>`; }
+  for (let i = 0; i <= 5; i++) { const v = xmax * i / 5; s += `<text class="tick" x="${sx(v)}" y="${H - m.b + 18}" text-anchor="middle">${fmt(v, 0)}</text>`; }
+  s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${sy(0)}" y2="${sy(0)}"/>`;
+  s += `<text class="tick" x="${(m.l + W - m.r) / 2}" y="${H - 6}" text-anchor="middle">H₂ capacity, ktpa</text><text class="tick" x="${m.l}" y="14" text-anchor="start">${yu}</text>`;
+  let d = ""; for (let i = 0; i <= 90; i++) { const x = Math.max(0.5, xmax * i / 90); d += `${i ? "L" : "M"}${sx(x).toFixed(1)} ${sy(f(x)).toFixed(1)}`; }
+  s += `<path d="${d}" fill="none" stroke="var(--s-kbr)" stroke-width="2.5" stroke-linecap="round"/>`;
+  for (const p of pts) { const hollow = p.c > 80; s += `<circle cx="${sx(p.c)}" cy="${sy(p.v)}" r="5" fill="${hollow ? "var(--bg2)" : "var(--s-kbr)"}" stroke="${hollow ? "var(--s-kbr)" : "var(--bg2)"}" stroke-width="2"/><text class="lbl2" x="${sx(p.c)}" y="${sy(p.v) - 10}" text-anchor="middle">${p.c} ktpa: ${nf(p.v)}</text>`; }
+  const xs = sx(I.cap), yv = f(I.cap);
+  s += `<line x1="${xs}" x2="${xs}" y1="${m.t}" y2="${sy(0)}" stroke="var(--text3)" stroke-dasharray="3 3"/><circle cx="${xs}" cy="${sy(yv)}" r="6" fill="var(--text)" stroke="var(--bg2)" stroke-width="2"/>`;
+  const right = xs > W - m.r - 190;
+  s += `<text class="lbl" x="${right ? xs - 10 : xs + 10}" y="${Math.min(sy(0) - 8, sy(yv) + 22)}" text-anchor="${right ? "end" : "start"}">${fmt(I.cap, 0)} ktpa → ${nf(yv)} ${yu}</text>`;
+  s += `<rect id="osblHit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"/>`;
+  svg.innerHTML = s;
+  const tip = $("osblTip"), wrap = $("osblChartWrap");
+  $("osblHit").addEventListener("mousemove", (e) => {
+    const p2 = svg.createSVGPoint(); p2.x = e.clientX; p2.y = e.clientY;
+    const p = p2.matrixTransform(svg.getScreenCTM().inverse());
+    const x = Math.max(0.5, (p.x - m.l) / (W - m.l - m.r) * xmax);
+    tip.innerHTML = `<b>${fmt(x, 0)} ktpa H₂</b><div class="row"><span class="sw" style="background:var(--s-kbr)"></span>${row[1]}: ${nf(f(x))} ${yu}</div>`;
+    tip.classList.remove("hidden");
+    const wr = wrap.getBoundingClientRect();
+    let left = e.clientX - wr.left + wrap.scrollLeft + 14;
+    if (left + tip.offsetWidth > wrap.scrollWidth) left = e.clientX - wr.left + wrap.scrollLeft - tip.offsetWidth - 14;
+    tip.style.left = left + "px"; tip.style.top = (e.clientY - wr.top + 10) + "px";
+  });
+  $("osblHit").addEventListener("mouseleave", () => tip.classList.add("hidden"));
+  $("osblChartNote").textContent = `${row[1]} ${row[2]}: ${nf(yv)} ${yu} at ${fmt(I.cap, 0)} ktpa. Solid markers sit at the KBR data capacities (12, 24, 80 ktpa); the 160 ktpa marker is extrapolated (80 ktpa × 2). Equipment quantities do not change with capacity, so steps appear only where a tank is rounded up to a whole m³.`;
 }
 
 // ---------- Tolling ----------
@@ -1022,15 +1310,31 @@ $("btnLinkToll").addEventListener("click", () => {
 // ---------- Wiring ----------
 $("inRoute").addEventListener("change", (e) => setRoute(e.target.value));
 $("inBasis").addEventListener("change", () => { populateModes(); recalc(); });
-["inMode", "inRef"].forEach((id) => $(id).addEventListener("change", recalc));
+["inMode", "inRef", "inUPsa"].forEach((id) => $(id).addEventListener("change", recalc));
+["inUFeed", "inUCracked", "inUNgEq"].forEach((id) => $(id).addEventListener("input", recalc));
+$("inOsblItem").addEventListener("change", () => { if (lastOwn) renderOsbl(inputs()); });
+let prevNgUnit = "mwh";
+$("inPNgUnit").addEventListener("change", (e) => {     // keep the same price, shown in the new unit
+  const u = e.target.value, v = num($("inPNg").value);
+  if (u !== prevNgUnit) {
+    const usdMwh = prevNgUnit === "mmbtu" ? v * MMBTU_PER_MWH : v;
+    const nv = u === "mmbtu" ? usdMwh / MMBTU_PER_MWH : usdMwh;
+    $("inPNg").value = +nv.toFixed(u === "mmbtu" ? 3 : 2);
+    $("inPNg").step = u === "mmbtu" ? "0.1" : "1";
+    prevNgUnit = u;
+  }
+  recalc();
+});
 ["inCap", "inDays", "inPsaUplift", "inPNh3", "inPEl", "inPNg", "inFx", "inRate", "inLife", "inDuikerExp"].forEach((id) => $(id).addEventListener("input", recalc));
 $("inH2KtpaToll").addEventListener("input", recalcToll);
 $("inTolling").addEventListener("change", recalcToll);
 document.querySelectorAll(".seg button[data-path]").forEach((b) => b.addEventListener("click", () => setBfd(b.dataset.path, false)));
 
-const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inH2KtpaToll: 70 };
+const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inH2KtpaToll: 70, inUFeed: 7.2, inUCracked: 6.5, inUNgEq: 0, inUPsa: "single" };
 $("btnReset").addEventListener("click", () => {
   for (const [k, v] of Object.entries(DEFAULTS)) $(k).value = v;
+  $("inPNgUnit").value = "mwh"; prevNgUnit = "mwh"; $("inPNg").value = 30; $("inPNg").step = "1";
+  for (const [id, v] of Object.entries(OSBL_DEF)) $("os_" + id).value = v;
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
   populateModes(); $("inMode").value = "NG100";
   $("inTolling").value = TOLLING[0].id;
@@ -1079,11 +1383,12 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
   let t = "light"; try { t = localStorage.getItem("nh3CrackerThemeV2") || "light"; } catch (e) {}
   applyTheme(t);
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
+  buildOsblInputs();
   populateModes();
   populateTollingSelect();
   setBfd("cf", true);
   let tab = "tech"; try { tab = localStorage.getItem(TAB_KEY) || "tech"; } catch (e) {}
-  showTab(["tech", "capex", "opex"].includes(tab) ? tab : "tech");
+  showTab(["tech", "capex", "opex", "osbl"].includes(tab) ? tab : "tech");
   setRoute("own");
 })();
 </script>

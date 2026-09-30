@@ -71,3 +71,32 @@ LCOH = (CAPEX × CRF + OPEX) ÷ H₂. On KBR's basis at 12 ktpa NG100 the model 
 (`{ throughputKtpa, h2OutputKtpa, licensor, fuelMode, ts }`). The storage module reads
 the key on load and offers to apply the NH₃ throughput as `demand.throughputKtpa`, then
 clears it.
+
+## Natural gas price unit (added 2026-09-30)
+
+The NG price input has a unit dropdown, USD/MWh or USD/MMBtu. The model works in USD/MWh
+(LHV energy); MMBtu input is converted with 1 MWh = 3.6 GJ ÷ 1.055056 GJ/MMBtu = 3.4121 MMBtu.
+This is an energy-unit conversion only. Gas quoted per MMBtu is usually on an HHV basis while the
+model consumes LHV energy, so adjust the price if you need that basis. Switching the unit keeps
+the same price and re-expresses it.
+
+## Custom fuel mode (added 2026-09-30)
+
+With basis = Custom, the Fuel mode list has a fourth option, "Custom — enter your own numbers".
+Inputs: NH₃ drawn from storage (t/t H₂), NH₃ cracked (t/t H₂), natural-gas firing (kg NH₃-eq/kg H₂),
+single or double PSA. Derived as for the three preset pathways: tail gas = cracked − 5.66, direct NH₃ =
+feed − cracked, NG CO₂ from the KBR I.E emission factor. Cracked is clamped to ≥ 5.66 and feed to
+≥ cracked, with a flag shown. Defaults equal the 100 % clean-fuel pathway. CAPEX, power and fixed
+O&M follow the chosen reference curve; double PSA applies the CAPEX uplift input. Not licensor-quoted.
+
+## OSBL equipment tab (added 2026-09-30)
+
+Lists KBR's OSBL equipment (I.H, Units 101–114, 40 items) sized for the H₂ capacity entered, plus a
+scaling curve of any one item versus H₂ output. Port of `tools/kbr_osbl_workbook.py` in
+Gentari-ammoniacracker (its 12 / 24 / 80 / 160 ktpa results are reproduced exactly: genset
+1,080 / 1,929 / 6,121 / 12,241 kWe). Between 12, 24 and 80 ktpa, power, NG, NH₃ feed and H₂ are
+interpolated linearly from I.E; above 80 and below 12 ktpa they scale proportionally. All I.F
+utility maxima scale linearly from 12 ktpa. 160 ktpa is extrapolated. Six items are TBD (fire water,
+flare KO drum heater, off-spec tank, oil-water package, ammoniacal drain drum and pumps). The list is
+KBR's, so for Duiker or Custom it is only an indicative OSBL reference. Assumptions A1–A14 are editable
+on the tab; emergency power keeps the repo owner's ×2 load allowance and flags KBR I.F Note 9 (0.3 MW).
