@@ -112,6 +112,15 @@ storage and H₂ compression above 50 barg.
 Technical sizing also shows **direct CO₂ from a carbon balance** next to the licensor figure: NG burned ×
 carbon fraction × 44.01/12.011. NG composition is KBR I.A §5 (MW 16.95, 75.1 wt % C) giving 2.752 kg CO₂/kg NG,
 identical to KBR I.E (1,150 kg/h ÷ 417.9 kg/h). It reproduces KBR's 0.81 / 0.45 / 0.00. For Duiker NG-fired
-the NG energy implied by its 90.6 % efficiency gives ≈0.24 vs Duiker's stated 0.21 (flagged). CO₂ only; N₂O and
+its own Table 6 fuel (145 kg/h N₂-rich NG per 1,500 kg/h H₂, composition in the table) gives 0.206 against the stated 0.21, so it agrees. CO₂ only; N₂O and
 CH₄ slip are not in any source, so CO₂e = CO₂.
 Footprint is also shown in acres (1 acre = 4,046.86 m²).
+
+## Display units and Duiker process flow (added 2026-09-30)
+
+Technical sizing shows footprint with sqft as the main unit (acre, m², ha secondary; ISBL / OSBL tile in sqft with acre
+secondary) and both direct-CO₂ tiles with kgCO₂e/kg H₂ as the main unit. The NH₃ cracker block is purple in the flow
+diagrams. With the Duiker basis the process flow switches to a Duiker AHC diagram drawn from Duiker §3.2 and §3.6 with
+Tables 5–6 flows per kg H₂ (NH₃ pump and vaporiser, convective cracking reactor, SCO combustor, heat recovery, PSA,
+optional SCR, stack with CEMS; NG stream in NG-fired mode). Duiker's own Figure 3 is not extractable from the converted
+package, so the drawing follows the text.

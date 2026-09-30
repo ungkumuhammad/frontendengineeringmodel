@@ -139,7 +139,8 @@
   /* block flow diagram */
   .bfd { display: block; width: 100%; min-width: 900px; height: auto; }
   .bfd .blk { fill: var(--bg3); stroke: var(--text2); stroke-width: 1.4; }
-  .bfd .blk.core { stroke: var(--text); stroke-width: 2.2; }
+  .bfd .blk.core { fill: var(--brand); stroke: var(--brand); stroke-width: 2.4; }
+  .bfd .inv { fill: #ffffff !important; }
   .bfd .blk.osbl { stroke-dasharray: 5 4; }
   .bfd .isbl { fill: none; stroke: var(--text3); stroke-width: 1.2; stroke-dasharray: 10 6; }
   .bfd .t1 { font: 700 13px var(--sans); fill: var(--text); }
@@ -265,10 +266,10 @@
     </div>
 
     <div class="panel">
-      <div class="panel-h"><span class="t">Process flow — Custom pathways</span><span class="s">per 1 kg H₂ delivered</span></div>
+      <div class="panel-h"><span class="t" id="bfdTitle">Process flow — Custom pathways</span><span class="s" id="bfdSub">per 1 kg H₂ delivered</span></div>
       <div class="panel-b">
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div class="seg" role="group" aria-label="Pathway shown in the diagram">
+          <div class="seg" id="bfdSeg" role="group" aria-label="Pathway shown in the diagram">
             <button type="button" data-path="cf" aria-pressed="true">100 % clean fuel · 7.2</button>
             <button type="button" data-path="ng" aria-pressed="false">Natural gas · 6.5</button>
             <button type="button" data-path="maxng" aria-pressed="false">Maximum NG · 5.7</button>
@@ -284,7 +285,7 @@
           <span><i style="border-color:var(--flue)"></i>Flue gas</span>
           <span><i class="dash" style="border-color:var(--water)"></i>Water / steam / cooling</span>
         </div>
-        <div class="chart-wrap">
+        <div class="chart-wrap" id="bfdCustomWrap">
           <svg class="bfd" viewBox="0 0 1380 660" role="img" aria-label="Block flow diagram of the selected custom cracker pathway">
             <defs>
               <marker id="a-nh3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-nh3" d="M0 0 L10 5 L0 10 z"/></marker>
@@ -366,10 +367,10 @@
             <text class="t1" x="415" y="275" text-anchor="middle">vaporiser</text>
             <text class="t2" x="415" y="293" text-anchor="middle">−33 → 400 °C</text>
             <rect class="blk core" x="540" y="206" width="180" height="128" rx="4"/>
-            <text class="t1 big" x="630" y="246" text-anchor="middle">NH₃ cracker</text>
-            <text class="t2" x="630" y="268" text-anchor="middle">Ni catalyst</text>
-            <text class="t2" x="630" y="285" text-anchor="middle">600–700 °C · 50 barg</text>
-            <text class="t2" x="630" y="310" text-anchor="middle">2NH₃ → N₂ + 3H₂</text>
+            <text class="inv t1 big" x="630" y="246" text-anchor="middle">NH₃ cracker</text>
+            <text class="inv t2" x="630" y="268" text-anchor="middle">Ni catalyst</text>
+            <text class="inv t2" x="630" y="285" text-anchor="middle">600–700 °C · 50 barg</text>
+            <text class="inv t2" x="630" y="310" text-anchor="middle">2NH₃ → N₂ + 3H₂</text>
             <rect class="blk" x="790" y="238" width="120" height="64" rx="4"/>
             <text class="t1" x="850" y="264" text-anchor="middle">NH₃ scrubber</text>
             <text class="t2" x="850" y="284" text-anchor="middle">water wash</text>
@@ -395,6 +396,95 @@
             <rect class="blk" x="790" y="520" width="120" height="52" rx="4"/>
             <text class="t1" x="850" y="542" text-anchor="middle">Aqueous NH₃ /</text>
             <text class="t1" x="850" y="559" text-anchor="middle">condensate tank</text>
+          </svg>
+        </div>
+        <div class="chart-wrap hidden" id="dkWrap">
+          <svg class="bfd" viewBox="0 0 1380 660" role="img" aria-label="Block flow diagram of the Duiker AHC ammonia cracker">
+            <defs><marker id="d-nh3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-nh3" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-gas" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-gas" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-fuel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-fuel" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-flue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-flue" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-water" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-water" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-air" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-air" d="M0 0 L10 5 L0 10 z"/></marker><marker id="d-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ng" d="M0 0 L10 5 L0 10 z"/></marker></defs>
+            <rect class="isbl" x="188" y="36" width="1082" height="604" rx="4"/>
+            <text class="t3" x="202" y="628">CRACKER ISBL (Duiker AHC)</text>
+            <text class="t2" id="dkPower" x="1258" y="58" text-anchor="end"></text>
+
+            <path class="ln nh3" d="M144 270 H197" marker-end="url(#d-nh3)"/>
+            <path class="ln nh3" d="M310 270 H347" marker-end="url(#d-nh3)"/>
+            <path class="ln nh3" d="M480 270 H537" marker-end="url(#d-nh3)"/>
+            <path class="ln thin nh3" d="M350 270 V440 H537" marker-end="url(#d-nh3)"/>
+            <circle class="dot" cx="350" cy="270" r="3.5"/>
+            <text class="m nh3" id="dkFeedLbl2" x="340" y="360" text-anchor="end"></text>
+            <path class="ln gas" d="M740 270 H787" marker-end="url(#d-gas)"/>
+            <path class="ln gas" d="M920 270 H947" marker-end="url(#d-gas)"/>
+            <path class="ln gas" d="M1060 270 H1097" marker-end="url(#d-gas)"/>
+            <path class="ln gas" d="M1230 270 H1366" marker-end="url(#d-gas)"/>
+            <path class="ln thin water dash" d="M1005 302 V352" marker-end="url(#d-water)"/>
+            <text class="t2" x="1005" y="370" text-anchor="middle">glycol, closed loop</text>
+
+            <path class="ln flue" d="M640 410 V337" marker-end="url(#d-flue)"/>
+            <text class="t2" x="652" y="380">hot gas, convective heat</text>
+            <path class="ln flue" d="M640 206 V143" marker-end="url(#d-flue)"/>
+            <text class="m flue" id="dkFlueLbl" x="652" y="176"></text>
+            <path class="ln flue" d="M575 110 H503" marker-end="url(#d-flue)"/>
+            <path class="ln flue" d="M428 80 V46" marker-end="url(#d-flue)"/>
+            <text class="t2" x="441" y="52">to atmosphere</text>
+            <text class="m flue" id="dkCo2" x="441" y="68"></text>
+
+            <path class="ln thin air dash" d="M190 525 H367" marker-end="url(#d-air)"/>
+            <text class="m" id="dkAir" x="280" y="515" text-anchor="middle" style="fill:var(--text3)"></text>
+            <path class="ln thin air dash" d="M480 525 H600 V482" marker-end="url(#d-air)"/>
+            <path class="ln fuel" d="M1165 302 V620 H720 V482" marker-end="url(#d-fuel)"/>
+            <text class="m fuel" id="dkTailLbl" x="940" y="610" text-anchor="middle"></text>
+            <text class="m fuel" id="dkFuel" x="752" y="432"></text>
+            <g id="dkNg">
+              <path class="ln ngl" d="M144 590 H660 V482" marker-end="url(#d-ng)"/>
+              <text class="m ngl" id="dkNgLbl" x="400" y="580" text-anchor="middle"></text>
+              <text class="t3" x="82" y="550" text-anchor="middle">OSBL</text>
+              <rect class="blk osbl" x="20" y="560" width="124" height="60" rx="4"/>
+              <text class="t1" x="82" y="586" text-anchor="middle">Natural gas</text>
+              <text class="t2" x="82" y="604" text-anchor="middle">optional fuel</text>
+            </g>
+
+            <text class="m nh3" id="dkFeed" x="170" y="258" text-anchor="middle"></text>
+            <text class="m gas" x="1316" y="258" text-anchor="middle">1.00 kg H₂</text>
+            <text class="t2" x="1300" y="292" text-anchor="middle">30 °C · 50 barg</text>
+
+            <text class="t3" x="82" y="226" text-anchor="middle">OSBL</text>
+            <rect class="blk osbl" x="20" y="236" width="124" height="68" rx="4"/>
+            <text class="t1" x="82" y="262" text-anchor="middle">NH₃ storage</text>
+            <text class="t2" x="82" y="280" text-anchor="middle">−33 °C · 0.04 barg</text>
+            <text class="t2" x="82" y="294" text-anchor="middle">liquid</text>
+            <rect class="blk" x="200" y="238" width="110" height="64" rx="4"/>
+            <text class="t1" x="255" y="264" text-anchor="middle">NH₃ pump</text>
+            <text class="t2" x="255" y="284" text-anchor="middle">to 50 barg</text>
+            <rect class="blk" x="350" y="238" width="130" height="64" rx="4"/>
+            <text class="t1" x="415" y="259" text-anchor="middle">Vaporiser /</text>
+            <text class="t1" x="415" y="275" text-anchor="middle">feed pre-heat</text>
+            <text class="t2" x="415" y="293" text-anchor="middle">heat integrated</text>
+            <rect class="blk core" x="540" y="206" width="200" height="128" rx="4"/>
+            <text class="inv t1 big" x="640" y="246" text-anchor="middle">NH₃ cracker</text>
+            <text class="inv t2" x="640" y="268" text-anchor="middle">convective reactor</text>
+            <text class="inv t2" x="640" y="285" text-anchor="middle">counter-current · 50 barg</text>
+            <text class="inv t2" x="640" y="310" text-anchor="middle">2NH₃ → N₂ + 3H₂</text>
+            <rect class="blk" x="790" y="238" width="130" height="64" rx="4"/>
+            <text class="t1" x="855" y="264" text-anchor="middle">Heat recovery</text>
+            <text class="t2" x="855" y="284" text-anchor="middle">heat exchangers</text>
+            <rect class="blk" x="950" y="238" width="110" height="64" rx="4"/>
+            <text class="t1" x="1005" y="264" text-anchor="middle">Gas cooler</text>
+            <text class="t2" x="1005" y="284" text-anchor="middle">to 30 °C</text>
+            <rect class="blk" x="1100" y="238" width="130" height="64" rx="4"/>
+            <text class="t1" x="1165" y="259" text-anchor="middle">PSA</text>
+            <text class="t2" x="1165" y="275" text-anchor="middle">NH₃ + N₂ removal</text>
+            <text class="t2" x="1165" y="291" text-anchor="middle">H₂ purification</text>
+            <rect class="blk" x="353" y="80" width="150" height="60" rx="4"/>
+            <text class="t1" x="428" y="106" text-anchor="middle">Stack</text>
+            <text class="t2" x="428" y="124" text-anchor="middle">with CEMS</text>
+            <rect class="blk" x="575" y="80" width="130" height="60" rx="4"/>
+            <text class="t1" x="640" y="106" text-anchor="middle">SCR</text>
+            <text class="t2" x="640" y="124" text-anchor="middle">optional, NOₓ to 5 ppm</text>
+            <rect class="blk" x="540" y="410" width="200" height="70" rx="4"/>
+            <text class="t1" x="640" y="438" text-anchor="middle">SCO combustor</text>
+            <text class="t2" x="640" y="456" text-anchor="middle">stoichiometry-controlled</text>
+            <text class="t2" x="640" y="470" text-anchor="middle">oxidation</text>
+            <rect class="blk" x="370" y="500" width="110" height="50" rx="4"/>
+            <text class="t1" x="425" y="530" text-anchor="middle">Air blower</text>
           </svg>
         </div>
         <p class="note" id="bfdCaption"></p>
@@ -581,10 +671,17 @@ const MMBTU_PER_MWH = 3.6 / 1.055056;                       // 1 MWh = 3.6 GJ; 1
 
 // Natural gas composition, mol %, KBR I.A §5 (also I.C stream 13). Carbon balance: every C atom leaves as CO2.
 const NG_COMP = [["CH4", 94.464, 1, 16.043], ["C2H6", 4.564, 2, 30.070], ["C3H8", 0.484, 3, 44.097], ["i-C4H10", 0.116, 4, 58.123], ["n-C4H10", 0.119, 4, 58.123], ["i-C5H12", 0.002, 5, 72.150], ["N2", 0.250, 0, 28.014]];
-const NG_MW = NG_COMP.reduce((a, c) => a + c[1] / 100 * c[3], 0);                 // kg/kmol, ~16.95 (I.C: 16.95)
-const NG_C_KMOL = NG_COMP.reduce((a, c) => a + c[1] / 100 * c[2], 0);             // kmol C per kmol NG
-const CO2_PER_KG_NG_MB = NG_C_KMOL * 44.01 / NG_MW;                                // kg CO2 / kg NG, mass balance
-const NG_C_FRAC = NG_C_KMOL * 12.011 / NG_MW;                                     // kg C / kg NG
+function ngProps(comp) {
+  const mw = comp.reduce((a, c) => a + c[1] / 100 * c[3], 0), cK = comp.reduce((a, c) => a + c[1] / 100 * c[2], 0);   // kg/kmol; kmol C per kmol gas
+  return { mw, co2PerKg: cK * 44.01 / mw, cFrac: cK * 12.011 / mw };
+}
+const NG_KBR = ngProps(NG_COMP);
+const NG_MW = NG_KBR.mw, CO2_PER_KG_NG_MB = NG_KBR.co2PerKg, NG_C_FRAC = NG_KBR.cFrac;       // KBR: ~16.95 kg/kmol (I.C: 16.95)
+// Duiker NG fuel, Table 6 (mol %; CO2 in the fuel passes to the stack and counts as emitted)
+const NG_COMP_DK = [["CH4", 81.3, 1, 16.043], ["CO2", 0.89, 1, 44.01], ["C2H6", 2.85, 2, 30.070], ["C3H8", 0.37, 3, 44.097], ["C4H10", 0.14, 4, 58.123], ["C5H12", 0.04, 5, 72.150], ["C6H14", 0.05, 6, 86.177], ["N2", 14.35, 0, 28.014], ["O2", 0.01, 0, 31.998]];
+const NG_DK = ngProps(NG_COMP_DK);
+// Duiker overall material balance, 12 ktpa (36 tpd), kg/h — Tables 5 (NH3-fired) and 6 (NG-fired)
+const DK_MB = { NH3: { feed: 10448, air: 50000, h2: 1487, flue: 58961, ng: 0, flueT: 45.1 }, NG: { feed: 10246, air: 51332, h2: 1500, flue: 59947, ng: 145, flueT: 108 } };
 const M2_PER_ACRE = 4046.8564224;                                                // international acre
 const SQFT_PER_M2 = 10.7639;                                                      // international foot
 // ISBL plot footprints: KBR §3.6 (70x50, 80x55, 95x75, 100x75 m at 12/24/68/80 ktpa); Duiker §3.10 (900 m2 at 12 ktpa; 3,660 m2 for a 276 tpd train = 92 ktpa at Duiker's implied 333.3 d/yr)
@@ -768,7 +865,6 @@ function inputs() {
   };
 }
 
-const m_dk_eff = (I) => DUIKER.modes[I.mode].eff;
 function duikerCapexUsdM(cap, I) { return DUIKER.capexEurM * I.fx * Math.pow(cap / DUIKER.cap, I.duikerExp); }
 
 function model(I) {
@@ -813,12 +909,11 @@ function model(I) {
   r.elMW = r.elMWh / (I.days * 24);
   r.co2t = r.co2 * h2t;
   // CO2 from the carbon balance: NG burned x carbon fraction x 44.01/12.011. NH3, H2 and PSA tail gas carry no carbon.
-  r.ngKgMB = r.ngKgPerKg;
-  if (I.basis === "duiker" && I.mode === "NG") {   // Duiker NG mode: NG energy implied by its 90.6 % LHV efficiency (feed NH3 + NG + power)
-    const mjIn = LHV.h2 / (m_dk_eff(I) / 100) - r.ratio * LHV.nh3 - r.el / 1000 * 3.6;
-    r.ngKgMB = Math.max(0, mjIn) / LHV.ng;
+  r.ngKgMB = r.ngKgPerKg; r.ng = NG_KBR; r.ngSrc = "KBR I.A §5 composition";
+  if (I.basis === "duiker" && I.mode === "NG") {   // Duiker Table 6: 145 kg/h NG per 1,500 kg/h H2, N2-rich fuel
+    r.ngKgMB = DK_MB.NG.ng / DK_MB.NG.h2; r.ng = NG_DK; r.ngSrc = "Duiker Table 6 fuel composition";
   }
-  r.co2mb = r.ngKgMB * CO2_PER_KG_NG_MB;
+  r.co2mb = r.ngKgMB * r.ng.co2PerKg;
   r.co2Stated = I.basis === "custom" ? null : r.co2;
   // Footprint: ISBL from the licensor plot data, OSBL as a user percentage of ISBL
   const fpFit = ref === "kbr" ? FIT_FP_KBR : FIT_FP_DUIKER;
@@ -890,20 +985,22 @@ function recalc() {
     kpi("NH₃ used as fuel", fmt(r.nh3FuelEq * I.cap, 1), `ktpa NH₃-eq (${fmt(r.nh3FuelEq, 2)} t/t)`),
     kpi("Natural gas", fmt(r.ngt / 1000, 1), `ktpa · ${fmt(r.ngMWh / 1000, 0)} GWh/yr LHV (${fmt(r.ngMJ, 1)} MJ/kg H₂)`),
     kpi("Electricity", fmt(r.elMWh / 1000, 1), `GWh/yr · ${fmt(r.elMW, 2)} MW avg (${fmt(r.el, 0)} kWh/t H₂)`),
-    kpi("Direct CO₂ — " + (r.co2Stated === null ? "model basis" : "licensor stated"), fmt(r.co2t / 1000, 1), `kt/yr · ${fmt(r.co2, 2)} kgCO₂e/kg H₂`),
-    kpi("Direct CO₂ — mass balance", fmt(r.co2mb * r.h2t / 1000, 1), `kt/yr · ${fmt(r.co2mb, 2)} kgCO₂e/kg H₂ · ${fmt(r.ngKgMB, 3)} kg NG/kg H₂ × ${fmt(CO2_PER_KG_NG_MB, 3)}`, true),
-    kpi("Plot footprint, ISBL + OSBL", fmt(r.fp, 0), `m² · ${fmt(r.fp * SQFT_PER_M2, 0)} sqft · ${fmt(r.fp / 10000, 2)} ha · ${fmt(r.fp / M2_PER_ACRE, 2)} acre`, true),
-    kpi("of which ISBL / OSBL", `${fmt(r.fpIsbl, 0)} / ${fmt(r.fpOsbl, 0)}`, `m² · ISBL licensor curve; OSBL = ${fmt(I.osblPct * 100, 0)} % of ISBL (assumption)`),
+    kpi("Direct CO₂ — " + (r.co2Stated === null ? "model basis" : "licensor stated"), fmt(r.co2, 2), `kgCO₂e/kg H₂ · ${fmt(r.co2t / 1000, 1)} kt/yr`),
+    kpi("Direct CO₂ — mass balance", fmt(r.co2mb, 3), `kgCO₂e/kg H₂ · ${fmt(r.co2mb * r.h2t / 1000, 1)} kt/yr · ${fmt(r.ngKgMB, 3)} kg NG/kg H₂ × ${fmt(r.ng.co2PerKg, 3)}`, true),
+    kpi("Plot footprint, ISBL + OSBL", fmt(r.fp * SQFT_PER_M2, 0), `sqft · ${fmt(r.fp / M2_PER_ACRE, 2)} acre · ${fmt(r.fp, 0)} m² · ${fmt(r.fp / 10000, 2)} ha`, true),
+    kpi("of which ISBL / OSBL", `${fmt(r.fpIsbl * SQFT_PER_M2, 0)} / ${fmt(r.fpOsbl * SQFT_PER_M2, 0)}`, `sqft · ${fmt(r.fpIsbl / M2_PER_ACRE, 2)} / ${fmt(r.fpOsbl / M2_PER_ACRE, 2)} acre · OSBL = ${fmt(I.osblPct * 100, 0)} % of ISBL (assumption)`),
     kpi("Energy efficiency", fmt(r.eff, 1), "% LHV, incl. power"),
     kpi("Cooling / demin water", r.ref === "kbr" ? fmt(r.cwt / 1e6, 2) : "—", r.ref === "kbr" ? `Mt/yr CW · ${fmt(r.dnwt / 1000, 1)} kt/yr demin` : "Duiker: no steam or cooling water"),
   ].join("");
-  const mbNote = `<div class="ok">CO₂ mass balance: natural gas (KBR I.A composition, ${fmt(NG_MW, 2)} kg/kmol, ${fmt(NG_C_FRAC * 100, 1)} wt % carbon) × 44.01/12.011 = ${fmt(CO2_PER_KG_NG_MB, 3)} kg CO₂ per kg NG (KBR I.E implies ${fmt(CO2_PER_KG_NG, 3)}). This case burns ${fmt(r.ngKgMB, 3)} kg NG per kg H₂, giving ${fmt(r.co2mb, 3)} kgCO₂e/kg H₂${r.co2Stated === null ? "" : ` against the licensor's ${fmt(r.co2Stated, 2)}`}. Cracking and NH₃, H₂ or tail-gas firing carry no carbon. CO₂ only: N₂O and unburnt CH₄ from firing are not in any source package, so CO₂e equals CO₂ here.</div>`;
+  const mbNote = `<div class="ok">CO₂ mass balance: natural gas (${r.ngSrc}, ${fmt(r.ng.mw, 2)} kg/kmol, ${fmt(r.ng.cFrac * 100, 1)} wt % carbon) × 44.01/12.011 = ${fmt(r.ng.co2PerKg, 3)} kg CO₂ per kg NG${r.ng === NG_KBR ? ` (KBR I.E implies ${fmt(CO2_PER_KG_NG, 3)})` : ""}. This case burns ${fmt(r.ngKgMB, 3)} kg NG per kg H₂, giving ${fmt(r.co2mb, 3)} kgCO₂e/kg H₂${r.co2Stated === null ? "" : ` against the licensor's ${fmt(r.co2Stated, 2)}`}. Cracking and NH₃, H₂ or tail-gas firing carry no carbon. CO₂ only: N₂O and unburnt CH₄ from firing are not in any source package, so CO₂e equals CO₂ here.</div>`;
   $("techFlags").innerHTML = mbNote + r.flags.map((f) => `<div class="flag">${f}</div>`).join("");
   $("linkStatus").textContent = "";
 
   // BFD sync
+  showBfd(I);
   if (I.basis === "custom") setBfd(I.mode, true);
-  $("bfdSync").textContent = I.basis === "custom" ? "Following the Custom fuel mode above." : "Reference diagram. KBR fires cracked gas (NG50, CF100) rather than NH₃ vapour, so its flow differs in detail.";
+  if (I.basis === "duiker") setDuikerBfd(I, r);
+  $("bfdSync").textContent = I.basis === "custom" ? "Following the Custom fuel mode above." : I.basis === "duiker" ? "Following the Duiker fuel mode above." : "Reference diagram. KBR fires cracked gas (NG50, CF100) rather than NH₃ vapour, so its flow differs in detail.";
 
   renderCapex(I, r);
   renderOpex(I, r);
@@ -943,6 +1040,29 @@ function setBfd(path, fromModel) {
     ? "Natural gas: burner takes the same 0.84 kg NH₃-eq of tail gas; 0.26 kg of natural gas replaces the 0.70 kg direct NH₃ draw. All 6.50 kg from storage is cracked."
     : "Maximum natural gas: a double PSA recovers almost all the H₂, so only 0.04 kg NH₃-eq returns as tail gas. Natural gas supplies the other 1.50 kg NH₃-eq of firing (27.8 MJ). Storage supplies 5.70 kg.";
   if (!fromModel && $("inBasis").value === "custom") { $("inMode").value = path; recalc(); }
+}
+
+function setDuikerBfd(I, r) {
+  const d = DK_MB[I.mode] || DK_MB.NH3, k = 1 / d.h2, ng = d.ng > 0;
+  $("dkFeed").textContent = fmt(d.feed * k, 2);
+  $("dkFeedLbl2").textContent = fmt(d.feed * k, 2) + " kg NH₃";
+  $("dkAir").textContent = `air ${fmt(d.air * k, 1)} kg`;
+  $("dkFlueLbl").textContent = `flue gas ${fmt(d.flue * k, 1)} kg · ${fmt(d.flueT, 0)} °C`;
+  $("dkNg").style.display = ng ? "" : "none";
+  $("dkNgLbl").textContent = ng ? `${fmt(d.ng * k, 3)} kg NG (Table 6)` : "";
+  $("dkTailLbl").textContent = `PSA tail gas: H₂ + N₂ + NH₃ slip → SCO`;
+  $("dkFuel").textContent = `fuel ≡ ${fmt(r.nh3FuelEq, 2)} kg NH₃-eq (tail gas + NH₃${ng ? " + NG" : ""})`;
+  $("dkCo2").textContent = ng ? `direct CO₂ ≈ ${fmt(r.co2mb, 2)} kg (mass balance)` : "direct CO₂: 0";
+  $("dkPower").textContent = `power ≈ ${fmt(DUIKER.el / 1000, 3)} kWh (Duiker §3.9)`;
+  $("bfdCaption").textContent = `Duiker AHC, from Duiker's process description (§3.2, §3.6) and Tables 5–6 (12 ktpa, per kg H₂). NH₃ is pumped and vaporised, cracked at 50 barg in a convective reactor heated counter-current by hot gas from the SCO combustor, and purified in one PSA step that also removes NH₃ and N₂. PSA tail gas is recycled to the SCO. ${ng ? "Natural gas replaces part of the ammonia fuel. " : "Ammonia and tail gas are the only fuel. "}No steam and no cooling water (closed glycol loop). The block diagram itself (Duiker Figure 3) is not extractable from the converted package, so this drawing follows the text.`;
+}
+function showBfd(I) {
+  const dk = I.basis === "duiker";
+  $("bfdCustomWrap").classList.toggle("hidden", dk);
+  $("dkWrap").classList.toggle("hidden", !dk);
+  $("bfdSeg").classList.toggle("hidden", dk);
+  $("bfdTitle").textContent = dk ? "Process flow — Duiker AHC" : "Process flow — Custom pathways";
+  $("bfdSub").textContent = dk ? "per 1 kg H₂ delivered · " + (I.mode === "NG" ? "natural-gas-fired" : "NH₃-fired") : "per 1 kg H₂ delivered";
 }
 
 // ---------- CAPEX ----------
@@ -1080,7 +1200,7 @@ function renderSources() {
     ["Double-PSA uplift", "10 % default", "Assumption", "Gentari input; not from a licensor quote"],
     ["Maximum-NG power", "KBR NG100 or Duiker figure", "Assumption", "No licensor data for a double-PSA configuration"],
     ["NG carbon factor (mass balance)", `${fmt(CO2_PER_KG_NG_MB, 3)} kg CO₂/kg NG`, "Derived", `KBR I.A §5 composition (${NG_COMP.map((c) => c[0] + " " + c[1]).join(", ")} mol %), C atoms × 44.01 ÷ MW ${fmt(NG_MW, 2)}. Matches KBR I.E 1,150 kg/h ÷ 417.9 kg/h = ${fmt(CO2_PER_KG_NG, 3)}`],
-    ["Duiker NG-mode CO₂, mass balance", "≈0.24 kgCO₂/kg H₂", "Discrepancy", "NG energy implied by Duiker's 90.6 % LHV efficiency (≈4.4 MJ/kg H₂) gives ≈0.24; Duiker states 0.21 (§3.11.2)"],
+    ["Duiker NG-mode CO₂, mass balance", `${fmt(DK_MB.NG.ng / DK_MB.NG.h2 * NG_DK.co2PerKg, 3)} kgCO₂/kg H₂`, "Derived", `Table 6: ${DK_MB.NG.ng} kg/h N₂-rich NG per ${DK_MB.NG.h2} kg/h H₂, ${fmt(NG_DK.co2PerKg, 3)} kg CO₂/kg NG from its composition. Agrees with Duiker's stated 0.21 (§3.11.2). The Natural gas tile above still uses a quantity back-derived from 0.21 (≈0.076 kg/kg H₂) vs Table 6's 0.097 kg/kg H₂, different because Duiker's NG is N₂-rich`],
     ["ISBL footprint, KBR", `${fmt(FIT_FP_KBR.a, 1)} × ktpa^${fmt(FIT_FP_KBR.b, 2)} m²`, "Derived", "Power-law fit to KBR §3.6: 3,500 / 4,400 / 7,125 / 7,500 m² at 12 / 24 / 68 / 80 ktpa. KBR excludes offsites and utilities"],
     ["ISBL footprint, Duiker", `${fmt(FIT_FP_DUIKER.a, 1)} × ktpa^${fmt(FIT_FP_DUIKER.b, 2)} m²`, "Derived", "Two points, Duiker §3.10: 900 m² at 12 ktpa (Duiker's own scale-down) and 3,660 m² for 276 tpd (≈92 ktpa at the implied 333.3 d/yr). Excludes NH₃ storage and H₂ compression above 50 barg"],
     ["OSBL plot area", "50 % of ISBL default", "Assumption", "No OSBL area appears in the KBR, Duiker or Casale packages (KBR I.I plot plan gives ISBL layout only). Placeholder, replace with a site layout"],
