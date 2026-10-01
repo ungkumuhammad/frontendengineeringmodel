@@ -2062,31 +2062,34 @@ function drawInventory(sz) {
   const cycles = Math.max(2, Math.min(6, Math.ceil(90 / sz.intervalD)));
   const days = cycles * sz.intervalD;
   const safety = sz.safetyDays * sz.q;
-  const { top: yMax, ticks } = niceTicks(sz.net * 1.05);
+  const heel = sz.heelT; // unusable liquid below the low alarm: drawn at the bottom, never drawn down
+  const { top: yMax, ticks } = niceTicks((heel + sz.net) * 1.05);
   const x = (d) => L + (d / days) * (W - L - R), y = (t) => T + (1 - t / yMax) * (H - T - B);
   const pts = [];
-  for (let k = 0; k < cycles; k++) { const t0 = k * sz.intervalD; pts.push([t0, safety], [t0, safety + sz.parcel]); }
-  pts.push([days, safety]);
+  for (let k = 0; k < cycles; k++) { const t0 = k * sz.intervalD; pts.push([t0, heel + safety], [t0, heel + safety + sz.parcel]); }
+  pts.push([days, heel + safety]);
   const path = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
-  const area = path + `L${x(days)},${y(0)}L${x(0)},${y(0)}Z`;
+  const area = path + `L${x(days)},${y(heel)}L${x(0)},${y(heel)}Z`;
   const dStep = days > 60 ? 14 : 7;
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Working inventory over a nominal ship cycle">`;
   svg += `<g class="axis">` + ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)" stroke-width="1"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${fmt(t / 1000, t % 1000 ? 1 : 0)}k</text>`).join("");
   for (let d = 0; d <= days; d += dStep) svg += `<text x="${x(d)}" y="${H - 10}" text-anchor="middle">${d}d</text>`;
   svg += `</g>`;
   // ullage reserve band (between parcel top and net capacity)
-  svg += `<rect x="${L}" y="${y(sz.net)}" width="${W - L - R}" height="${Math.max(0, y(safety + sz.parcel) - y(sz.net))}" fill="var(--s3)" opacity="0.10"/>`;
+  svg += `<rect x="${L}" y="${y(heel + sz.net)}" width="${W - L - R}" height="${Math.max(0, y(heel + safety + sz.parcel) - y(heel + sz.net))}" fill="var(--s3)" opacity="0.10"/>`;
+  // pump heel: untouched at the bottom
+  if (heel > 0) svg += `<rect x="${L}" y="${y(heel)}" width="${W - L - R}" height="${y(0) - y(heel)}" fill="var(--text3)" opacity="0.25"/><text class="lbl-txt" x="${W - R + 8}" y="${(y(0) + y(heel)) / 2 + 4}">Pump heel ${fmt(heel / 1000, 1)}k t</text>`;
   svg += `<path d="${area}" fill="var(--s1)" opacity="0.10"/><path d="${path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   const ref = (t, label) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--text3)" stroke-width="1"/><text class="lbl-txt" x="${W - R + 8}" y="${y(t) + 4}">${label}</text>`;
-  svg += ref(sz.net, `Loadable ${fmt(sz.net / 1000, 1)}k t`);
-  if (safety > 0) svg += ref(safety, `Safety stock ${fmt(safety / 1000, 1)}k t`);
+  svg += ref(heel + sz.net, `Loadable ${fmt(sz.net / 1000, 1)}k t`);
+  if (safety > 0) svg += ref(heel + safety, `Safety stock ${fmt(safety / 1000, 1)}k t`);
   // Ullage label sits just under the net capacity label so it never collides, however thin the band.
-  svg += `<text class="lbl-txt" x="${W - R + 8}" y="${Math.max(y(sz.net) + 20, (y(sz.net) + y(safety + sz.parcel)) / 2 + 4)}">Ullage reserve ${fmt(sz.ullageT / 1000, 1)}k t</text>`;
+  svg += `<text class="lbl-txt" x="${W - R + 8}" y="${Math.max(y(heel + sz.net) + 20, (y(heel + sz.net) + y(heel + safety + sz.parcel)) / 2 + 4)}">Ullage reserve ${fmt(sz.ullageT / 1000, 1)}k t</text>`;
   svg += `<line id="invCross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--text3)" stroke-width="1" visibility="hidden"/><circle id="invDot" r="4.5" fill="var(--s1)" stroke="var(--bg2)" stroke-width="2" visibility="hidden"/>`;
   svg += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="invHit"/></svg>`;
   host.innerHTML = svg;
-  $("invSub").textContent = `${cycles} arrivals every ${fmt(sz.intervalD, 1)} d · tonnes above heel`;
-  $("invNote").textContent = `Stock falls at ${fmt(sz.qAvg)} t/d between arrivals and rises by ${fmt(sz.parcel)} t at each discharge. Safety stock covers late ships; the ullage reserve above the peak absorbs early ships and downstream outages${sz.withUllage ? "" : " — excluded from sizing, so only rounding leaves space there"}.`;
+  $("invSub").textContent = `${cycles} arrivals every ${fmt(sz.intervalD, 1)} d · tonnes in tank, heel at the bottom`;
+  $("invNote").textContent = `Stock falls at ${fmt(sz.qAvg)} t/d between arrivals and rises by ${fmt(sz.parcel)} t at each discharge. The pump heel at the bottom is never drawn down. Safety stock covers late ships; the ullage reserve above the peak absorbs early ships and downstream outages${sz.withUllage ? "" : " — excluded from sizing, so only rounding leaves space there"}.`;
   const svgEl = host.querySelector("svg"), hit = $("invHit"), cross = $("invCross"), dot = $("invDot");
   hit.addEventListener("mousemove", (e) => {
     const r = svgEl.getBoundingClientRect();
@@ -2095,7 +2098,7 @@ function drawInventory(sz) {
     const phase = d % sz.intervalD;
     const stock = safety + sz.parcel - phase * sz.qAvg;
     cross.setAttribute("x1", x(d)); cross.setAttribute("x2", x(d)); cross.setAttribute("visibility", "visible");
-    dot.setAttribute("cx", x(d)); dot.setAttribute("cy", y(stock)); dot.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", x(d)); dot.setAttribute("cy", y(heel + stock)); dot.setAttribute("visibility", "visible");
     showTip(e, `Day <b>${fmt(d, 1)}</b><br/>Working stock <b>${fmt(stock)}</b> t<br/>Free space <b>${fmt(sz.net - stock)}</b> t`, host);
   });
   hit.addEventListener("mouseleave", () => { hideTip(); cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); });
