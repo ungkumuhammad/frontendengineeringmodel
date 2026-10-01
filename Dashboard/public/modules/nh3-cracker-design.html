@@ -575,7 +575,7 @@
     </div>
 
     <div class="panel">
-      <div class="panel-h"><span class="t">OPEX utilities — usage per hour &amp; unit cost</span><span class="s" id="utilSub"></span></div>
+      <div class="panel-h"><span class="t">Utilities — usage per hour &amp; unit cost</span><span class="s" id="utilSub"></span></div>
       <div class="panel-b">
         <details class="adv" open><summary>Utility unit costs (editable — assumptions)</summary>
           <div class="grid-inputs" id="utilInputs"></div>
@@ -1029,9 +1029,10 @@ function model(I) {
     o.push({ k: "Fixed O&M (labour, maintenance)", v: (DUIKER.laborEurM + DUIKER.maintEurM) * I.fx * Math.pow(I.cap / DUIKER.cap, FIT_FIXED.b), d: `€0.5M at 12 ktpa, scaled with KBR fixed-cost exponent ${fmt(FIT_FIXED.b, 3)}` });
     o.push({ k: "Duiker operation licence fee", v: DUIKER.opFeeEurPerT * I.fx * h2t / 1e6, d: `€8.50/t H₂ exported` });
   }
-  // Utilities other than power and natural gas (already priced above): average usage per hour x on-stream hours x unit cost
+  // Utilities other than power and natural gas (power and gas are priced above): average usage per hour x on-stream hours x unit cost
+  // KBR cases already carry these in the "Other consumables" lump above, so they are charged only when there is no lump (Duiker)
   const U = utilRows(I, r);
-  for (const [k, avg, u, , , , c, cu, , charged] of U.rows) {
+  if (ref !== "kbr") for (const [k, avg, u, , , , c, cu, , charged] of U.rows) {
     if (!charged || k === "Power" || k === "Natural gas (fuel)") continue;
     o.push({ k, v: avg * U.hrs * c / 1e6, d: `${nf(avg)} ${u} × ${fmt(U.hrs, 0)} h × ${c < 1 ? fmt(c, 3) : fmt(c, 2)} ${cu}` });
   }
@@ -1273,7 +1274,7 @@ function renderOpex(I, r) {
   const kr = model(kI);
   const dev = (kr.lcoh / 4.90 - 1) * 100;
   $("checkBox").innerHTML = `<div class="${Math.abs(dev) < 2 ? "ok" : "flag"}">Model check: KBR 12 ktpa NG100 on KBR's basis (NH₃ 500 USD/t, power 140, NG 30, 8 %, 25 yr) gives ${fmt(kr.lcoh, 2)} USD/kg against KBR's published 4.90 (${dev >= 0 ? "+" : ""}${fmt(dev, 1)} %).</div>`;
-  $("opexNote").innerHTML = `OPEX is rebuilt bottom-up from quantities × your prices. KBR fixed O&M comes from KBR's own OPEX tables: 6.9 MM USD at 12 ktpa (stated), and ${caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 1)} at ${c}`).join(", ")} ktpa (derived), so it barely scales with size. Duiker's €2.2M "utilities" line lumps electricity, fuel, nitrogen, instrument air and cooling water; electricity and fuel are priced here from quantities, and the nitrogen, instrument air and cooling water share is not separable and is left out. Nitrogen, instrument and plant air, cooling, demin and waste water are now itemised from the per-hour usage table below, so the Duiker share is no longer left out. KBR\'s "other consumables" line is kept as well and may already include part of them, so KBR cases can read slightly high.`;
+  $("opexNote").innerHTML = `OPEX is rebuilt bottom-up from quantities × your prices. KBR fixed O&M comes from KBR's own OPEX tables: 6.9 MM USD at 12 ktpa (stated), and ${caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 1)} at ${c}`).join(", ")} ktpa (derived), so it barely scales with size. Duiker's €2.2M "utilities" line lumps electricity, fuel, nitrogen, instrument air and cooling water; electricity and fuel are priced here from quantities, and the nitrogen, instrument air and cooling water share is not separable and is left out. For KBR cases, nitrogen, air, cooling, demin and waste water sit inside KBR\'s "other consumables" line, so the usage table below is a memo and is not added again. Duiker has no such line, so its nitrogen, air and water are charged from the table.`;
 }
 
 // ---------- CI ----------
@@ -1533,10 +1534,10 @@ function renderUtilities(I, r) {
     <tbody>${body}<tr class="total"><td>Total utilities</td><td></td><td></td><td></td><td></td><td class="n">${fmt(tot / (r.h2t * 1000), 3)} <span class="note">USD/kg H₂</span></td><td class="n">${fmt(tot / 1000, 1)}</td><td class="note">Of which water and air systems (excl. power and gas): ${fmt(totNonEnergy / 1000, 1)} k USD/yr</td></tr></tbody>`;
   $("utilSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · ${fmt(hrs, 0)} on-stream h/yr · ${r.basisLabel}`;
   const fl = [];
-  if (kbr) fl.push(`Possible overlap: KBR's "other consumables" line (${fmt(KBR.consumablesUsdPerT * r.h2t / 1e6 * 1000, 0)} k USD/yr at this capacity) already covers utilities, catalyst and chemicals, and is still charged. The itemised water, air and nitrogen above add ${fmt(totNonEnergy / 1000, 0)} k USD/yr on top.`);
+  if (kbr) fl.push(`Memo only: KBR's "other consumables" line (${fmt(KBR.consumablesUsdPerT * r.h2t / 1e6 * 1000, 0)} k USD/yr at this capacity) already covers these utilities plus catalyst and chemicals and is what OPEX charges. The itemised water, air and nitrogen above come to ${fmt(totNonEnergy / 1000, 0)} k USD/yr at the placeholder unit costs, for comparison.`);
   else fl.push("Duiker prices utilities as one €2.2M lump (electricity, fuel, nitrogen, instrument air, cooling water) with no split. Nitrogen and air here are KBR I.F figures scaled to capacity and are indicative only; cooling and demin water are zero because Duiker has no steam or cooling-water system.");
   $("utilFlags").innerHTML = fl.map((f) => `<div class="flag">${f}</div>`).join("");
-  $("utilNote").innerHTML = `Nitrogen, air, cooling, demin and waste water are charged in the OPEX table above. Power and natural gas are already priced there from quantities and are shown here for reference only; raw water, steam and diesel carry no separate charge. Average usage uses the on-stream hours above. Peak usage comes from the KBR I.F maxima at 12 ktpa scaled linearly with capacity, as in the OSBL tab. Not quantified in any source package: ammoniacal process condensate and drain flows, water-treatment chemicals (carried in the cooling and demin unit costs), glycol loop (Duiker), flare purge gas and fire water.`;
+  $("utilNote").innerHTML = `On a Duiker basis, nitrogen, air, cooling, demin and waste water are charged in the OPEX table above; on a KBR basis they are a memo, because KBR's "other consumables" line already covers them. Power and natural gas are priced in OPEX from quantities and shown here for reference only; raw water, steam and diesel carry no separate charge. Average usage uses the on-stream hours above. Peak usage comes from the KBR I.F maxima at 12 ktpa scaled linearly with capacity, as in the OSBL tab. Not quantified in any source package: ammoniacal process condensate and drain flows, water-treatment chemicals (carried in the cooling and demin unit costs), glycol loop (Duiker), flare purge gas and fire water.`;
 }
 
 let osblItemsBuilt = false;
