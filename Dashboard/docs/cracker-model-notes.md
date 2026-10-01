@@ -163,6 +163,10 @@ Defaults give **€591.0M at 110 ktpa** and **€380.4M at 36.7 ktpa** (CRF 10.9
 power law through the two points (exponent 0.406, set by the fee ratio alone); implied CAPEX scales ≈ 89.6 × ktpa^0.401 MM EUR.
 Outside 36.7–110 ktpa the result is flagged as extrapolated. All five inputs are editable on the panel.
 
+![Air Liquide fee power law and implied CAPEX](figures/air-liquide-power-law.png)
+
+At 80 ktpa: fee 12.36 × 80^0.406 = €73.3M/yr; less licence €0.68M; ÷ 0.13955 → **€520M** (≈ $596M, €6,503/tpa).
+
 Duiker licence-fee gaps: §4.2 says the operation fee is in "Table 7" (a performance table); Table 9 OPEX (€2.9M) sums
 utilities, labour, maintenance and catalyst only, so the fee is not visible there. Gentari-ammoniacracker
 `calc_opex.py` also annualises the €2.7M construction fee into OPEX over 25 yr while `data.py` treats it as additive to
