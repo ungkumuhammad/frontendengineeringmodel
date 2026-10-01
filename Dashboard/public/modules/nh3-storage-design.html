@@ -413,8 +413,6 @@
           <div class="field"><label>Ship early <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.earlyDays"/></div>
           <div class="field"><label>Ship late <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.lateDays"/></div>
           <div class="field"><label>Port / weather closure <span class="hint">days</span></label><input type="number" step="0.5" min="0" data-path="buffer.portClosureDays"/></div>
-          <div class="field"><label>Round gross tank size to <span class="hint">t, 0 = no rounding</span></label><input type="number" step="500" min="0" data-path="buffer.roundStepT"/></div>
-          <div class="field"><label>Rounding direction</label><select data-path="buffer.roundDir"><option value="up">Up — net ≥ required</option><option value="down">Down — net may fall short</option></select></div>
         </div>
       </div>
     </details>
@@ -1047,10 +1045,10 @@ function size(shipKey = P.shipClass) {
     area: areaReq, gross: grossReq,
     topT: tOf(areaReq, Lreq.mdll - Lreq.lah) * N, botT: tOf(areaReq, Lreq.lal) * N, fbT: tOf(areaReq, H - Lreq.mdll) * N,
   };
-  const step = Math.max(0, num(b.roundStepT));
+  const step = 0; // gross size is not rounded: loadable volume = required net
   const grossLo = step > 0 ? Math.floor(grossReq / step + 1e-9) * step : grossReq;
   const grossHi = step > 0 ? Math.ceil(grossReq / step - 1e-9) * step : grossReq;
-  const roundDir = P.buffer.roundDir === "down" && grossLo > 0 ? "down" : "up";
+  const roundDir = "up";
   const gross = roundDir === "down" ? grossLo : grossHi;
   const area = gross / N * 1000 / (dens * H);
   const L = levelsFor(area);
@@ -1270,15 +1268,7 @@ function renderSummaries(sz, cx) {
 function renderSizing(sz) {
   $("heroSub").textContent = `${shipName(sz.shipKey)} · ${sz.rule.name}`;
   const short = sz.netReq - sz.net;
-  $("roundPick").innerHTML = sz.step > 0 && sz.grossHi > sz.grossLo
-    ? `<div class="pick"><span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>. Round to:</span>
-       <div class="radio-group" role="radiogroup" aria-label="Round the gross tank size">${[["down", sz.grossLo, "▼ round down"], ["up", sz.grossHi, "▲ round up"]].map(([d, v, t]) =>
-         `<button type="button" role="radio" aria-checked="${sz.roundDir === d}" data-dir="${d}" class="${sz.roundDir === d ? "active" : ""}"${d === "down" && !(sz.grossLo > 0) ? " disabled" : ""}>${fmt(v)} t<small>${t}</small></button>`).join("")}</div></div>`
-    : `<div class="pick"><span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>${sz.step > 0 ? ` (exactly on the ${fmt(sz.step)} t step)` : " · no rounding"}.</span></div>`;
-  const stepNow = Math.max(0, num(P.buffer.roundStepT));
-  $("roundPick").innerHTML = `<div class="pick"><span>Rounding step:</span>
-    <div class="radio-group" role="radiogroup" aria-label="Rounding step">${[[0, "None", "exact required size"], [1000, "1,000 t", "small overshoot"], [5000, "5,000 t", "coarse step"]].map(([v, t, sm]) =>
-      `<button type="button" role="radio" aria-checked="${stepNow === v}" data-step="${v}" class="${stepNow === v ? "active" : ""}">${t}<small>${sm}</small></button>`).join("")}</div></div>` + $("roundPick").innerHTML;
+  $("roundPick").innerHTML = `<div class="pick"><span>Gross tank size to shell top — <b>${fmt(sz.req.gross)} t</b> (sized to the required net, no rounding).</span></div>`;
   $("roundPick").innerHTML += `<div class="pick"><span>Ullage reserve:</span>
     <div class="radio-group" role="radiogroup" aria-label="Ullage reserve">${[["include", `Include`, `${fmt(sz.ullageRuleDays, 1)} d · ${fmt(sz.ullageRuleDays * sz.q)} t`], ["exclude", "Exclude", "parcel + safety only"]].map(([k, t, sm]) =>
       `<button type="button" role="radio" aria-checked="${(sz.withUllage ? "include" : "exclude") === k}" data-ull="${k}" class="${(sz.withUllage ? "include" : "exclude") === k ? "active" : ""}">${t}<small>${sm}</small></button>`).join("")}</div></div>`;
@@ -2305,7 +2295,7 @@ const INPUT_GROUPS = [
     ["voyage.fxUsdPerEur", "FX", "USD per EUR"], ["voyage.fleetMode", "Fleet basis", "", "auto = ships needed from demand; chartered = fleet is an input"], ["voyage.chartered", "Ships chartered", "vessels", "used when the fleet basis is chartered"],
     ["voyage.freightMethod", "Freight cost"], ["voyage.charterBasis", "Charter basis"]]],
   ["Buffer rule", [["buffer.rule", "How buffer events combine"], ["buffer.noSendoutDays", "No send-out", "d"], ["buffer.earlyDays", "Ship early", "d"], ["buffer.lateDays", "Ship late", "d"],
-    ["buffer.portClosureDays", "Port / weather closure", "d"], ["buffer.strategicDays", "Strategic reserve", "d"], ["buffer.ullage", "Ullage reserve"], ["buffer.roundStepT", "Round gross tank size to", "t", "0 = no rounding"], ["buffer.roundDir", "Rounding direction"]]],
+    ["buffer.portClosureDays", "Port / weather closure", "d"], ["buffer.strategicDays", "Strategic reserve", "d"], ["buffer.ullage", "Ullage reserve"]]],
   ["Tank geometry", [["geometry.tanks", "Number of tanks"], ["geometry.innerHeightM", "Inner tank shell height", "m"], ["geometry.levelBasis", "Liquid level basis"],
     ["geometry.heelM", "Bottom heel (lumped basis)", "m"], ["geometry.topMarginM", "Top margin (lumped basis)", "m"], ["geometry.annularGapM", "Inner → outer gap", "m, radial"],
     ["geometry.maxDiameterM", "Max inner diameter", "m"], ["geometry.clearanceM", "Clearance ring", "m per tank"], ["geometry.plotHa", "Available plot", "ha"]]],
