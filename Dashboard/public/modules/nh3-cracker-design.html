@@ -573,6 +573,20 @@
         <p class="note" id="opexNote"></p>
       </div>
     </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="t">OPEX utilities — usage per hour &amp; unit cost</span><span class="s" id="utilSub"></span></div>
+      <div class="panel-b">
+        <details class="adv" open><summary>Utility unit costs (editable — assumptions)</summary>
+          <div class="grid-inputs" id="utilInputs"></div>
+          <p class="note" style="margin-top:8px">Power and natural gas use the electricity and gas prices set above. Unit costs for the other utilities are placeholder defaults (typical industrial ranges, not from any licensor package): replace them with your site or vendor quotes.</p>
+        </details>
+        <div class="tbl-wrap"><table class="dt" id="utilTable"></table></div>
+        <div id="utilFlags"></div>
+        <p class="note" id="utilNote"></p>
+      </div>
+    </div>
+
     </div>
     <div class="tabpane" id="pane-osbl" role="tabpanel">
     <div class="panel">
@@ -1015,6 +1029,12 @@ function model(I) {
     o.push({ k: "Fixed O&M (labour, maintenance)", v: (DUIKER.laborEurM + DUIKER.maintEurM) * I.fx * Math.pow(I.cap / DUIKER.cap, FIT_FIXED.b), d: `€0.5M at 12 ktpa, scaled with KBR fixed-cost exponent ${fmt(FIT_FIXED.b, 3)}` });
     o.push({ k: "Duiker operation licence fee", v: DUIKER.opFeeEurPerT * I.fx * h2t / 1e6, d: `€8.50/t H₂ exported` });
   }
+  // Utilities other than power and natural gas (already priced above): average usage per hour x on-stream hours x unit cost
+  const U = utilRows(I, r);
+  for (const [k, avg, u, , , , c, cu, , charged] of U.rows) {
+    if (!charged || k === "Power" || k === "Natural gas (fuel)") continue;
+    o.push({ k, v: avg * U.hrs * c / 1e6, d: `${nf(avg)} ${u} × ${fmt(U.hrs, 0)} h × ${c < 1 ? fmt(c, 3) : fmt(c, 2)} ${cu}` });
+  }
   r.opex = o;
   r.opexTotal = o.reduce((s, x) => s + x.v, 0);
   r.capCharge = r.capex * crf(I.rate, I.life);
@@ -1051,14 +1071,12 @@ function recalc() {
     kpi("NH₃ from storage", fmt(r.nh3t / 1000, 1), `ktpa · ${fmt(r.nh3t / I.days, 0)} t/d — storage demand`, true),
     kpi("NH₃ : H₂ ratio", fmt(r.ratio, 2), "t NH₃ / t H₂"),
     kpi("NH₃ used as fuel", fmt(r.nh3FuelEq * I.cap, 1), `ktpa NH₃-eq (${fmt(r.nh3FuelEq, 2)} t/t)`),
-    kpi("Natural gas", fmt(r.ngt / 1000, 1), `ktpa · ${fmt(r.ngMWh / 1000, 0)} GWh/yr LHV (${fmt(r.ngMJ, 1)} MJ/kg H₂)`),
+    kpi("Natural gas", fmt(r.ngMWh * MMBTU_PER_MWH, 0), `MMBtu/yr (LHV) · ${fmt(r.ngt / 1000, 1)} ktpa · ${fmt(r.ngMWh / 1000, 0)} GWh/yr · ${fmt(r.ngMJ, 1)} MJ/kg H₂`),
     kpi("Electricity", fmt(r.elMWh / 1000, 1), `GWh/yr · ${fmt(r.elMW, 2)} MW avg (${fmt(r.el, 0)} kWh/t H₂)`),
     kpi("Direct CO₂ — " + (r.co2Stated === null ? "model basis" : "licensor stated"), fmt(r.co2, 2), `kgCO₂e/kg H₂ · ${fmt(r.co2t / 1000, 1)} kt/yr`),
     kpi("Direct CO₂ — mass balance", fmt(r.co2mb, 3), `kgCO₂e/kg H₂ · ${fmt(r.co2mb * r.h2t / 1000, 1)} kt/yr · ${fmt(r.ngKgMB, 3)} kg NG/kg H₂ × ${fmt(r.ng.co2PerKg, 3)}`, true),
     kpi("Plot footprint, ISBL + OSBL", fmt(r.fp * SQFT_PER_M2, 0), `sqft · ${fmt(r.fp / M2_PER_ACRE, 2)} acre · ${fmt(r.fp / 10000, 2)} ha · ${fmt(r.fp, 0)} m²`, true),
-    kpi("of which ISBL / OSBL", `${fmt(r.fpIsbl * SQFT_PER_M2, 0)} / ${fmt(r.fpOsbl * SQFT_PER_M2, 0)}`, `sqft · ${fmt(r.fpIsbl / M2_PER_ACRE, 2)} / ${fmt(r.fpOsbl / M2_PER_ACRE, 2)} acre · OSBL = ${fmt(I.osblPct * 100, 0)} % of ISBL (assumption)`),
     kpi("Energy efficiency", fmt(r.eff, 1), "% LHV, incl. power"),
-    kpi("Cooling / demin water", r.ref === "kbr" ? fmt(r.cwt / 1e6, 2) : "—", r.ref === "kbr" ? `Mt/yr CW · ${fmt(r.dnwt / 1000, 1)} kt/yr demin` : "Duiker: no steam or cooling water"),
   ].join("");
   const mbNote = `<div class="ok">CO₂ mass balance: natural gas (${r.ngSrc}, ${fmt(r.ng.mw, 2)} kg/kmol, ${fmt(r.ng.cFrac * 100, 1)} wt % carbon) × 44.01/12.011 = ${fmt(r.ng.co2PerKg, 3)} kg CO₂ per kg NG${r.ng === NG_KBR ? ` (KBR I.E implies ${fmt(CO2_PER_KG_NG, 3)})` : ""}. This case burns ${fmt(r.ngKgMB, 3)} kg NG per kg H₂, giving ${fmt(r.co2mb, 3)} kgCO₂e/kg H₂${r.co2Stated === null ? "" : ` against the licensor's ${fmt(r.co2Stated, 2)}`}. Cracking and NH₃, H₂ or tail-gas firing carry no carbon. CO₂ only: N₂O and unburnt CH₄ from firing are not in any source package, so CO₂e equals CO₂ here.</div>`;
   $("techFlags").innerHTML = mbNote + r.flags.map((f) => `<div class="flag">${f}</div>`).join("");
@@ -1074,6 +1092,7 @@ function recalc() {
   renderCapex(I, r);
   renderOpex(I, r);
   renderOsbl(I);
+  renderUtilities(I, r);
   renderCi(r);
   renderSources();
   lastOwn = { I, r };
@@ -1254,7 +1273,7 @@ function renderOpex(I, r) {
   const kr = model(kI);
   const dev = (kr.lcoh / 4.90 - 1) * 100;
   $("checkBox").innerHTML = `<div class="${Math.abs(dev) < 2 ? "ok" : "flag"}">Model check: KBR 12 ktpa NG100 on KBR's basis (NH₃ 500 USD/t, power 140, NG 30, 8 %, 25 yr) gives ${fmt(kr.lcoh, 2)} USD/kg against KBR's published 4.90 (${dev >= 0 ? "+" : ""}${fmt(dev, 1)} %).</div>`;
-  $("opexNote").innerHTML = `OPEX is rebuilt bottom-up from quantities × your prices. KBR fixed O&M comes from KBR's own OPEX tables: 6.9 MM USD at 12 ktpa (stated), and ${caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 1)} at ${c}`).join(", ")} ktpa (derived), so it barely scales with size. Duiker's €2.2M "utilities" line lumps electricity, fuel, nitrogen, instrument air and cooling water; electricity and fuel are priced here from quantities, and the nitrogen, instrument air and cooling water share is not separable and is left out.`;
+  $("opexNote").innerHTML = `OPEX is rebuilt bottom-up from quantities × your prices. KBR fixed O&M comes from KBR's own OPEX tables: 6.9 MM USD at 12 ktpa (stated), and ${caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 1)} at ${c}`).join(", ")} ktpa (derived), so it barely scales with size. Duiker's €2.2M "utilities" line lumps electricity, fuel, nitrogen, instrument air and cooling water; electricity and fuel are priced here from quantities, and the nitrogen, instrument air and cooling water share is not separable and is left out. Nitrogen, instrument and plant air, cooling, demin and waste water are now itemised from the per-hour usage table below, so the Duiker share is no longer left out. KBR\'s "other consumables" line is kept as well and may already include part of them, so KBR cases can read slightly high.`;
 }
 
 // ---------- CI ----------
@@ -1290,6 +1309,8 @@ function renderSources() {
     ["Natural gas price unit", "1 MWh = 3.4121 MMBtu", "Derived", "3.6 GJ/MWh ÷ 1.055056 GJ/MMBtu. Energy-unit conversion only; MMBtu prices are usually HHV, the model uses LHV energy"],
     ["Custom fuel mode (user)", "user-entered NH₃ feed, NH₃ cracked, NG firing", "Assumption", "Not licensor-quoted. Tail gas = cracked − 5.66; direct NH₃ = feed − cracked; NG CO₂ from the KBR I.E factor"],
     ["OSBL equipment list", "KBR I.H, Units 101–114 (40 items)", "Stated / derived", "Gentari-PR-GEN-LST-0002 Rev 0 (issued for info). Sizing by tools/kbr_osbl_workbook.py rules; scaling S1–S4 are assumptions, 160 ktpa is extrapolated"],
+    ["Utility usage per hour", "KBR I.F maxima at 12 ktpa, scaled linearly", "Stated / derived", "N₂ normal 150 and maximum 500 Nm³/h, instrument air 350 Nm³/h, plant air 250 Nm³/h, cooling water 40 t/h, demin 270 kg/h (I.F). Averages for power, cooling water and demin come from KBR's per-tonne figures; air has only a maximum, so the maximum is used"],
+    ["Utility unit costs", "N₂ 0.10, IA/PA 0.03 USD/Nm³; CW 0.05, demin 2.0, waste water 2.0 USD/m³", "Assumption", "Placeholder values in typical industrial ranges, not from any licensor package. Editable in the Utilities panel"],
     ["FX", "1.1448 USD/EUR default", "Assumption", "ECB reference rate 3 Jul 2026, as in the cracker workbook"],
   ];
   $("srcTable").innerHTML = `<thead><tr><th>Item</th><th>Value</th><th>Status</th><th>Source / derivation</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td class="note">${x[3]}</td></tr>`).join("")}</tbody>`;
@@ -1458,6 +1479,66 @@ function renderOsbl(I) {
   drawOsblChart(I, A, rows);
 }
 
+// ---------- Utilities: usage per hour and unit cost ----------
+// Unit costs other than power and natural gas are placeholder assumptions (typical industrial ranges), editable above the table.
+const UTIL_COSTS = [   // id, label, default, step, unit
+  ["n2", "Nitrogen", 0.10, 0.01, "USD/Nm³"], ["ia", "Instrument air", 0.03, 0.005, "USD/Nm³"], ["pa", "Plant air", 0.03, 0.005, "USD/Nm³"],
+  ["cw", "Cooling water", 0.05, 0.01, "USD/m³"], ["dm", "Demin water", 2.0, 0.1, "USD/m³"], ["ww", "Waste water treatment / disposal", 2.0, 0.1, "USD/m³"],
+];
+const UTIL_DEF = Object.fromEntries(UTIL_COSTS.map((f) => [f[0], f[2]]));
+function buildUtilInputs() {
+  $("utilInputs").innerHTML = UTIL_COSTS.map(([id, label, def, step, unit]) => `<div class="field"><label for="uc_${id}">${label} <span class="hint">${unit}</span></label><input type="number" id="uc_${id}" step="${step}" min="0" value="${def}"/></div>`).join("");
+  UTIL_COSTS.forEach(([id]) => $("uc_" + id).addEventListener("input", () => { if (lastOwn) recalc(); }));
+}
+function utilRows(I, r) {
+  const A = osblInputs(), o = osblSize(I.cap, A), K = OSBL, C = OSBL_C, s = I.cap / K.caps[0];
+  const hrs = I.days * 24, h2kgh = r.h2t * 1000 / hrs, kbr = r.ref === "kbr";
+  const uc = {}; UTIL_COSTS.forEach(([id, , def]) => { uc[id] = Math.max(0, num($("uc_" + id).value, def)); });
+  // water: KBR t/t H2 averages (CW 25, demin 0.1); Duiker has no steam system and no cooling water
+  const cwAvg = kbr ? KBR.cw * r.h2t / hrs : 0, dmAvg = kbr ? KBR.dnw * r.h2t / hrs : 0;   // m3/h (1 t = 1 m3)
+  const cwDuty = cwAvg * 1000 * C.cp * (K.cwRetT - K.cwSupT) / 3600;                       // kW
+  const evap = cwDuty * 3600 / C.hfg / 1000, ctBd = evap / (A.coc - 1);                    // m3/h
+  const wwAvg = kbr ? K.bdRatio * h2kgh / 1000 + ctBd + dmAvg * (1 / A.deminRec - 1) : 0;
+  const rawAvg = kbr ? evap + ctBd + dmAvg / A.deminRec + A.headcount * C.potableLpd / 1000 / 24 : A.headcount * C.potableLpd / 1000 / 24;
+  const ngMMBtuH = r.ngMWh * MMBTU_PER_MWH / hrs;
+  const ngPeak = r.ngMJ > 0 ? o.ngMax * LHV.ng / 3600 * MMBTU_PER_MWH : null;
+  const pUsdKwh = I.pEl / 1000, pNgMMBtu = I.pNg / MMBTU_PER_MWH;
+  const n2Avg = K.n2Nor12 * s, iaAvg = K.iaMax12 * s, paAvg = K.paMax12 * s;
+  const none = kbr ? "" : "Duiker basis: none";
+  // key, avg/h, unit, peak/h, annual quantity, annual unit, unit cost, cost unit, basis, charged
+  const rows = [
+    ["Power", r.elMW * 1000, "kW", kbr ? o.pMax : null, r.elMWh, "MWh/yr", pUsdKwh, "USD/kWh", `${fmt(r.el, 0)} kWh/t H₂ × throughput; peak = KBR max ISBL power. Price from Electricity price above`, true],
+    ["Natural gas (fuel)", ngMMBtuH, "MMBtu/h", ngPeak, r.ngMWh * MMBTU_PER_MWH, "MMBtu/yr", pNgMMBtu, "USD/MMBtu", r.ngMJ > 0 ? "LHV energy; peak = KBR I.F NG maximum. Price from Natural gas price above" : "Not used in this fuel mode", true],
+    ["Nitrogen", n2Avg, "Nm³/h", K.n2Max12 * s, n2Avg * hrs / 1000, "k Nm³/yr", uc.n2, "USD/Nm³", "KBR I.F normal 150 Nm³/h at 12 ktpa, scaled linearly; peak = start-up/purge maximum 500 Nm³/h", true],
+    ["Instrument air", iaAvg, "Nm³/h", K.iaMax12 * s, iaAvg * hrs / 1000, "k Nm³/yr", uc.ia, "USD/Nm³", "KBR I.F gives a maximum only (350 Nm³/h at 12 ktpa); used as the average, so conservative", true],
+    ["Plant (service) air", paAvg, "Nm³/h", K.paMax12 * s, paAvg * hrs / 1000, "k Nm³/yr", uc.pa, "USD/Nm³", "KBR I.F maximum only (250 Nm³/h at 12 ktpa); used as the average, so conservative", true],
+    ["Cooling water", cwAvg, "m³/h", kbr ? K.cwMax12 * s : 0, cwAvg * hrs / 1000, "k m³/yr", uc.cw, "USD/m³", kbr ? `KBR ${fmt(KBR.cw, 0)} t/t H₂, 30 → 40 °C (${fmt(cwDuty / 1000, 2)} MW avg duty); peak = KBR I.F maximum` : none, true],
+    ["Demin water", dmAvg, "m³/h", kbr ? K.deminMax12 * s / 1000 : 0, dmAvg * hrs, "m³/yr", uc.dm, "USD/m³", kbr ? `KBR ${fmt(KBR.dnw, 1)} t/t H₂ make-up to the deaerator; peak = KBR I.F maximum 270 kg/h at 12 ktpa` : none, true],
+    ["Waste water (condensate, blowdown)", wwAvg, "m³/h", kbr ? o.effluent : 0, wwAvg * hrs, "m³/yr", uc.ww, "USD/m³", kbr ? `Steam blowdown + cooling-tower blowdown (${fmt(A.coc, 1)} cycles) + demin regeneration waste (${fmt(A.deminRec * 100, 0)} % recovery); peak = OSBL effluent design` : none, true],
+    ["Raw / potable water", rawAvg, "m³/h", o.raw, rawAvg * hrs, "m³/yr", "incl.", "", "Cooling-tower make-up + demin feed + potable. Cost sits inside the cooling and demin unit costs, so it is not charged again", false],
+    ["Steam", 0, "t/h", 0, 0, "t/yr", "n/a", "", "No import: KBR I.D has no steam import, Duiker has no steam system. Heat is recovered inside the cracker", false],
+    ["Emergency diesel (standby)", 0, "L/h", o.dieselKg / A.backupH / OSBL_C.dieselRho * 1000, 0, "L/yr", "n/a", "", `Standby genset only; peak = ${fmt(A.backupH, 0)} h autonomy burn. Not run in normal operation, so no OPEX`, false],
+  ];
+  return { rows, hrs, A };
+}
+function renderUtilities(I, r) {
+  const { rows, hrs, A } = utilRows(I, r), kbr = r.ref === "kbr";
+  let tot = 0, totNonEnergy = 0;
+  const body = rows.map(([k, avg, u, pk, ann, annU, c, cu, basis, charged]) => {
+    const cost = charged ? avg * hrs * c : null;
+    if (charged) { tot += cost; if (k !== "Power" && k !== "Natural gas (fuel)") totNonEnergy += cost; }
+    return `<tr><td><b>${k}</b></td><td class="n">${nf(avg)}</td><td>${u}</td><td class="n">${pk === null ? "—" : nf(pk)}</td><td class="n">${nf(ann)} <span class="note">${annU}</span></td><td class="n">${typeof c === "string" ? c : (c < 1 ? fmt(c, 3) : fmt(c, 2))} <span class="note">${cu}</span></td><td class="n">${cost === null ? "—" : fmt(cost / 1000, 1)}</td><td class="note">${basis}</td></tr>`;
+  }).join("");
+  $("utilTable").innerHTML = `<thead><tr><th>Utility</th><th class="n">Avg usage / h</th><th>Unit</th><th class="n">Peak / h</th><th class="n">Annual quantity</th><th class="n">Unit cost</th><th class="n">Annual cost, k USD/yr</th><th>Basis</th></tr></thead>
+    <tbody>${body}<tr class="total"><td>Total utilities</td><td></td><td></td><td></td><td></td><td class="n">${fmt(tot / (r.h2t * 1000), 3)} <span class="note">USD/kg H₂</span></td><td class="n">${fmt(tot / 1000, 1)}</td><td class="note">Of which water and air systems (excl. power and gas): ${fmt(totNonEnergy / 1000, 1)} k USD/yr</td></tr></tbody>`;
+  $("utilSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · ${fmt(hrs, 0)} on-stream h/yr · ${r.basisLabel}`;
+  const fl = [];
+  if (kbr) fl.push(`Possible overlap: KBR's "other consumables" line (${fmt(KBR.consumablesUsdPerT * r.h2t / 1e6 * 1000, 0)} k USD/yr at this capacity) already covers utilities, catalyst and chemicals, and is still charged. The itemised water, air and nitrogen above add ${fmt(totNonEnergy / 1000, 0)} k USD/yr on top.`);
+  else fl.push("Duiker prices utilities as one €2.2M lump (electricity, fuel, nitrogen, instrument air, cooling water) with no split. Nitrogen and air here are KBR I.F figures scaled to capacity and are indicative only; cooling and demin water are zero because Duiker has no steam or cooling-water system.");
+  $("utilFlags").innerHTML = fl.map((f) => `<div class="flag">${f}</div>`).join("");
+  $("utilNote").innerHTML = `Nitrogen, air, cooling, demin and waste water are charged in the OPEX table above. Power and natural gas are already priced there from quantities and are shown here for reference only; raw water, steam and diesel carry no separate charge. Average usage uses the on-stream hours above. Peak usage comes from the KBR I.F maxima at 12 ktpa scaled linearly with capacity, as in the OSBL tab. Not quantified in any source package: ammoniacal process condensate and drain flows, water-treatment chemicals (carried in the cooling and demin unit costs), glycol loop (Duiker), flare purge gas and fire water.`;
+}
+
 let osblItemsBuilt = false;
 function drawOsblChart(I, A, rows) {
   const sel = $("inOsblItem");
@@ -1608,6 +1689,7 @@ $("btnReset").addEventListener("click", () => {
   for (const [k, v] of Object.entries(DEFAULTS)) $(k).value = v;
   $("inPNgUnit").value = "mwh"; prevNgUnit = "mwh"; $("inPNg").value = 30; $("inPNg").step = "1";
   for (const [id, v] of Object.entries(OSBL_DEF)) $("os_" + id).value = v;
+  for (const [id, v] of Object.entries(UTIL_DEF)) $("uc_" + id).value = v;
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
   populateModes(); $("inMode").value = "NG100";
   $("inTolling").value = TOLLING[0].id;
@@ -1657,6 +1739,7 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
   applyTheme(t);
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
   buildOsblInputs();
+  buildUtilInputs();
   populateModes();
   populateTollingSelect();
   setBfd("cf", true);
