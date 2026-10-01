@@ -753,7 +753,7 @@ const DEFAULTS = {
     // fleetMode "auto": ships needed is an output (demand sets the arrival interval).
     fleetMode: "chartered", chartered: 2 },
   jetty: { unloadRateTph: 650, berthHours: 12 },
-  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 5000, roundDir: "up", ullage: "include" },
+  buffer: { rule: "tepsa", noSendoutDays: 5, earlyDays: 2, lateDays: 2, portClosureDays: 0, strategicDays: 0, roundStepT: 0, roundDir: "up", ullage: "include" },
   geometry: { tanks: 1, innerHeightM: 29.3, levelBasis: "pgs12", heelM: 1.5, topMarginM: 3.1, annularGapM: 1.5, maxDiameterM: 90, clearanceM: 15, plotHa: 3.7 },
   // Plot reference (user-supplied, 2026-09-27): 3.7 ha for a 60 kt tank incl. jetty; jetty 500 m from the tank.
   site: { refPlotHa: 3.7, refTankT: 60000, jettyToTankM: 500 },
