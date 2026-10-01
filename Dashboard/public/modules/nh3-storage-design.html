@@ -1177,8 +1177,9 @@ function renderShipPicker() {
   }).join("");
 }
 $("roundPick").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-dir], [data-ull]"); if (!b || b.disabled) return;
-  if (b.dataset.dir) P.buffer.roundDir = b.dataset.dir; else P.buffer.ullage = b.dataset.ull;
+  const b = e.target.closest("[data-dir], [data-ull], [data-step]"); if (!b || b.disabled) return;
+  if (b.dataset.step !== undefined) P.buffer.roundStepT = Number(b.dataset.step);
+  else if (b.dataset.dir) P.buffer.roundDir = b.dataset.dir; else P.buffer.ullage = b.dataset.ull;
   syncInputs(); recalc();
 });
 $("shipPicker").addEventListener("click", (e) => {
@@ -1274,6 +1275,10 @@ function renderSizing(sz) {
        <div class="radio-group" role="radiogroup" aria-label="Round the gross tank size">${[["down", sz.grossLo, "▼ round down"], ["up", sz.grossHi, "▲ round up"]].map(([d, v, t]) =>
          `<button type="button" role="radio" aria-checked="${sz.roundDir === d}" data-dir="${d}" class="${sz.roundDir === d ? "active" : ""}"${d === "down" && !(sz.grossLo > 0) ? " disabled" : ""}>${fmt(v)} t<small>${t}</small></button>`).join("")}</div></div>`
     : `<div class="pick"><span>Gross tank size to shell top — required <b>${fmt(sz.req.gross)} t</b>${sz.step > 0 ? ` (exactly on the ${fmt(sz.step)} t step)` : " · no rounding"}.</span></div>`;
+  const stepNow = Math.max(0, num(P.buffer.roundStepT));
+  $("roundPick").innerHTML = `<div class="pick"><span>Rounding step:</span>
+    <div class="radio-group" role="radiogroup" aria-label="Rounding step">${[[0, "None", "exact required size"], [1000, "1,000 t", "small overshoot"], [5000, "5,000 t", "coarse step"]].map(([v, t, sm]) =>
+      `<button type="button" role="radio" aria-checked="${stepNow === v}" data-step="${v}" class="${stepNow === v ? "active" : ""}">${t}<small>${sm}</small></button>`).join("")}</div></div>` + $("roundPick").innerHTML;
   $("roundPick").innerHTML += `<div class="pick"><span>Ullage reserve:</span>
     <div class="radio-group" role="radiogroup" aria-label="Ullage reserve">${[["include", `Include`, `${fmt(sz.ullageRuleDays, 1)} d · ${fmt(sz.ullageRuleDays * sz.q)} t`], ["exclude", "Exclude", "parcel + safety only"]].map(([k, t, sm]) =>
       `<button type="button" role="radio" aria-checked="${(sz.withUllage ? "include" : "exclude") === k}" data-ull="${k}" class="${(sz.withUllage ? "include" : "exclude") === k ? "active" : ""}">${t}<small>${sm}</small></button>`).join("")}</div></div>`;
