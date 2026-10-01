@@ -136,3 +136,34 @@ Process Description; Duiker §2–3.9 and Tables 5–7), with the NH₃ cracker 
 mode: KBR shows PSA tail gas always, the cracked-gas split in CF100 and NG50, natural gas in NG100 and NG50; Duiker shows the
 Table 5 (NH₃-fired) or Table 6 (NG-fired) flows. KBR's drawing is the clean-fuel layout; Duiker's heat-exchanger network is
 indicative and its Figure 3 is not reproduced.
+
+## Air Liquide Le Havre tolling reference (added 2026-10-01)
+
+Fourth tolling reference: yearly fee **€83.4M at 110 ktpa H₂** and **€53.4M at 36.7 ktpa H₂** (Air Liquide, Le Havre,
+France, figures passed on by Gentari). Tariff shown as fee ÷ capacity: €0.76–1.46/kg H₂. Air Liquide gave no NH₃:H₂
+ratio, so the VTTI range 6.3–7.3 t/t is borrowed for the feed estimate. Scope, term, indexation and passthrough are
+not stated.
+
+When this reference is selected, an **Implied CAPEX** panel back-calculates installed CAPEX from the fee:
+
+CAPEX = (yearly fee − operating licence fee × H₂) ÷ (CRF(rate, term) + fixed O&M %)
+
+| Assumption | Default | Note |
+|---|---|---|
+| Fee covers | Capital recovery, fixed O&M, operator return | NH₃, energy and utilities passed through |
+| Discount rate | 9 % real, pre-tax | Gentari instruction |
+| Recovery period | 20 years | Tolling term (Vopak LoI 15–20 yr) |
+| Fixed O&M | 3 % of CAPEX/yr, excl. licence fees | KBR implies ≈ 5.7 % at 12 ktpa, ≈ 3.2 % at 80 ktpa; KBR excludes licence fees (§4.1) |
+| Operating licence fee | €8.50/t H₂ | Duiker §4.2 Plant Operation License Fee |
+| Construction licence fee | Inside CAPEX | Duiker §4.2: €2.7M per train up to 276 tpd H₂, capacity-adjusted (method not disclosed) |
+| Fee profile / CAPEX basis | Flat real fee on booked capacity; overnight CAPEX, no IDC, no residual value, pre-tax | |
+| FX | 1.1448 USD/EUR | Same default as the own-and-operate route |
+
+Defaults give **€591.0M at 110 ktpa** and **€380.4M at 36.7 ktpa** (CRF 10.955 %). Fee at other capacities follows the
+power law through the two points (exponent 0.406, set by the fee ratio alone); implied CAPEX scales ≈ 89.6 × ktpa^0.401 MM EUR.
+Outside 36.7–110 ktpa the result is flagged as extrapolated. All five inputs are editable on the panel.
+
+Duiker licence-fee gaps: §4.2 says the operation fee is in "Table 7" (a performance table); Table 9 OPEX (€2.9M) sums
+utilities, labour, maintenance and catalyst only, so the fee is not visible there. Gentari-ammoniacracker
+`calc_opex.py` also annualises the €2.7M construction fee into OPEX over 25 yr while `data.py` treats it as additive to
+the €47M — a double count against Duiker's text.
