@@ -623,6 +623,21 @@
         <p class="note" id="linkStatusToll"></p>
       </div>
     </div>
+    <div class="panel hidden" id="tollCapexPanel">
+      <div class="panel-h"><span class="t">Implied CAPEX — back-calculated from the yearly fee</span><span class="s">assumption-driven</span></div>
+      <div class="panel-b">
+        <div class="grid-inputs">
+          <div class="field"><label for="inTollRate">Discount rate <span class="hint">% real, pre-tax</span></label><input type="number" step="0.5" min="0" id="inTollRate" value="9"/></div>
+          <div class="field"><label for="inTollTerm">Recovery period <span class="hint">years</span></label><input type="number" step="1" min="1" id="inTollTerm" value="20"/></div>
+          <div class="field"><label for="inTollOm">Fixed O&amp;M <span class="hint">% of CAPEX/yr, excl. licence</span></label><input type="number" step="0.5" min="0" id="inTollOm" value="3"/></div>
+          <div class="field"><label for="inTollLic">Operating licence fee <span class="hint">EUR/t H₂</span></label><input type="number" step="0.5" min="0" id="inTollLic" value="8.5"/></div>
+          <div class="field"><label for="inTollFx">FX <span class="hint">USD per EUR</span></label><input type="number" step="0.01" min="0.01" id="inTollFx" value="1.1448"/></div>
+        </div>
+        <div class="kpis" id="tollCapexKpis" style="margin-top:14px"></div>
+        <div class="tbl-wrap"><table class="dt" id="tollCapexTable"></table></div>
+        <p class="note" id="tollCapexNote"></p>
+      </div>
+    </div>
     <div class="panel">
       <div class="panel-h"><span class="t">Tolling reference comparison</span></div>
       <div class="panel-b"><div class="tbl-wrap"><table class="dt" id="tollTable"></table></div></div>
@@ -695,6 +710,7 @@
           <ul>
             <li>Casale MACH2™: technical proposal only, no CAPEX/OPEX (Rev.00, 05 Dec 2025)</li>
             <li>Technip Energies / Nippon Sanso: tolling offer, see the Tolling route</li>
+            <li>Air Liquide Le Havre: yearly tolling fee at 36.7 and 110 ktpa H₂, see the Tolling route (CAPEX back-calculated)</li>
             <li class="src">Licensor/Casale, Licensor/technip</li>
           </ul>
         </div>
@@ -810,6 +826,12 @@ const TOLLING = [
     term: "Not stated in this excerpt", accuracy: "Pre-FEED, indicative",
     note: "Same basis as the ToP-only row, with current variable-cost assumptions folded in.",
     source: "tolling/vtti/VTTI_Cracker_Tolling_Fee.md, Process Letter 2, 25 Apr 2025" },
+  { id: "airliquide", label: "Air Liquide Le Havre — yearly tolling fee", capacityMinKtpa: 36.7, capacityMaxKtpa: 110,
+    tariffLow: 83.4 / 110, tariffHigh: 53.4 / 36.7, tariffUnit: "EUR/kg H₂ (yearly fee ÷ capacity; passthrough assumed excluded)", ratioLow: 6.3, ratioHigh: 7.3,
+    term: "Not stated (20-year recovery assumed for the CAPEX back-calculation)", accuracy: "Indicative, not stated",
+    note: "Two quoted points: €83.4M/yr at 110 ktpa H₂ and €53.4M/yr at 36.7 ktpa H₂. Scope, indexation and passthrough are not stated; NH₃, energy and utilities are assumed passed through. Air Liquide gave no NH₃:H₂ ratio, so the VTTI range (6.3–7.3 t/t) is borrowed for the feed estimate.",
+    source: "Air Liquide, Le Havre (France), figures passed on by Gentari, Oct 2026",
+    feePoints: [{ cap: 36.7, feeEurM: 53.4 }, { cap: 110, feeEurM: 83.4 }] },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -1499,9 +1521,40 @@ function recalcToll() {
   $("tollNote").innerHTML = `${t.note}<br/><b>Term:</b> ${t.term} · <b>Accuracy:</b> ${t.accuracy}<br/><span class="src">Source: ${t.source}</span>`;
   $("tollTable").innerHTML = `<thead><tr><th>Reference</th><th>H₂ capacity (ktpa)</th><th>Tariff</th><th>NH₃:H₂ (t/t)</th><th>Estimate class</th></tr></thead><tbody>${TOLLING.map((x) => `
     <tr class="${x.id === t.id ? "active" : ""}"><td>${x.label}</td><td>${x.capacityMinKtpa}–${x.capacityMaxKtpa}</td><td>${fmt(x.tariffLow, 2)}–${fmt(x.tariffHigh, 2)}<br/><span class="src">${x.tariffUnit}</span></td><td>${fmt(x.ratioLow, 1)}–${fmt(x.ratioHigh, 1)}</td><td>${x.accuracy}</td></tr>`).join("")}</tbody>`;
+  renderTollCapex(t, h2Ktpa);
   $("ciLine").textContent = "Tolling route: carbon intensity depends on the operator's fuel mode, which the tolling packages leave open.";
   $("linkStatusToll").textContent = "";
   return { h2Ktpa, nh3Ktpa, t };
+}
+
+// Fee → CAPEX: Fee = CAPEX × (CRF + O&M %) + licence €/t × H₂, so CAPEX = (Fee − licence) ÷ (CRF + O&M %).
+// Fee at other capacities follows the power law through the two quoted points.
+function renderTollCapex(t, h2Ktpa) {
+  const show = !!t.feePoints;
+  $("tollCapexPanel").classList.toggle("hidden", !show);
+  if (!show) return;
+  const rate = num($("inTollRate").value, 9) / 100, term = Math.max(1, num($("inTollTerm").value, 20));
+  const om = num($("inTollOm").value, 3) / 100, lic = num($("inTollLic").value, 8.5), fx = num($("inTollFx").value, 1.1448);
+  const [p1, p2] = t.feePoints;
+  const b = Math.log(p2.feeEurM / p1.feeEurM) / Math.log(p2.cap / p1.cap), a = p1.feeEurM / Math.pow(p1.cap, b);
+  const k = crf(rate, term), div = k + om;
+  const row = (cap, fee) => {
+    const licM = lic * cap / 1000, capex = (fee - licM) / div;
+    return { cap, fee, licM, capex, capChg: capex * k, omM: capex * om };
+  };
+  const pts = t.feePoints.map((p) => row(p.cap, p.feeEurM));
+  const capB = Math.log(pts[1].capex / pts[0].capex) / Math.log(p2.cap / p1.cap), capA = pts[0].capex / Math.pow(p1.cap, capB);
+  const out = h2Ktpa < t.capacityMinKtpa || h2Ktpa > t.capacityMaxKtpa;
+  const u = h2Ktpa > 0 ? row(h2Ktpa, a * Math.pow(h2Ktpa, b)) : null;
+  $("tollCapexKpis").innerHTML = u ? [
+    kpi(`Implied CAPEX at ${fmt(h2Ktpa, 1)} ktpa`, fmt(u.capex, 0), `MM EUR (≈ ${fmt(u.capex * fx, 0)} MM USD)${out ? " · extrapolated" : ""}`, true),
+    kpi("Yearly fee at this capacity", fmt(u.fee, 1), `MM EUR/yr · ${fmt(u.fee / h2Ktpa, 2)} EUR/kg H₂`),
+    kpi("Specific CAPEX", fmt(u.capex / h2Ktpa * 1000, 0), "EUR per t/yr H₂"),
+    kpi("CRF", fmt(k * 100, 2), `% (${fmt(rate * 100, 1)} %, ${fmt(term, 0)} yr)`),
+  ].join("") : "";
+  const tr = (r, lbl, cls) => `<tr class="${cls || ""}"><td>${lbl}</td><td class="n">${fmt(r.fee, 1)}</td><td class="n">${fmt(r.licM, 2)}</td><td class="n">${fmt(r.capChg, 1)}</td><td class="n">${fmt(r.omM, 1)}</td><td class="n"><b>${fmt(r.capex, 1)}</b></td><td class="n">${fmt(r.capex * fx, 1)}</td><td class="n">${fmt(r.capex / r.cap * 1000, 0)}</td></tr>`;
+  $("tollCapexTable").innerHTML = `<thead><tr><th>Capacity (ktpa H₂)</th><th>Yearly fee (MM EUR)</th><th>Operating licence (MM EUR/yr)</th><th>Capital charge (MM EUR/yr)</th><th>Fixed O&amp;M (MM EUR/yr)</th><th>Implied CAPEX (MM EUR)</th><th>(MM USD)</th><th>EUR per t/yr</th></tr></thead><tbody>${pts.map((r) => tr(r, `${fmt(r.cap, 1)} — quoted`)).join("")}${u ? tr(u, `${fmt(h2Ktpa, 1)} — your capacity${out ? " (extrapolated)" : ""}`, "active") : ""}</tbody>`;
+  $("tollCapexNote").innerHTML = `CAPEX = (yearly fee − operating licence fee) ÷ (CRF + fixed O&amp;M %). The fee is assumed to cover capital recovery, fixed O&amp;M and the operator's return, with NH₃, energy and utilities passed through; it is flat in real terms and charged on booked capacity, so availability does not change it. CAPEX is overnight (no interest during construction), pre-tax, with no residual value, and includes the one-time construction licence fee. The licence default is Duiker's €8.50/t H₂ operation fee (Budgetary Proposal 122380 §4.2); its construction fee (€2.7M per train up to 276 tpd H₂) sits inside CAPEX. Fee scales as ${fmt(a, 2)} × ktpa^${fmt(b, 3)}; implied CAPEX as ${fmt(capA, 1)} × ktpa^${fmt(capB, 3)} MM EUR. The fee exponent depends only on the two quoted fees, not on the finance inputs. USD at the FX input (${fmt(fx, 4)}).`;
 }
 
 function setRoute(route) {
@@ -1547,9 +1600,10 @@ $("inPNgUnit").addEventListener("change", (e) => {     // keep the same price, s
 ["inCap", "inDays", "inOsblPct", "inPsaUplift", "inPNh3", "inPEl", "inPNg", "inFx", "inRate", "inLife", "inDuikerExp"].forEach((id) => $(id).addEventListener("input", recalc));
 $("inH2KtpaToll").addEventListener("input", recalcToll);
 $("inTolling").addEventListener("change", recalcToll);
+["inTollRate", "inTollTerm", "inTollOm", "inTollLic", "inTollFx"].forEach((id) => $(id).addEventListener("input", recalcToll));
 document.querySelectorAll(".seg button[data-path]").forEach((b) => b.addEventListener("click", () => setBfd(b.dataset.path, false)));
 
-const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inOsblPct: 200, inH2KtpaToll: 70, inUFeed: 7.2, inUCracked: 6.5, inUNgEq: 0, inUPsa: "single" };
+const DEFAULTS = { inRoute: "own", inCap: 12, inDays: 350, inBasis: "kbr", inRef: "kbr", inPsaUplift: 10, inPNh3: 500, inPEl: 140, inPNg: 30, inFx: 1.1448, inRate: 8, inLife: 25, inOsblPct: 200, inH2KtpaToll: 70, inTollRate: 9, inTollTerm: 20, inTollOm: 3, inTollLic: 8.5, inTollFx: 1.1448, inUFeed: 7.2, inUCracked: 6.5, inUNgEq: 0, inUPsa: "single" };
 $("btnReset").addEventListener("click", () => {
   for (const [k, v] of Object.entries(DEFAULTS)) $(k).value = v;
   $("inPNgUnit").value = "mwh"; prevNgUnit = "mwh"; $("inPNg").value = 30; $("inPNg").step = "1";
