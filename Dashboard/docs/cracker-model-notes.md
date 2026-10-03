@@ -194,7 +194,12 @@ At 100 ktpa (extrapolated): ISBL **$234M**, OSBL **$76M**, total **$310M**. Sens
 | 45 % of ISBL | 105 | 339 |
 | 55 % of ISBL (KBR at 12 ktpa) | 129 | 362 |
 
-Two 50 ktpa trains instead of one would put ISBL at ≈ $326M. KBR OSBL excludes NH₃ storage, jetty and H₂ export
-compression.
+Two 50 ktpa trains instead of one would put ISBL at ≈ $326M.
+
+**Terminal & Storage B.L.** (Gentari definition, 2026-10-03): the scope outside KBR's OSBL, costed separately — NH₃ jetty,
+NH₃ storage and storage flare, H₂ storage, H₂ compression above 20 barg. Basis: KBR's OSBL equipment list (I.H, Units
+101–114) covers utilities, flare, air, N₂, water, waste water and H₂ export metering only; §1 and §4.1 name storage, jetty
+and H₂ storage as OSBL but KBR does not say what its ~55 % OSBL cost factor covers, so this split is Gentari's reading.
+Buildings and laboratories appear in §1/§4.1 but not in I.H; confirm with KBR.
 
 ![KBR OSBL power law and 100 ktpa sensitivity](figures/kbr-osbl-sensitivity.png)
