@@ -171,3 +171,26 @@ Duiker licence-fee gaps: §4.2 says the operation fee is in "Table 7" (a perform
 utilities, labour, maintenance and catalyst only, so the fee is not visible there. Gentari-ammoniacracker
 `calc_opex.py` also annualises the €2.7M construction fee into OPEX over 25 yr while `data.py` treats it as additive to
 the €47M — a double count against Duiker's text.
+
+## KBR OSBL power law and 100 ktpa sensitivity (added 2026-10-03)
+
+OSBL at each KBR capacity = total installed − ISBL: 42.9 / 54.4 / 66.8 / 72.4 MM USD at 12 / 24 / 68 / 80 ktpa
+(55 % → 35 % of ISBL). Log-space fits: ISBL = 21.25 × ktpa^0.521, OSBL = 23.03 × ktpa^0.259 (R² 0.984).
+
+At 100 ktpa (extrapolated): ISBL **$234M**, OSBL **$76M**, total **$310M**. Sensitivity on OSBL, ISBL held at $234M:
+
+| Case | OSBL | Total |
+|---|---|---|
+| OSBL₈₀ × 1.25^b, b = 0.26 (KBR fit, base) | 76 | 310 |
+| b = 0.50 (KBR slope 68→80) | 81 | 315 |
+| b = 0.60 (six-tenths rule) | 83 | 316 |
+| b = 1.00 (no scale economy) | 91 | 324 |
+| 30 % of ISBL | 70 | 304 |
+| 35 % of ISBL (KBR at 68–80 ktpa) | 82 | 315 |
+| 45 % of ISBL | 105 | 339 |
+| 55 % of ISBL (KBR at 12 ktpa) | 129 | 362 |
+
+Two 50 ktpa trains instead of one would put ISBL at ≈ $326M. KBR OSBL excludes NH₃ storage, jetty and H₂ export
+compression.
+
+![KBR OSBL power law and 100 ktpa sensitivity](figures/kbr-osbl-sensitivity.png)
