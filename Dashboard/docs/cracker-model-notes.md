@@ -57,7 +57,7 @@ plus reference-specific lines:
   the KBR fixed-cost exponent), operation licence fee €8.50/t H₂.
 
 LCOH = (CAPEX × CRF + OPEX) ÷ H₂. On KBR's basis at 12 ktpa NG100 the model gives
-4.95 USD/kg against KBR's published 4.90 (+1.0 %; 4.94 before CAPEX became ISBL + OSBL).
+4.95 USD/kg against KBR's published 4.90 (+0.9 %).
 
 ## Flagged discrepancies
 
@@ -203,3 +203,36 @@ and H₂ storage as OSBL but KBR does not say what its ~55 % OSBL cost factor co
 Buildings and laboratories appear in §1/§4.1 but not in I.H; confirm with KBR.
 
 ![KBR OSBL power law and 100 ktpa sensitivity](figures/kbr-osbl-sensitivity.png)
+
+## Total Cost tab, full CAPEX and ISBL equipment list (added 2026-10-03)
+
+Tabs are now **Technical & process · Total Cost · ISBL equipment · OSBL equipment**. Total Cost merges the former
+CAPEX and OPEX & LCOH tabs and opens with a **full project CAPEX build-up**:
+
+| # | Line | Default basis | Source |
+|---|---|---|---|
+| 1–2 | KBR ISBL + OSBL (licensor TIC) | Power-law fits | KBR §4.1, derived OSBL |
+| 3 | Commissioning & start-up | 6 months fixed O&M + 1 month power & consumables + 25 % of one month's NH₃ + NG + 2 % of TIC | NETL QGESS owner's costs |
+| 4 | Capital spares | 0.5 % of TIC | NETL QGESS |
+| 5 | Initial inventory | 60 days of consumables | NETL QGESS |
+| 6 | Catalyst first fill | KBR I.G volumes (12 ktpa) × capacity/12 × 1.05 margin × 30 USD/kg | KBR I.G; price from $15–50/kg market range |
+| 7 | Licence fee | €2.7M × FX (Duiker per-train fee as KBR proxy; zero for Duiker, inside its turnkey) | Duiker §4.2 |
+| 8 | Owner's costs | 7.5 % of TIC | Assumption |
+| 9 | Contingency | 25 % of TIC | Assumption |
+| 10 | Escalation | 3 %/yr × 2 yr on TIC | Assumption |
+
+All twelve factors are editable. At 80 ktpa KBR NG100 the defaults give 280 → **≈ 411 MM USD** (1.47 × TIC,
+5,131 USD per t/yr) and LCOH 3.96 USD/kg against 3.81 on licensor CAPEX. LCOH is shown on both bases; the KBR check
+still uses licensor CAPEX. Excluded rows: Terminal & Storage B.L., buildings & labs (KBR scope unclear), sales tax and
+import duties, IDC, land.
+
+Catalyst at 80 ktpa: (4.70 m³ × 1,000 + 4.50 m³ × 1,100 kg/m³) × 80/12 × 1.05 = 67.6 t. KBR lists the first fill in its
+scope of supply, so it may already sit in the TIC: set the price to 0 if KBR confirms.
+
+**ISBL equipment** tab: KBR's own list from I.D (Gentari-PR-GEN-PSD-001), 36 tagged items in six sections plus the ID
+fan, FD fan and SCR package inside 301-B. KBR gives no sizes, so only flows (NH₃ feed, H₂ product) and catalyst
+volumes are scaled; proprietary items (301-B, 301-D, 304-C) and long-lead times (furnace 23–26 months, PSA 18–23
+months) are flagged. Pressures: NH₃ at 2 barg, −33 °C; feed pump ≈ 44 barg; H₂ product 27–28 barg (20 barg minimum).
+
+**OSBL equipment** tab adds a Terminal & Storage B.L. table (NH₃ jetty, NH₃ storage, storage flare, H₂ storage,
+H₂ compression above 20 barg, plus buildings & labs to confirm).
