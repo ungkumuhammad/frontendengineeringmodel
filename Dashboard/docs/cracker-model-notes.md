@@ -30,6 +30,10 @@ CAPEX = a × (H₂ ktpa)^b, least-squares fit in log space, computed at runtime.
   the price points and fuel modes (≈ 164 / 258 / 281 MM USD). This method reproduces
   the stated 120.9 at 12 ktpa. b ≈ 0.44. Implied OSBL falls from 55 % to ≈ 35 % of ISBL,
   consistent with KBR's note that OSBL "reduces for larger capacity".
+- **KBR OSBL** — total − ISBL at each point (42.9 / 54.4 / 66.8 / 72.4 MM USD), fitted as its own power
+  law: 23.03 × ktpa^0.259. Since 2026-10-03 the model's KBR CAPEX is **ISBL fit + OSBL fit**, and the CAPEX
+  tab shows both parts. This is within 0.4 % of the single total fit across 12–100 ktpa; the total fit stays
+  in the fit table as a reference and still sets the default Duiker exponent.
 - **Duiker** — €47M at 12 ktpa (lump-sum turnkey incl. buildings, civil, EPC and the
   construction licence fee, Table 8), converted at the FX input. Only one point, so the
   exponent is borrowed from the KBR total fit (editable).
@@ -53,7 +57,7 @@ plus reference-specific lines:
   the KBR fixed-cost exponent), operation licence fee €8.50/t H₂.
 
 LCOH = (CAPEX × CRF + OPEX) ÷ H₂. On KBR's basis at 12 ktpa NG100 the model gives
-4.94 USD/kg against KBR's published 4.90 (+0.9 %).
+4.95 USD/kg against KBR's published 4.90 (+1.0 %; 4.94 before CAPEX became ISBL + OSBL).
 
 ## Flagged discrepancies
 

@@ -24,7 +24,7 @@
     --shadow: 0 1px 2px rgba(28,30,38,.05), 0 1px 3px rgba(28,30,38,.04);
     --grid: #e9ebf1;
     /* chart series */
-    --s-kbr: #7030A0; --s-isbl: #0070C0; --s-duiker: #C55A11;
+    --s-kbr: #7030A0; --s-isbl: #0070C0; --s-duiker: #C55A11; --s-osbl: #2E8B57;
     /* process streams */
     --nh3: #2361A6; --gas: #16805E; --fuel: #B06A08; --flue: #B03A2D; --water: #6A60A8; --ng: #56656E;
   }
@@ -39,7 +39,7 @@
     --warn: #e3b341; --warn-bg: #2d2410;
     --danger: #f06a63; --danger-bg: #2d1518;
     --shadow: none; --grid: #262937;
-    --s-kbr: #9A5CC8; --s-isbl: #2E8FD6; --s-duiker: #D9733A;
+    --s-kbr: #9A5CC8; --s-isbl: #2E8FD6; --s-duiker: #D9733A; --s-osbl: #3FA876;
     --nh3: #72A9E8; --gas: #4DC59B; --fuel: #E6A544; --flue: #EF7A6A; --water: #A89FE2; --ng: #A3B1BA;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -549,12 +549,13 @@
         <div class="legend" id="capexLegend" aria-hidden="true">
           <span><i style="border-color:var(--s-kbr)"></i>KBR total installed (ISBL + OSBL)</span>
           <span><i style="border-color:var(--s-isbl)"></i>KBR ISBL only</span>
+          <span><i style="border-color:var(--s-osbl)"></i>KBR OSBL only</span>
           <span><i class="dash" style="border-color:var(--s-duiker)"></i>Duiker lump-sum turnkey</span>
           <span><i class="dot" style="background:var(--text2)"></i>stated data point</span>
           <span><i class="dot" style="border:2px solid var(--text2);background:transparent"></i>derived data point</span>
         </div>
         <div class="chart-wrap" id="capexChartWrap">
-          <svg class="chart" id="capexChart" viewBox="0 0 760 340" role="img" aria-label="CAPEX versus H2 capacity power-law curves for KBR and Duiker"></svg>
+          <svg class="chart" id="capexChart" viewBox="0 0 760 340" role="img" aria-label="CAPEX versus H2 capacity power-law curves for KBR total, ISBL, OSBL and Duiker"></svg>
           <div class="tip hidden" id="capexTip"></div>
         </div>
         <div class="tbl-wrap"><table class="dt" id="fitTable"></table></div>
@@ -895,6 +896,12 @@ for (const c of caps(KBR.isbl)) {
 }
 const FIT_ISBL = fitPower(caps(KBR.isbl).map((c) => ({ x: c, y: KBR.isbl[c] })));
 const FIT_KBR = fitPower(caps(KBR_TOTAL).map((c) => ({ x: c, y: KBR_TOTAL[c].v })));
+// OSBL = total installed - stated ISBL at each KBR capacity, fitted as its own power law.
+// KBR CAPEX in the model is ISBL fit + OSBL fit, so the two parts always add up to the total.
+const KBR_OSBL = {};
+for (const c of caps(KBR.isbl)) KBR_OSBL[c] = { v: KBR_TOTAL[c].v - KBR.isbl[c], stated: KBR_TOTAL[c].stated };
+const FIT_OSBL = fitPower(caps(KBR_OSBL).map((c) => ({ x: c, y: KBR_OSBL[c].v })));
+const kbrCapex = (x) => FIT_ISBL.f(x) + FIT_OSBL.f(x);
 
 // Fixed O&M implied by KBR NG100 OPEX at each capacity:
 // fixed = OPEX(500) - NH3 cost - NG cost - power cost - consumables, with NH3 t/yr from the OPEX slope between price points.
@@ -1007,7 +1014,8 @@ function model(I) {
 
   // CAPEX
   r.capexIsbl = ref === "kbr" ? FIT_ISBL.f(I.cap) : null;
-  r.capexBase = ref === "kbr" ? FIT_KBR.f(I.cap) : duikerCapexUsdM(I.cap, I);
+  r.capexOsbl = ref === "kbr" ? FIT_OSBL.f(I.cap) : null;
+  r.capexBase = ref === "kbr" ? r.capexIsbl + r.capexOsbl : duikerCapexUsdM(I.cap, I);
   r.upliftUsd = I.basis === "custom" && (I.mode === "maxng" || (I.mode === "user" && CUSTOM.user.dpsa)) ? r.capexBase * I.uplift : 0;
   r.capex = r.capexBase + r.upliftUsd;
   r.accuracy = ref === "kbr" ? 0.5 : 0.4;
@@ -1175,7 +1183,8 @@ function renderCapex(I, r) {
   const lo = r.capex * (1 - r.accuracy), hi = r.capex * (1 + r.accuracy);
   $("capexSub").textContent = r.ref === "kbr" ? "KBR curve · Class V ±50 %, Q3 2025 USD" : "Duiker curve · ±40 %, EUR converted at the FX input";
   const k = [kpi("CAPEX, total installed", fmt(r.capex, 0), `MM USD · range ${fmt(lo, 0)}–${fmt(hi, 0)}`, true)];
-  if (r.capexIsbl !== null) k.push(kpi("of which ISBL", fmt(r.capexIsbl, 0), "MM USD, KBR ISBL curve"));
+  if (r.capexIsbl !== null) k.push(kpi("of which ISBL", fmt(r.capexIsbl, 0), `MM USD, ${fmt(FIT_ISBL.a, 2)} × ktpa^${fmt(FIT_ISBL.b, 3)}`));
+  if (r.capexOsbl !== null) k.push(kpi("of which OSBL", fmt(r.capexOsbl, 0), `MM USD, ${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`));
   if (r.upliftUsd > 0) k.push(kpi("Double-PSA uplift", fmt(r.upliftUsd, 1), `MM USD (${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)})`));
   k.push(kpi("Specific CAPEX", fmt(r.capex * 1e6 / r.h2t, 0), "USD per t/yr H₂ capacity"));
   k.push(kpi("Capital charge", fmt(r.capCharge, 1), `MM USD/yr (CRF ${fmt(crf(I.rate, I.life) * 100, 2)} %)`));
@@ -1184,12 +1193,13 @@ function renderCapex(I, r) {
   $("fitTable").innerHTML = `
     <thead><tr><th>Curve</th><th>Data points (ktpa → MM USD)</th><th class="n">a</th><th class="n">b (exponent)</th><th class="n">R²</th><th>Basis</th></tr></thead>
     <tbody>
-      <tr class="${r.ref === "kbr" ? "active" : ""}"><td>KBR total installed</td><td>${caps(KBR_TOTAL).map((c) => `${c} → ${fmt(KBR_TOTAL[c].v, 1)}${KBR_TOTAL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_KBR.a, 2)}</td><td class="n">${fmt(FIT_KBR.b, 3)}</td><td class="n">${fmt(FIT_KBR.r2, 4)}</td><td>12 ktpa stated (§4.2). *Derived from KBR's LCOH: (LCOH × H₂ − OPEX) ÷ CRF(8 %, 25 yr)</td></tr>
+      <tr class="${r.ref === "kbr" ? "active" : ""}"><td>KBR total installed</td><td>${caps(KBR_TOTAL).map((c) => `${c} → ${fmt(KBR_TOTAL[c].v, 1)}${KBR_TOTAL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_KBR.a, 2)}</td><td class="n">${fmt(FIT_KBR.b, 3)}</td><td class="n">${fmt(FIT_KBR.r2, 4)}</td><td>12 ktpa stated (§4.2). *Derived from KBR's LCOH: (LCOH × H₂ − OPEX) ÷ CRF(8 %, 25 yr). Reference fit only: the model uses ISBL + OSBL</td></tr>
       <tr><td>KBR ISBL only</td><td>${caps(KBR.isbl).map((c) => `${c} → ${KBR.isbl[c]}`).join(" · ")}</td><td class="n">${fmt(FIT_ISBL.a, 2)}</td><td class="n">${fmt(FIT_ISBL.b, 3)}</td><td class="n">${fmt(FIT_ISBL.r2, 4)}</td><td>Stated, KBR §4.1</td></tr>
+      <tr><td>KBR OSBL only</td><td>${caps(KBR_OSBL).map((c) => `${c} → ${fmt(KBR_OSBL[c].v, 1)}${KBR_OSBL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_OSBL.a, 2)}</td><td class="n">${fmt(FIT_OSBL.b, 3)}</td><td class="n">${fmt(FIT_OSBL.r2, 4)}</td><td>Total installed − ISBL. *From derived totals</td></tr>
       <tr class="${r.ref === "duiker" ? "active" : ""}"><td>Duiker lump-sum turnkey</td><td>12 → ${fmt(DUIKER.capexEurM * I.fx, 1)} (€47M × ${fmt(I.fx, 4)})</td><td class="n">${fmt(DUIKER.capexEurM * I.fx / Math.pow(12, I.duikerExp), 2)}</td><td class="n">${fmt(I.duikerExp, 3)}</td><td class="n">—</td><td>One point; exponent borrowed (default = KBR total fit)</td></tr>
     </tbody>`;
   const osbl = caps(KBR_TOTAL).map((c) => `${c} ktpa ${fmt((KBR_TOTAL[c].v / KBR.isbl[c] - 1) * 100, 0)} %`).join(", ");
-  $("capexNote").innerHTML = `CAPEX = a × (H₂ ktpa)<sup>b</sup>, least-squares fit in log space. KBR's LCOH implies OSBL shrinks with scale (${osbl} of ISBL), matching KBR's note that OSBL "reduces for larger capacity"; the flat 55 % used elsewhere overstates OSBL above 24 ktpa. Duiker's €47M already includes buildings, civil works, EPC and the construction licence fee (Table 8). KBR excludes contingency, owner's costs, licence fees and royalties (§4.1).`;
+  $("capexNote").innerHTML = `CAPEX = a × (H₂ ktpa)<sup>b</sup>, least-squares fit in log space. KBR total installed = ISBL fit + OSBL fit; the OSBL exponent (${fmt(FIT_OSBL.b, 2)}) is flatter than ISBL (${fmt(FIT_ISBL.b, 2)}), so OSBL's share falls with scale. KBR OSBL excludes NH₃ storage, jetty and H₂ export compression. KBR's LCOH implies OSBL shrinks with scale (${osbl} of ISBL), matching KBR's note that OSBL "reduces for larger capacity"; the flat 55 % used elsewhere overstates OSBL above 24 ktpa. Duiker's €47M already includes buildings, civil works, EPC and the construction licence fee (Table 8). KBR excludes contingency, owner's costs, licence fees and royalties (§4.1).`;
 }
 
 function drawCapexChart(I, r) {
@@ -1197,7 +1207,7 @@ function drawCapexChart(I, r) {
   const W = 760, H = 340, m = { l: 58, r: 150, t: 30, b: 44 };
   const xmax = niceCeil(Math.max(100, I.cap * 1.15));
   const dk = (x) => duikerCapexUsdM(x, I);
-  const ymax = niceCeil(Math.max(FIT_KBR.f(xmax), dk(xmax), r.capex) * 1.05);
+  const ymax = niceCeil(Math.max(kbrCapex(xmax), dk(xmax), r.capex) * 1.05);
   const sx = (x) => m.l + x / xmax * (W - m.l - m.r);
   const sy = (y) => H - m.b - y / ymax * (H - m.t - m.b);
   let s = "";
@@ -1216,14 +1226,16 @@ function drawCapexChart(I, r) {
   s += `<text class="tick" x="${m.l}" y="14" text-anchor="middle">MM USD</text>`;
   const path = (f) => { let d = ""; for (let i = 0; i <= 90; i++) { const x = Math.max(1, xmax * i / 90); d += `${i ? "L" : "M"}${sx(x).toFixed(1)} ${sy(f(x)).toFixed(1)}`; } return d; };
   const series = [
-    { f: FIT_KBR.f, c: "var(--s-kbr)", dash: "", name: "KBR total", key: "kbr" },
+    { f: kbrCapex, c: "var(--s-kbr)", dash: "", name: "KBR total", key: "kbr" },
     { f: FIT_ISBL.f, c: "var(--s-isbl)", dash: "", name: "KBR ISBL", key: "isbl" },
+    { f: FIT_OSBL.f, c: "var(--s-osbl)", dash: "", name: "KBR OSBL", key: "osbl" },
     { f: dk, c: "var(--s-duiker)", dash: "6 4", name: "Duiker", key: "duiker" },
   ];
   for (const se of series) s += `<path d="${path(se.f)}" fill="none" stroke="${se.c}" stroke-width="${se.key === r.ref ? 2.5 : 2}" stroke-dasharray="${se.dash}" stroke-linecap="round"/>`;
   const pt = (x, y, c, hollow) => `<circle cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${hollow ? "var(--bg2)" : c}" stroke="${hollow ? c : "var(--bg2)"}" stroke-width="2"/>`;
   for (const c of caps(KBR.isbl)) s += pt(c, KBR.isbl[c], "var(--s-isbl)", false);
   for (const c of caps(KBR_TOTAL)) s += pt(c, KBR_TOTAL[c].v, "var(--s-kbr)", !KBR_TOTAL[c].stated);
+  for (const c of caps(KBR_OSBL)) s += pt(c, KBR_OSBL[c].v, "var(--s-osbl)", !KBR_OSBL[c].stated);
   s += pt(12, DUIKER.capexEurM * I.fx, "var(--s-duiker)", false);
   // end labels, nudged apart
   const ends = series.map((se) => ({ y: sy(se.f(xmax)), se })).sort((a, b) => a.y - b.y);
@@ -1289,6 +1301,7 @@ function renderSources() {
     ["Heating values", "NH₃ 18.529, H₂ 119.42, NG 49.56 MJ/kg LHV", "Stated", "KBR I.E Feed & Product, Rev 0"],
     ["NG emission factor", `${fmt(CO2_PER_KG_NG, 3)} kg CO₂/kg NG`, "Derived", "KBR I.E: 1,150 kg/h CO₂ ÷ 417.9 kg/h NG"],
     ["KBR total CAPEX 24/68/80 ktpa", caps(KBR_TOTAL).filter((c) => !KBR_TOTAL[c].stated).map((c) => `${fmt(KBR_TOTAL[c].v, 1)} MM$`).join(" / "), "Derived", "KBR §4.2 LCOH & OPEX, CRF(8 %, 25 yr), 350 d/yr"],
+    ["KBR OSBL CAPEX", `${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} MM$`, "Derived", `Power-law fit to total − ISBL: ${caps(KBR_OSBL).map((c) => fmt(KBR_OSBL[c].v, 1)).join(" / ")} MM$ at 12 / 24 / 68 / 80 ktpa. Model CAPEX = ISBL fit + OSBL fit`],
     ["KBR fixed O&M 24/68/80 ktpa", caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 2)} MM$/yr`).join(" / "), "Derived", "KBR §4.2 OPEX slope between NH₃ price points, less NG, power and consumables"],
     ["KBR NH₃ to product", `${fmt(STOICH_KBR, 2)} t/t`, "Derived", "KBR §4.2: ammonia cracked for product 33.8 MM$ at 500 USD/t, 12,005 t H₂/yr. Custom and Duiker use 5.66"],
     ["KBR NH₃ ratio 12 ktpa NG100", "6.40 t/t used", "Discrepancy", "KBR KPI table says 6.40; KBR's own OPEX split (33.8 + 4.3 MM$ at 500 USD/t) implies 6.35. The model's NH₃-fuel line reads 4.6 MM$ vs KBR's 4.3"],
