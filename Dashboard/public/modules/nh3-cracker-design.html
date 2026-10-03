@@ -24,7 +24,7 @@
     --shadow: 0 1px 2px rgba(28,30,38,.05), 0 1px 3px rgba(28,30,38,.04);
     --grid: #e9ebf1;
     /* chart series */
-    --s-kbr: #7030A0; --s-isbl: #0070C0; --s-duiker: #C55A11;
+    --s-kbr: #7030A0; --s-isbl: #0070C0; --s-duiker: #C55A11; --s-osbl: #2E8B57;
     /* process streams */
     --nh3: #2361A6; --gas: #16805E; --fuel: #B06A08; --flue: #B03A2D; --water: #6A60A8; --ng: #56656E;
   }
@@ -39,7 +39,7 @@
     --warn: #e3b341; --warn-bg: #2d2410;
     --danger: #f06a63; --danger-bg: #2d1518;
     --shadow: none; --grid: #262937;
-    --s-kbr: #9A5CC8; --s-isbl: #2E8FD6; --s-duiker: #D9733A;
+    --s-kbr: #9A5CC8; --s-isbl: #2E8FD6; --s-duiker: #D9733A; --s-osbl: #3FA876;
     --nh3: #72A9E8; --gas: #4DC59B; --fuel: #E6A544; --flue: #EF7A6A; --water: #A89FE2; --ng: #A3B1BA;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,6 +90,7 @@
   .cf { display:inline-block; min-width:22px; text-align:center; border-radius:4px; padding:0 5px; font-size:11px; font-weight:700; color:#1c1e26; }
   .cf-H { background:#C6E0B4; } .cf-M { background:#FFE699; } .cf-L { background:#FCE4D6; } .cf-TBD { background:#F8CBAD; }
   .dt td.tbd { color: var(--danger); font-weight: 700; }
+  h4.sub-h { margin: 18px 0 6px; font-size: 13px; color: var(--text2); }
   .dt td.unit-h { font-weight: 700; color: var(--brand-ink); white-space: nowrap; }
   details.adv > summary { cursor: pointer; font-weight: 700; color: var(--text2); font-size: 12.5px; }
   details.adv[open] > summary { margin-bottom: 10px; }
@@ -253,8 +254,8 @@
   <div id="ownPanels" style="display:grid;gap:18px">
     <div class="tabs" role="tablist" aria-label="Cracker results">
       <button type="button" class="tab active" role="tab" data-tab="tech" aria-selected="true">Technical &amp; process</button>
-      <button type="button" class="tab" role="tab" data-tab="capex" aria-selected="false">CAPEX</button>
-      <button type="button" class="tab" role="tab" data-tab="opex" aria-selected="false">OPEX &amp; LCOH</button>
+      <button type="button" class="tab" role="tab" data-tab="cost" aria-selected="false">Total Cost</button>
+      <button type="button" class="tab" role="tab" data-tab="isbl" aria-selected="false">ISBL equipment</button>
       <button type="button" class="tab" role="tab" data-tab="osbl" aria-selected="false">OSBL equipment</button>
     </div>
     <div class="tabpane active" id="pane-tech" role="tabpanel">
@@ -538,9 +539,23 @@
     </div>
 
     </div>
-    <div class="tabpane" id="pane-capex" role="tabpanel">
+    <div class="tabpane" id="pane-cost" role="tabpanel">
     <div class="panel">
-      <div class="panel-h"><span class="t">CAPEX</span><span class="s" id="capexSub"></span></div>
+      <div class="panel-h"><span class="t">Total CAPEX — full project build-up</span><span class="s" id="fullSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="fullKpis"></div>
+        <details class="adv"><summary>Full-CAPEX assumptions (editable)</summary>
+          <div class="grid-inputs" id="fullInputs"></div>
+          <p class="note" style="margin-top:8px">Start-up, spares and inventory follow the NETL QGESS owner's-cost method. Catalyst volumes are KBR I.G (12 ktpa) scaled with capacity. Owner's costs, contingency and escalation are Gentari assumptions: replace them with internal factors where available.</p>
+        </details>
+        <div class="tbl-wrap"><table class="dt" id="fullTable"></table></div>
+        <div id="fullFlags"></div>
+        <p class="note" id="fullNote"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="t">CAPEX curves — licensor TIC</span><span class="s" id="capexSub"></span></div>
       <div class="panel-b">
         <div class="kpis" id="capexKpis"></div>
         <div class="grid-inputs" style="max-width:420px">
@@ -549,12 +564,13 @@
         <div class="legend" id="capexLegend" aria-hidden="true">
           <span><i style="border-color:var(--s-kbr)"></i>KBR total installed (ISBL + OSBL)</span>
           <span><i style="border-color:var(--s-isbl)"></i>KBR ISBL only</span>
+          <span><i style="border-color:var(--s-osbl)"></i>KBR OSBL only</span>
           <span><i class="dash" style="border-color:var(--s-duiker)"></i>Duiker lump-sum turnkey</span>
           <span><i class="dot" style="background:var(--text2)"></i>stated data point</span>
           <span><i class="dot" style="border:2px solid var(--text2);background:transparent"></i>derived data point</span>
         </div>
         <div class="chart-wrap" id="capexChartWrap">
-          <svg class="chart" id="capexChart" viewBox="0 0 760 340" role="img" aria-label="CAPEX versus H2 capacity power-law curves for KBR and Duiker"></svg>
+          <svg class="chart" id="capexChart" viewBox="0 0 760 340" role="img" aria-label="CAPEX versus H2 capacity power-law curves for KBR total, ISBL, OSBL and Duiker"></svg>
           <div class="tip hidden" id="capexTip"></div>
         </div>
         <div class="tbl-wrap"><table class="dt" id="fitTable"></table></div>
@@ -562,8 +578,6 @@
       </div>
     </div>
 
-    </div>
-    <div class="tabpane" id="pane-opex" role="tabpanel">
     <div class="panel">
       <div class="panel-h"><span class="t">OPEX &amp; LCOH</span><span class="s" id="opexSub"></span></div>
       <div class="panel-b">
@@ -588,6 +602,17 @@
     </div>
 
     </div>
+    <div class="tabpane" id="pane-isbl" role="tabpanel">
+    <div class="panel">
+      <div class="panel-h"><span class="t">ISBL equipment list</span><span class="s" id="isblSub"></span></div>
+      <div class="panel-b">
+        <div class="kpis" id="isblKpis"></div>
+        <div id="isblFlags"></div>
+        <div class="tbl-wrap"><table class="dt" id="isblTable"></table></div>
+        <p class="note" id="isblNote"></p>
+      </div>
+    </div>
+    </div>
     <div class="tabpane" id="pane-osbl" role="tabpanel">
     <div class="panel">
       <div class="panel-h"><span class="t">OSBL equipment list</span><span class="s" id="osblSub"></span></div>
@@ -599,6 +624,8 @@
         </details>
         <div class="tbl-wrap"><table class="dt" id="osblTable"></table></div>
         <p class="note" id="osblNote"></p>
+        <h4 class="sub-h">Terminal &amp; Storage B.L. — not in KBR's OSBL (cost separately)</h4>
+        <div class="tbl-wrap"><table class="dt" id="tsblTable"></table></div>
       </div>
     </div>
     <div class="panel">
@@ -774,6 +801,8 @@ const KBR = {
   consumablesUsdPerT: 0.4e6 / (34.3 * 350),                 // "Other consumables" 0.4 MM$ at 12 ktpa
   fixed12: 6.9,                                             // Fixed annual operating costs, 12 ktpa
   cw: 25, dnw: 0.1,                                         // t per t H2, all modes
+  // Catalyst, I.G at 12 ktpa: 301-B fired cracker HyProGen 830 4.70 m3 at 1,000 kg/m3; 301-D adiabatic HyProGen 820/821 4.50 m3 at 1,100 kg/m3; 4-yr life
+  cat: { cap: 12, beds: [["301-B Fired Cracker (HyProGen 830)", 4.70, 1000], ["301-D Adiabatic Reactor (HyProGen 820/821)", 4.50, 1100]], life: 4 },
   modes: {
     NG100: { label: "100 % natural gas (NG100)",
       ratio: { 12: 6.40, 24: 6.35, 68: 6.35, 80: 6.35 }, el: { 12: 324, 24: 305, 68: 290, 80: 280 },
@@ -895,6 +924,12 @@ for (const c of caps(KBR.isbl)) {
 }
 const FIT_ISBL = fitPower(caps(KBR.isbl).map((c) => ({ x: c, y: KBR.isbl[c] })));
 const FIT_KBR = fitPower(caps(KBR_TOTAL).map((c) => ({ x: c, y: KBR_TOTAL[c].v })));
+// OSBL = total installed - stated ISBL at each KBR capacity, fitted as its own power law.
+// KBR CAPEX in the model is ISBL fit + OSBL fit, so the two parts always add up to the total.
+const KBR_OSBL = {};
+for (const c of caps(KBR.isbl)) KBR_OSBL[c] = { v: KBR_TOTAL[c].v - KBR.isbl[c], stated: KBR_TOTAL[c].stated };
+const FIT_OSBL = fitPower(caps(KBR_OSBL).map((c) => ({ x: c, y: KBR_OSBL[c].v })));
+const kbrCapex = (x) => FIT_ISBL.f(x) + FIT_OSBL.f(x);
 
 // Fixed O&M implied by KBR NG100 OPEX at each capacity:
 // fixed = OPEX(500) - NH3 cost - NG cost - power cost - consumables, with NH3 t/yr from the OPEX slope between price points.
@@ -1007,7 +1042,8 @@ function model(I) {
 
   // CAPEX
   r.capexIsbl = ref === "kbr" ? FIT_ISBL.f(I.cap) : null;
-  r.capexBase = ref === "kbr" ? FIT_KBR.f(I.cap) : duikerCapexUsdM(I.cap, I);
+  r.capexOsbl = ref === "kbr" ? FIT_OSBL.f(I.cap) : null;
+  r.capexBase = ref === "kbr" ? r.capexIsbl + r.capexOsbl : duikerCapexUsdM(I.cap, I);
   r.upliftUsd = I.basis === "custom" && (I.mode === "maxng" || (I.mode === "user" && CUSTOM.user.dpsa)) ? r.capexBase * I.uplift : 0;
   r.capex = r.capexBase + r.upliftUsd;
   r.accuracy = ref === "kbr" ? 0.5 : 0.4;
@@ -1016,25 +1052,25 @@ function model(I) {
   const o = [];
   const nh3Prod = h2t * r.stoich, nh3Fuel = h2t * r.nh3FuelEq;
   const fuelSplit = r.custom ? `tail gas ${fmt(r.custom.tail, 2)} + direct ${fmt(r.custom.direct, 2)} t/t` : `${fmt(r.nh3FuelEq, 2)} t/t`;
-  o.push({ k: "Ammonia — cracked to product H₂", v: nh3Prod * I.pNh3 / 1e6, d: `${fmt(nh3Prod / 1000, 1)} kt (${fmt(r.stoich, 2)} t/t) × ${fmt(I.pNh3, 0)} USD/t` });
-  o.push({ k: "Ammonia — used as fuel", v: nh3Fuel * I.pNh3 / 1e6, d: `${fmt(nh3Fuel / 1000, 1)} kt (${fuelSplit}) × ${fmt(I.pNh3, 0)} USD/t` });
-  if (r.ngMWh > 0) o.push({ k: "Natural gas", v: r.ngMWh * I.pNg / 1e6, d: `${fmt(r.ngMWh / 1000, 1)} GWh (LHV) × ${fmt(I.pNg, 0)} USD/MWh` });
-  o.push({ k: "Electricity", v: r.elMWh * I.pEl / 1e6, d: `${fmt(r.elMWh / 1000, 2)} GWh × ${fmt(I.pEl, 0)} USD/MWh` });
+  o.push({ t: "nh3", k: "Ammonia — cracked to product H₂", v: nh3Prod * I.pNh3 / 1e6, d: `${fmt(nh3Prod / 1000, 1)} kt (${fmt(r.stoich, 2)} t/t) × ${fmt(I.pNh3, 0)} USD/t` });
+  o.push({ t: "nh3", k: "Ammonia — used as fuel", v: nh3Fuel * I.pNh3 / 1e6, d: `${fmt(nh3Fuel / 1000, 1)} kt (${fuelSplit}) × ${fmt(I.pNh3, 0)} USD/t` });
+  if (r.ngMWh > 0) o.push({ t: "ng", k: "Natural gas", v: r.ngMWh * I.pNg / 1e6, d: `${fmt(r.ngMWh / 1000, 1)} GWh (LHV) × ${fmt(I.pNg, 0)} USD/MWh` });
+  o.push({ t: "el", k: "Electricity", v: r.elMWh * I.pEl / 1e6, d: `${fmt(r.elMWh / 1000, 2)} GWh × ${fmt(I.pEl, 0)} USD/MWh` });
   if (ref === "kbr") {
-    o.push({ k: "Other consumables (utilities, catalyst, chemicals)", v: KBR.consumablesUsdPerT * h2t / 1e6, d: `${fmt(KBR.consumablesUsdPerT, 1)} USD/t H₂, KBR 12 ktpa` });
-    o.push({ k: "Fixed O&M (labour, overheads, insurance, maintenance)", v: FIT_FIXED.f(I.cap), d: `KBR-derived curve, ${fmt(FIT_FIXED.a, 2)} × ktpa^${fmt(FIT_FIXED.b, 3)}` });
+    o.push({ t: "cons", k: "Other consumables (utilities, catalyst, chemicals)", v: KBR.consumablesUsdPerT * h2t / 1e6, d: `${fmt(KBR.consumablesUsdPerT, 1)} USD/t H₂, KBR 12 ktpa` });
+    o.push({ t: "fixed", k: "Fixed O&M (labour, overheads, insurance, maintenance)", v: FIT_FIXED.f(I.cap), d: `KBR-derived curve, ${fmt(FIT_FIXED.a, 2)} × ktpa^${fmt(FIT_FIXED.b, 3)}` });
   } else {
     const cat = DUIKER.catalystEurM * 1e6 / DUIKER.h2t * I.fx;
-    o.push({ k: "Catalyst", v: cat * h2t / 1e6, d: `€${fmt(DUIKER.catalystEurM * 1e6 / DUIKER.h2t, 2)}/t H₂, Duiker Table 9` });
-    o.push({ k: "Fixed O&M (labour, maintenance)", v: (DUIKER.laborEurM + DUIKER.maintEurM) * I.fx * Math.pow(I.cap / DUIKER.cap, FIT_FIXED.b), d: `€0.5M at 12 ktpa, scaled with KBR fixed-cost exponent ${fmt(FIT_FIXED.b, 3)}` });
-    o.push({ k: "Duiker operation licence fee", v: DUIKER.opFeeEurPerT * I.fx * h2t / 1e6, d: `€8.50/t H₂ exported` });
+    o.push({ t: "cons", k: "Catalyst", v: cat * h2t / 1e6, d: `€${fmt(DUIKER.catalystEurM * 1e6 / DUIKER.h2t, 2)}/t H₂, Duiker Table 9` });
+    o.push({ t: "fixed", k: "Fixed O&M (labour, maintenance)", v: (DUIKER.laborEurM + DUIKER.maintEurM) * I.fx * Math.pow(I.cap / DUIKER.cap, FIT_FIXED.b), d: `€0.5M at 12 ktpa, scaled with KBR fixed-cost exponent ${fmt(FIT_FIXED.b, 3)}` });
+    o.push({ t: "lic", k: "Duiker operation licence fee", v: DUIKER.opFeeEurPerT * I.fx * h2t / 1e6, d: `€8.50/t H₂ exported` });
   }
   // Utilities other than power and natural gas (power and gas are priced above): average usage per hour x on-stream hours x unit cost
   // KBR cases already carry these in the "Other consumables" lump above, so they are charged only when there is no lump (Duiker)
   const U = utilRows(I, r);
   if (ref !== "kbr") for (const [k, avg, u, , , , c, cu, , charged] of U.rows) {
     if (!charged || k === "Power" || k === "Natural gas (fuel)") continue;
-    o.push({ k, v: avg * U.hrs * c / 1e6, d: `${nf(avg)} ${u} × ${fmt(U.hrs, 0)} h × ${c < 1 ? fmt(c, 3) : fmt(c, 2)} ${cu}` });
+    o.push({ t: "cons", k, v: avg * U.hrs * c / 1e6, d: `${nf(avg)} ${u} × ${fmt(U.hrs, 0)} h × ${c < 1 ? fmt(c, 3) : fmt(c, 2)} ${cu}` });
   }
   r.opex = o;
   r.opexTotal = o.reduce((s, x) => s + x.v, 0);
@@ -1090,8 +1126,11 @@ function recalc() {
   if (I.basis === "kbr") setKbrBfd(I, r);
   $("bfdSync").textContent = I.basis === "custom" ? "Following the Custom fuel mode above." : I.basis === "duiker" ? "Following the Duiker fuel mode above." : "Following the KBR fuel mode above.";
 
+  r.full = fullCapex(I, r);
+  renderFull(I, r);
   renderCapex(I, r);
   renderOpex(I, r);
+  renderIsbl(I, r);
   renderOsbl(I);
   renderUtilities(I, r);
   renderCi(r);
@@ -1175,7 +1214,8 @@ function renderCapex(I, r) {
   const lo = r.capex * (1 - r.accuracy), hi = r.capex * (1 + r.accuracy);
   $("capexSub").textContent = r.ref === "kbr" ? "KBR curve · Class V ±50 %, Q3 2025 USD" : "Duiker curve · ±40 %, EUR converted at the FX input";
   const k = [kpi("CAPEX, total installed", fmt(r.capex, 0), `MM USD · range ${fmt(lo, 0)}–${fmt(hi, 0)}`, true)];
-  if (r.capexIsbl !== null) k.push(kpi("of which ISBL", fmt(r.capexIsbl, 0), "MM USD, KBR ISBL curve"));
+  if (r.capexIsbl !== null) k.push(kpi("of which ISBL", fmt(r.capexIsbl, 0), `MM USD, ${fmt(FIT_ISBL.a, 2)} × ktpa^${fmt(FIT_ISBL.b, 3)}`));
+  if (r.capexOsbl !== null) k.push(kpi("of which OSBL", fmt(r.capexOsbl, 0), `MM USD, ${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`));
   if (r.upliftUsd > 0) k.push(kpi("Double-PSA uplift", fmt(r.upliftUsd, 1), `MM USD (${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)})`));
   k.push(kpi("Specific CAPEX", fmt(r.capex * 1e6 / r.h2t, 0), "USD per t/yr H₂ capacity"));
   k.push(kpi("Capital charge", fmt(r.capCharge, 1), `MM USD/yr (CRF ${fmt(crf(I.rate, I.life) * 100, 2)} %)`));
@@ -1184,12 +1224,13 @@ function renderCapex(I, r) {
   $("fitTable").innerHTML = `
     <thead><tr><th>Curve</th><th>Data points (ktpa → MM USD)</th><th class="n">a</th><th class="n">b (exponent)</th><th class="n">R²</th><th>Basis</th></tr></thead>
     <tbody>
-      <tr class="${r.ref === "kbr" ? "active" : ""}"><td>KBR total installed</td><td>${caps(KBR_TOTAL).map((c) => `${c} → ${fmt(KBR_TOTAL[c].v, 1)}${KBR_TOTAL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_KBR.a, 2)}</td><td class="n">${fmt(FIT_KBR.b, 3)}</td><td class="n">${fmt(FIT_KBR.r2, 4)}</td><td>12 ktpa stated (§4.2). *Derived from KBR's LCOH: (LCOH × H₂ − OPEX) ÷ CRF(8 %, 25 yr)</td></tr>
+      <tr class="${r.ref === "kbr" ? "active" : ""}"><td>KBR total installed</td><td>${caps(KBR_TOTAL).map((c) => `${c} → ${fmt(KBR_TOTAL[c].v, 1)}${KBR_TOTAL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_KBR.a, 2)}</td><td class="n">${fmt(FIT_KBR.b, 3)}</td><td class="n">${fmt(FIT_KBR.r2, 4)}</td><td>12 ktpa stated (§4.2). *Derived from KBR's LCOH: (LCOH × H₂ − OPEX) ÷ CRF(8 %, 25 yr). Reference fit only: the model uses ISBL + OSBL</td></tr>
       <tr><td>KBR ISBL only</td><td>${caps(KBR.isbl).map((c) => `${c} → ${KBR.isbl[c]}`).join(" · ")}</td><td class="n">${fmt(FIT_ISBL.a, 2)}</td><td class="n">${fmt(FIT_ISBL.b, 3)}</td><td class="n">${fmt(FIT_ISBL.r2, 4)}</td><td>Stated, KBR §4.1</td></tr>
+      <tr><td>KBR OSBL only</td><td>${caps(KBR_OSBL).map((c) => `${c} → ${fmt(KBR_OSBL[c].v, 1)}${KBR_OSBL[c].stated ? "" : "*"}`).join(" · ")}</td><td class="n">${fmt(FIT_OSBL.a, 2)}</td><td class="n">${fmt(FIT_OSBL.b, 3)}</td><td class="n">${fmt(FIT_OSBL.r2, 4)}</td><td>Total installed − ISBL. *From derived totals</td></tr>
       <tr class="${r.ref === "duiker" ? "active" : ""}"><td>Duiker lump-sum turnkey</td><td>12 → ${fmt(DUIKER.capexEurM * I.fx, 1)} (€47M × ${fmt(I.fx, 4)})</td><td class="n">${fmt(DUIKER.capexEurM * I.fx / Math.pow(12, I.duikerExp), 2)}</td><td class="n">${fmt(I.duikerExp, 3)}</td><td class="n">—</td><td>One point; exponent borrowed (default = KBR total fit)</td></tr>
     </tbody>`;
   const osbl = caps(KBR_TOTAL).map((c) => `${c} ktpa ${fmt((KBR_TOTAL[c].v / KBR.isbl[c] - 1) * 100, 0)} %`).join(", ");
-  $("capexNote").innerHTML = `CAPEX = a × (H₂ ktpa)<sup>b</sup>, least-squares fit in log space. KBR's LCOH implies OSBL shrinks with scale (${osbl} of ISBL), matching KBR's note that OSBL "reduces for larger capacity"; the flat 55 % used elsewhere overstates OSBL above 24 ktpa. Duiker's €47M already includes buildings, civil works, EPC and the construction licence fee (Table 8). KBR excludes contingency, owner's costs, licence fees and royalties (§4.1).`;
+  $("capexNote").innerHTML = `CAPEX = a × (H₂ ktpa)<sup>b</sup>, least-squares fit in log space. KBR total installed = ISBL fit + OSBL fit; the OSBL exponent (${fmt(FIT_OSBL.b, 2)}) is flatter than ISBL (${fmt(FIT_ISBL.b, 2)}), so OSBL's share falls with scale. KBR OSBL (Annex I.H utilities and offsites) does not cover the <b>Terminal &amp; Storage B.L.</b>: NH₃ jetty, NH₃ storage and storage flare, H₂ storage and H₂ compression above KBR's 20 barg delivery. Cost these separately. KBR's LCOH implies OSBL shrinks with scale (${osbl} of ISBL), matching KBR's note that OSBL "reduces for larger capacity"; the flat 55 % used elsewhere overstates OSBL above 24 ktpa. Duiker's €47M already includes buildings, civil works, EPC and the construction licence fee (Table 8). KBR excludes contingency, owner's costs, licence fees and royalties (§4.1).`;
 }
 
 function drawCapexChart(I, r) {
@@ -1197,7 +1238,7 @@ function drawCapexChart(I, r) {
   const W = 760, H = 340, m = { l: 58, r: 150, t: 30, b: 44 };
   const xmax = niceCeil(Math.max(100, I.cap * 1.15));
   const dk = (x) => duikerCapexUsdM(x, I);
-  const ymax = niceCeil(Math.max(FIT_KBR.f(xmax), dk(xmax), r.capex) * 1.05);
+  const ymax = niceCeil(Math.max(kbrCapex(xmax), dk(xmax), r.capex) * 1.05);
   const sx = (x) => m.l + x / xmax * (W - m.l - m.r);
   const sy = (y) => H - m.b - y / ymax * (H - m.t - m.b);
   let s = "";
@@ -1216,14 +1257,16 @@ function drawCapexChart(I, r) {
   s += `<text class="tick" x="${m.l}" y="14" text-anchor="middle">MM USD</text>`;
   const path = (f) => { let d = ""; for (let i = 0; i <= 90; i++) { const x = Math.max(1, xmax * i / 90); d += `${i ? "L" : "M"}${sx(x).toFixed(1)} ${sy(f(x)).toFixed(1)}`; } return d; };
   const series = [
-    { f: FIT_KBR.f, c: "var(--s-kbr)", dash: "", name: "KBR total", key: "kbr" },
+    { f: kbrCapex, c: "var(--s-kbr)", dash: "", name: "KBR total", key: "kbr" },
     { f: FIT_ISBL.f, c: "var(--s-isbl)", dash: "", name: "KBR ISBL", key: "isbl" },
+    { f: FIT_OSBL.f, c: "var(--s-osbl)", dash: "", name: "KBR OSBL", key: "osbl" },
     { f: dk, c: "var(--s-duiker)", dash: "6 4", name: "Duiker", key: "duiker" },
   ];
   for (const se of series) s += `<path d="${path(se.f)}" fill="none" stroke="${se.c}" stroke-width="${se.key === r.ref ? 2.5 : 2}" stroke-dasharray="${se.dash}" stroke-linecap="round"/>`;
   const pt = (x, y, c, hollow) => `<circle cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${hollow ? "var(--bg2)" : c}" stroke="${hollow ? c : "var(--bg2)"}" stroke-width="2"/>`;
   for (const c of caps(KBR.isbl)) s += pt(c, KBR.isbl[c], "var(--s-isbl)", false);
   for (const c of caps(KBR_TOTAL)) s += pt(c, KBR_TOTAL[c].v, "var(--s-kbr)", !KBR_TOTAL[c].stated);
+  for (const c of caps(KBR_OSBL)) s += pt(c, KBR_OSBL[c].v, "var(--s-osbl)", !KBR_OSBL[c].stated);
   s += pt(12, DUIKER.capexEurM * I.fx, "var(--s-duiker)", false);
   // end labels, nudged apart
   const ends = series.map((se) => ({ y: sy(se.f(xmax)), se })).sort((a, b) => a.y - b.y);
@@ -1261,13 +1304,16 @@ function renderOpex(I, r) {
   $("opexKpis").innerHTML = [
     kpi("OPEX", fmt(r.opexTotal, 1), `MM USD/yr · ${fmt(perKg(r.opexTotal), 2)} USD/kg H₂`, true),
     kpi("Capital charge", fmt(r.capCharge, 1), `MM USD/yr · ${fmt(perKg(r.capCharge), 2)} USD/kg H₂`),
-    kpi("LCOH (cracking)", fmt(r.lcoh, 2), `USD/kg H₂ at ${fmt(I.rate * 100, 1)} %, ${fmt(I.life, 0)} yr`, true),
+    kpi("LCOH (cracking)", fmt(r.lcoh, 2), `USD/kg H₂ at ${fmt(I.rate * 100, 1)} %, ${fmt(I.life, 0)} yr · licensor CAPEX`, true),
+    kpi("LCOH, full project CAPEX", fmt(r.full.lcoh, 2), `USD/kg H₂ · ${fmt(r.full.total, 0)} MM USD overnight CAPEX`, true),
   ].join("");
   const rows = r.opex.map((o) => `<tr><td>${o.k}</td><td class="note">${o.d}</td><td class="n">${fmt(o.v, 2)}</td><td class="n">${fmt(perKg(o.v), 3)}</td><td class="n">${fmt(o.v / r.opexTotal * 100, 1)} %</td></tr>`).join("");
   $("opexTable").innerHTML = `<thead><tr><th>Cost line</th><th>Basis</th><th class="n">MM USD/yr</th><th class="n">USD/kg H₂</th><th class="n">Share</th></tr></thead>
     <tbody>${rows}<tr class="total"><td>Total OPEX</td><td></td><td class="n">${fmt(r.opexTotal, 2)}</td><td class="n">${fmt(perKg(r.opexTotal), 3)}</td><td class="n">100 %</td></tr>
     <tr><td>Capital charge (CAPEX × CRF)</td><td class="note">${fmt(r.capex, 0)} MM USD × ${fmt(crf(I.rate, I.life), 4)}</td><td class="n">${fmt(r.capCharge, 2)}</td><td class="n">${fmt(perKg(r.capCharge), 3)}</td><td class="n"></td></tr>
-    <tr class="total"><td>LCOH (cracking only)</td><td></td><td class="n">${fmt(r.capCharge + r.opexTotal, 2)}</td><td class="n">${fmt(r.lcoh, 3)}</td><td class="n"></td></tr></tbody>`;
+    <tr class="total"><td>LCOH (cracking only) — licensor CAPEX</td><td></td><td class="n">${fmt(r.capCharge + r.opexTotal, 2)}</td><td class="n">${fmt(r.lcoh, 3)}</td><td class="n"></td></tr>
+    <tr><td>Capital charge on full project CAPEX</td><td class="note">${fmt(r.full.total, 0)} MM USD × ${fmt(crf(I.rate, I.life), 4)}</td><td class="n">${fmt(r.full.capCharge, 2)}</td><td class="n">${fmt(perKg(r.full.capCharge), 3)}</td><td class="n"></td></tr>
+    <tr class="total"><td>LCOH (cracking only) — full project CAPEX</td><td></td><td class="n">${fmt(r.full.capCharge + r.opexTotal, 2)}</td><td class="n">${fmt(r.full.lcoh, 3)}</td><td class="n"></td></tr></tbody>`;
 
   // Reconciliation against KBR's own LCOH at 12 ktpa NG100 on KBR's cost basis
   const kI = { ...I, cap: 12, basis: "kbr", mode: "NG100", pNh3: 500, pEl: 140, pNg: 30, rate: 0.08, life: 25 };
@@ -1289,6 +1335,12 @@ function renderSources() {
     ["Heating values", "NH₃ 18.529, H₂ 119.42, NG 49.56 MJ/kg LHV", "Stated", "KBR I.E Feed & Product, Rev 0"],
     ["NG emission factor", `${fmt(CO2_PER_KG_NG, 3)} kg CO₂/kg NG`, "Derived", "KBR I.E: 1,150 kg/h CO₂ ÷ 417.9 kg/h NG"],
     ["KBR total CAPEX 24/68/80 ktpa", caps(KBR_TOTAL).filter((c) => !KBR_TOTAL[c].stated).map((c) => `${fmt(KBR_TOTAL[c].v, 1)} MM$`).join(" / "), "Derived", "KBR §4.2 LCOH & OPEX, CRF(8 %, 25 yr), 350 d/yr"],
+    ["KBR OSBL CAPEX", `${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} MM$`, "Derived", `Power-law fit to total − ISBL: ${caps(KBR_OSBL).map((c) => fmt(KBR_OSBL[c].v, 1)).join(" / ")} MM$ at 12 / 24 / 68 / 80 ktpa. Model CAPEX = ISBL fit + OSBL fit`],
+    ["KBR catalyst first fill", `${fmt(KBR.cat.beds.reduce((t, [, m3, rho]) => t + m3 * rho, 0) / 1000, 2)} t at 12 ktpa`, "Stated", "KBR I.G: 301-B 4.70 m³ × 1,000 kg/m³ + 301-D 4.50 m³ × 1,100 kg/m³, 4-yr life, + 3–5 % margin. Scaled linearly with capacity (assumption)"],
+    ["Ni catalyst price", `${fmt(FULL_DEF.catPrice, 0)} USD/kg default`, "Assumption", "Market range $15–50/kg (IndexBox SMR Ni catalyst $10–22/kg; PatSnap cracking catalysts $15–50/kg); no vendor quote"],
+    ["Start-up, spares, inventory", "6 mo fixed O&M + 1 mo consumables + 25 % of 1 mo fuel + 2 %; spares 0.5 %; 60 d", "Method", "NETL QGESS Cost Estimation Methodology for NETL Assessments of Power Plant Performance (owner's costs)"],
+    ["Owner's costs, contingency, escalation", "7.5 % / 25 % / 3 %/yr × 2 yr of licensor CAPEX", "Assumption", "Gentari placeholders for a Class V estimate; replace with internal factors"],
+    ["ISBL equipment list", `${ISBL_EQ.length} rows`, "Stated", "KBR I.D Process Description (Gentari-PR-GEN-PSD-001), list of equipment by section, 12 / 24 / 68 / 80 kTPA"],
     ["KBR fixed O&M 24/68/80 ktpa", caps(KBR_FIXED).filter((c) => c !== 12).map((c) => `${fmt(KBR_FIXED[c].v, 2)} MM$/yr`).join(" / "), "Derived", "KBR §4.2 OPEX slope between NH₃ price points, less NG, power and consumables"],
     ["KBR NH₃ to product", `${fmt(STOICH_KBR, 2)} t/t`, "Derived", "KBR §4.2: ammonia cracked for product 33.8 MM$ at 500 USD/t, 12,005 t H₂/yr. Custom and Duiker use 5.66"],
     ["KBR NH₃ ratio 12 ktpa NG100", "6.40 t/t used", "Discrepancy", "KBR KPI table says 6.40; KBR's own OPEX split (33.8 + 4.3 MM$ at 500 USD/t) implies 6.35. The model's NH₃-fuel line reads 4.6 MM$ vs KBR's 4.3"],
@@ -1315,6 +1367,173 @@ function renderSources() {
     ["FX", "1.1448 USD/EUR default", "Assumption", "ECB reference rate 3 Jul 2026, as in the cracker workbook"],
   ];
   $("srcTable").innerHTML = `<thead><tr><th>Item</th><th>Value</th><th>Status</th><th>Source / derivation</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td class="note">${x[3]}</td></tr>`).join("")}</tbody>`;
+}
+
+// ---------- Full project CAPEX ----------
+// Licensor CAPEX (KBR ISBL + OSBL TIC, or Duiker turnkey) plus the items the licensor excludes.
+// Start-up, spares and inventory: NETL QGESS "Cost Estimation Methodology" owner's costs (pre-production = 6 months of
+// operating labour + 1 month of maintenance materials and non-fuel consumables + 25 % of one month's fuel + 2 % of TPC;
+// spare parts 0.5 % of TPC; 60-day consumables inventory). Owner's costs, contingency and escalation are Gentari assumptions.
+const FULL_FIELDS = [   // id, label, default, step, min
+  ["suMonths", "Start-up: months of fixed O&M", 6, 1, 0], ["suFuelPct", "Start-up: % of one month's NH₃ + NG", 25, 5, 0],
+  ["suTicPct", "Start-up: % of licensor CAPEX", 2, 0.5, 0], ["sparePct", "Capital spares, % of licensor CAPEX", 0.5, 0.1, 0],
+  ["invDays", "Initial inventory, days of consumables", 60, 5, 0], ["catPrice", "Ni catalyst price, USD/kg", 30, 1, 0],
+  ["catMargin", "Catalyst loading margin, %", 5, 1, 0], ["licEur", "Licence fee, € M (KBR proxy: Duiker per-train fee)", 2.7, 0.1, 0],
+  ["ownerPct", "Owner's costs, % of licensor CAPEX", 7.5, 0.5, 0], ["contPct", "Contingency, % of licensor CAPEX", 25, 1, 0],
+  ["escRate", "Escalation, %/yr", 3, 0.5, 0], ["escYears", "Years from Q3 2025 to mid-construction", 2, 0.5, 0],
+];
+const FULL_DEF = Object.fromEntries(FULL_FIELDS.map((f) => [f[0], f[2]]));
+function buildFullInputs() {
+  $("fullInputs").innerHTML = FULL_FIELDS.map(([id, label, def, step, min]) => `<div class="field"><label for="fc_${id}">${label}</label><input type="number" id="fc_${id}" step="${step}" min="${min}" value="${def}"/></div>`).join("");
+  FULL_FIELDS.forEach(([id]) => $("fc_" + id).addEventListener("input", recalc));
+}
+function fullInputs() {
+  const F = {};
+  for (const [id, , def, , min] of FULL_FIELDS) F[id] = Math.max(min, num($("fc_" + id).value, def));
+  return F;
+}
+function catalystFill(cap, F) {   // KBR I.G volumes at 12 ktpa, scaled linearly with capacity (constant space velocity)
+  const s = cap / KBR.cat.cap, k = 1 + F.catMargin / 100;
+  const beds = KBR.cat.beds.map(([name, m3, rho]) => ({ name, m3: m3 * s, t: m3 * rho * s * k / 1000 }));
+  const t = beds.reduce((a, b) => a + b.t, 0), m3 = beds.reduce((a, b) => a + b.m3, 0);
+  return { beds, t, m3, usdM: t * 1000 * F.catPrice / 1e6 };
+}
+function fullCapex(I, r) {
+  const F = fullInputs(), tic = r.capex, sum = (ts) => r.opex.filter((o) => ts.includes(o.t)).reduce((a, o) => a + o.v, 0);
+  const fixed = sum(["fixed"]), nonFuel = sum(["el", "cons", "lic"]), consum = sum(["cons"]), fuel = sum(["nh3", "ng"]);
+  const L = [];
+  const add = (k, v, basis, src, cls) => L.push({ k, v, basis, src, cls });
+  const isK = r.ref === "kbr";
+  if (isK && r.capexIsbl !== null) {
+    add("KBR ISBL TIC", r.capexIsbl, `${fmt(FIT_ISBL.a, 2)} × ktpa^${fmt(FIT_ISBL.b, 3)}`, "KBR §4.1 (stated 78 / 110 / 191 / 209 at 12 / 24 / 68 / 80 ktpa)", "lic");
+    add("KBR OSBL (utilities & offsites, I.H)", r.capexOsbl, `${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`, "Derived from KBR LCOH; excludes Terminal & Storage B.L.", "lic");
+  } else add("Duiker lump-sum turnkey", r.capexBase, `€47M × ${fmt(I.fx, 4)}, exponent ${fmt(I.duikerExp, 2)}`, "Duiker Table 8: incl. buildings, civil, EPC, construction licence fee", "lic");
+  if (r.upliftUsd > 0) add("Double-PSA uplift", r.upliftUsd, `${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)}`, "Assumption (Custom pathway)", "lic");
+  const suLab = fixed * F.suMonths / 12, suCons = nonFuel / 12, suFuel = fuel / 12 * F.suFuelPct / 100, suTic = tic * F.suTicPct / 100;
+  const su = suLab + suCons + suFuel + suTic;
+  add("Commissioning & start-up", su, `${fmt(F.suMonths, 0)} mo fixed O&M ${fmt(suLab, 1)} + 1 mo power & consumables ${fmt(suCons, 1)} + ${fmt(F.suFuelPct, 0)} % of 1 mo NH₃/NG ${fmt(suFuel, 1)} + ${fmt(F.suTicPct, 1)} % ${fmt(suTic, 1)}`, "NETL QGESS pre-production costs; excluded by KBR §4.1");
+  add("Capital spares", tic * F.sparePct / 100, `${fmt(F.sparePct, 1)} % of licensor CAPEX`, "NETL QGESS; excluded by KBR §4.1");
+  add("Initial inventory (chemicals & consumables)", consum * F.invDays / 365, `${fmt(F.invDays, 0)} days of consumables (${fmt(consum, 2)} MM USD/yr)`, "NETL QGESS inventory capital");
+  const cat = isK ? catalystFill(I.cap, F) : null;
+  if (cat) add("Catalyst first fill (Ni)", cat.usdM, `${fmt(cat.t, 1)} t (${fmt(cat.m3, 1)} m³ + ${fmt(F.catMargin, 0)} %) × ${fmt(F.catPrice, 0)} USD/kg`, "KBR I.G volumes scaled; KBR supplies first fill, may already be in TIC — confirm");
+  else add("Catalyst first fill", 0, "No catalyst volumes in the Duiker package", "Not estimated");
+  const lic = isK ? F.licEur * I.fx : 0;
+  add("Licence fee & royalties", lic, isK ? `€${fmt(F.licEur, 1)}M × ${fmt(I.fx, 4)}` : "Inside the Duiker turnkey price", isK ? "Not quoted by KBR; Duiker §4.2 per-train fee as proxy — ask KBR" : "Duiker Table 8");
+  add("Owner's costs (owner's team/PMC, permitting, insurance)", tic * F.ownerPct / 100, `${fmt(F.ownerPct, 1)} % of licensor CAPEX`, "Assumption");
+  add("Contingency (incl. currency risk)", tic * F.contPct / 100, `${fmt(F.contPct, 0)} % of licensor CAPEX`, `Assumption; licensor accuracy ±${fmt(r.accuracy * 100, 0)} %`);
+  const esc = tic * (Math.pow(1 + F.escRate / 100, F.escYears) - 1);
+  add("Escalation from Q3 2025", esc, `${fmt(F.escRate, 1)} %/yr × ${fmt(F.escYears, 1)} yr on licensor CAPEX`, "Assumption; KBR has no forward escalation");
+  const total = L.reduce((a, x) => a + x.v, 0), capCharge = total * crf(I.rate, I.life);
+  return { F, L, tic, total, cat, capCharge, lcoh: (capCharge + r.opexTotal) / (r.h2t / 1000) };
+}
+function renderFull(I, r) {
+  const f = r.full, tic = f.tic, h = r.h2t;
+  $("fullSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · ${r.basisLabel} · overnight, ${r.ref === "kbr" ? "Q3 2025 USD + escalation" : "EUR converted at the FX input"}`;
+  $("fullKpis").innerHTML = [
+    kpi("Total overnight CAPEX", fmt(f.total, 0), `MM USD · ${fmt(f.total / tic, 2)} × licensor CAPEX`, true),
+    kpi("Licensor CAPEX (TIC)", fmt(tic, 0), r.ref === "kbr" ? "MM USD · KBR ISBL + OSBL" : "MM USD · Duiker turnkey"),
+    kpi("Add-ons", fmt(f.total - tic, 0), "MM USD · start-up, spares, catalyst, licence, owner's, contingency, escalation"),
+    kpi("Specific CAPEX", fmt(f.total * 1e6 / h, 0), "USD per t/yr H₂ capacity"),
+    kpi("LCOH, full CAPEX", fmt(f.lcoh, 2), `USD/kg H₂ (licensor CAPEX: ${fmt(r.lcoh, 2)})`, true),
+  ].join("");
+  const row = (x, i) => `<tr${x.cls === "lic" ? ' class="active"' : ""}><td>${i + 1}</td><td>${x.k}</td><td class="n"><b>${fmt(x.v, 1)}</b></td><td class="n">${fmt(x.v / tic * 100, 1)} %</td><td class="note">${x.basis}</td><td class="note">${x.src}</td></tr>`;
+  const nLic = f.L.filter((x) => x.cls === "lic").length;
+  const ex = [
+    ["Terminal & Storage B.L.", "NH₃ jetty, NH₃ storage and storage flare, H₂ storage, H₂ compression above 20 barg — use the NH₃ Storage Design module"],
+    ["Buildings & laboratories", r.ref === "kbr" ? "Named as OSBL in KBR §1/§4.1 but not in the I.H equipment list — confirm whether KBR's OSBL factor covers them" : "Included in the Duiker turnkey price"],
+    ["Sales tax & import duties", "Depends on Malaysian incentives and exemptions"],
+    ["Interest during construction / financing", "Not part of overnight cost"],
+    ["Land", "Site-specific"],
+  ];
+  $("fullTable").innerHTML = `<thead><tr><th>#</th><th>Item</th><th class="n">MM USD</th><th class="n">% of TIC</th><th>Basis</th><th>Source / status</th></tr></thead><tbody>
+    ${f.L.slice(0, nLic).map(row).join("")}
+    <tr class="total"><td></td><td>Licensor CAPEX (TIC)</td><td class="n">${fmt(tic, 1)}</td><td class="n">100 %</td><td class="note">${r.ref === "kbr" ? "Includes engineering, procurement and construction" : "Lump-sum turnkey"}</td><td class="note">Class ${r.ref === "kbr" ? "V ±50 %" : "±40 %"}</td></tr>
+    ${f.L.slice(nLic).map((x, i) => row(x, i + nLic)).join("")}
+    <tr class="total"><td></td><td>Total overnight CAPEX</td><td class="n">${fmt(f.total, 1)}</td><td class="n">${fmt(f.total / tic * 100, 0)} %</td><td class="note">${fmt(f.total * 1e6 / h, 0)} USD per t/yr H₂</td><td></td></tr>
+    ${ex.map(([k, d]) => `<tr><td></td><td class="note">Excluded: ${k}</td><td class="n note">—</td><td></td><td class="note" colspan="2">${d}</td></tr>`).join("")}</tbody>`;
+  const fl = [];
+  if (f.cat) fl.push(`Catalyst: ${f.cat.beds.map((b) => `${b.name} ${fmt(b.m3, 1)} m³`).join(" + ")} = ${fmt(f.cat.t, 1)} t incl. ${fmt(f.F.catMargin, 0)} % margin (KBR I.G note 2: 3–5 %), ${KBR.cat.life}-year life. Volumes are KBR's 12 ktpa figures scaled with capacity; KBR note 3 says final volumes follow equipment design. SCR catalyst (WO₃/V₂O₅, vendor) is not included. Price default ${fmt(FULL_DEF.catPrice, 0)} USD/kg sits in the $15–50/kg range from market sources, not a vendor quote.`);
+  if (r.ref === "kbr") fl.push("KBR lists the catalyst first fill and its proprietary equipment in its scope of supply. If the ISBL TIC already carries the first fill, set the catalyst price to 0 to avoid double counting.");
+  $("fullFlags").innerHTML = fl.map((x) => `<div class="flag">${x}</div>`).join("");
+  $("fullNote").innerHTML = `Licensor CAPEX is the total installed cost: engineering, procurement and construction. KBR §4.1 excludes contingency, permitting, sales tax, import duties, capital spares, commissioning spares, O&M spares, commissioning & start-up, owner's cost, licence fees, royalties and currency risk, with no forward escalation; rows 3 onward add those back. Start-up uses the NETL QGESS pre-production method with this case's OPEX lines; for a cracker the NH₃ burned during start-up is the largest driver. Contingency, owner's costs and escalation are applied to licensor CAPEX only.`;
+}
+
+// ---------- ISBL equipment list ----------
+// KBR I.D Process Description (Gentari-PR-GEN-PSD-001, Rev 0), equipment list by section, 12 / 24 / 68 / 80 kTPA.
+const ISBL_EQ = [   // section, tag, description, type, note
+  ["Preheat train", "300-D", "Ammonia Holding Drum", "Drum", "feed"],
+  ["", "301-J/JA", "Ammonia Feed Pump", "Pump", "pump"],
+  ["", "301-C", "Liquid Ammonia Preheater", "Heat Exchanger", "Liquid NH₃ heated against cracker effluent to near boiling"],
+  ["", "302-C", "Ammonia Vaporizer", "Heat Exchanger", "Vaporises > 80 % of the feed against cracker effluent"],
+  ["", "303-C", "Ammonia Start-up Vaporizer", "Heat Exchanger", "Vaporises the remainder with surplus LP steam"],
+  ["", "304-C", "Ammonia Cracker Feed/Effluent Exchanger", "Heat Exchanger", "KBR proprietary equipment"],
+  ["", "306-C", "Start-up Electric Heater", "Heat Exchanger", "Start-up heating before LP steam is available"],
+  ["", "300-L", "Ammonia Feed Oil Filter", "Filter", "Removes oil to protect the catalyst"],
+  ["Ammonia cracking", "301-B", "Ammonia Cracker", "Furnace", "cracker"],
+  ["", "301-BJ", "Induced Draft (ID) Fan", "Fan (in 301-B)", "Included in 301-B"],
+  ["", "301-BJ1", "Forced Draft (FD) Fan", "Fan (in 301-B)", "Included in 301-B"],
+  ["", "301-BSCR", "SCR NOx Reduction Unit / Ammonia Package", "Package (in 301-B)", "WO₃/V₂O₅ on TiO₂ catalyst by vendor, 4-yr life; NOx < 10 ppmv"],
+  ["", "301-D", "Adiabatic Reactor (pre-cracker)", "Reactor", "adiabatic"],
+  ["Ammonia recovery", "360-C", "Ammonia Distillation Column Reboiler", "Heat Exchanger", "MP steam"],
+  ["", "361-C", "Ammonia Distillation Column Feed/Effluent Exchanger", "Heat Exchanger", ""],
+  ["", "362-C", "Ammonia Distillation Overhead Condenser", "Heat Exchanger", ""],
+  ["", "363-C", "Ammonia Absorber Circulation Cooler", "Heat Exchanger", ""],
+  ["", "323-D", "LP Ammonia Scrubber", "Column", "Scrubs reflux-drum vent before the fuel system"],
+  ["", "324-D", "HP Ammonia Scrubber", "Column", "Water wash of cracker effluent; overhead < 50 ppmv NH₃"],
+  ["", "325-D", "Ammonia Distillation Column", "Column", "Recovers NH₃ to the feed preheat train"],
+  ["", "360-D", "Ammonia Distillation Reflux Drum", "Drum", ""],
+  ["", "325-J/JA", "Ammonia Distillation Reflux Pump", "Pump", ""],
+  ["", "360-J/JA", "Ammonia Distillation Feed Pump", "Pump", ""],
+  ["", "361-J/JA", "Ammonia Scrubber Feed Pump", "Pump", ""],
+  ["Product purification", "301-L", "PSA Unit", "Package", "psa"],
+  ["", "311-J", "Tail Gas Compressor", "Compressor", "PSA tail gas to furnace burners"],
+  ["Start-up", "373-C", "Start-Up Circulator Cooler", "Heat Exchanger", ""],
+  ["", "375-C", "Start-Up Circulator Outlet Cooler", "Heat Exchanger", ""],
+  ["", "373-D", "Start-Up Circulator K.O. Drum", "Drum", ""],
+  ["", "363-J", "Ammonia Distillation Start-Up Pump", "Pump", "Used while 324-D runs below 325-D pressure"],
+  ["", "373-J", "Start-Up Circulator", "Compressor", "N₂ circulation for heat-up and catalyst reduction"],
+  ["Steam & others", "341-D", "MP Steam Drum", "Drum", "23.5 barg, 223 °C"],
+  ["", "386-D", "Blowdown Drum", "Drum", ""],
+  ["", "387-D", "MP Condensate Flash Drum", "Drum", ""],
+  ["", "304-J/JA", "BFW Pump", "Pump", ""],
+  ["", "306-L", "Oxygen Scavenger Injection Unit", "Chemical Injection", "NALCO ELIMIN-OX 10 wt %, 0.5 L/h at 12 ktpa (I.G)"],
+  ["", "307-L", "PH Control Injection Unit", "Chemical Injection", "Aqueous NH₃ or NALCO 352, 2.5 L/h at 12 ktpa (I.G)"],
+  ["", "308-L", "Phosphate Injection Package", "Chemical Injection", "NALCO 7208, 0.5 L/h at 12 ktpa (I.G)"],
+  ["", "301-U", "Deaerator", "Drum", "1.7 barg, 130 °C"],
+];
+function renderIsbl(I, r) {
+  const hrs = I.days * 24, s = I.cap / KBR.cat.cap, nh3h = r.nh3t / hrs, h2h = r.h2t * 1000 / hrs;
+  const F = r.full.F, cat = catalystFill(I.cap, F);
+  const size = {
+    feed: [fmt(nh3h, 1), "t/h NH₃ feed", "From storage at 2 barg, −33 °C"],
+    pump: [fmt(nh3h, 1), "t/h each", "Discharge ≈ 44 barg (I.D)"],
+    cracker: [fmt(cat.beds[0].m3, 1), "m³ Ni catalyst", `Down-fired, KBR proprietary; long lead 23–26 months · catalyst ${fmt(cat.beds[0].t, 1)} t incl. margin`],
+    adiabatic: [fmt(cat.beds[1].m3, 1), "m³ Ni catalyst", `KBR proprietary · catalyst ${fmt(cat.beds[1].t, 1)} t incl. margin`],
+    psa: [fmt(h2h, 0), "kg/h H₂", `${fmt(h2h / 2.016 * 22.414, 0)} Nm³/h at 27–28 barg, 99.97 mol %; vendor package, long lead 18–23 months`],
+  };
+  const isPump = (t) => /\/JA$/.test(t);
+  const rows = ISBL_EQ.map(([sec, tag, desc, type, note]) => {
+    const z = size[note];
+    return `<tr><td class="unit-h">${sec}</td><td>${tag}</td><td>${desc}</td><td>${type}</td><td style="white-space:nowrap">${isPump(tag) ? "2 (1+1)" : "1"}</td>
+      <td class="n">${z ? `<b>${z[0]}</b>` : ""}</td><td class="note">${z ? z[1] : ""}</td><td class="note">${z ? z[2] : note}</td></tr>`;
+  }).join("");
+  const nMain = ISBL_EQ.filter((x) => !x[3].includes("(in 301-B)")).length;
+  $("isblSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · KBR I.D list, ${nMain} items + 3 included in 301-B`;
+  $("isblKpis").innerHTML = [
+    kpi("Equipment items", String(nMain), "tagged items, KBR I.D (+ 3 inside 301-B)"),
+    r.capexIsbl !== null ? kpi("ISBL TIC", fmt(r.capexIsbl, 0), "MM USD, KBR curve", true) : kpi("Licensor CAPEX", fmt(r.capex, 0), "MM USD (no ISBL split)", true),
+    kpi("NH₃ feed", fmt(nh3h, 1), `t/h · ${fmt(r.nh3t / 1000, 0)} ktpa`),
+    kpi("H₂ product", fmt(h2h, 0), "kg/h at 27–28 barg, 30 °C"),
+    kpi("Catalyst first fill", fmt(cat.t, 1), `t Ni · ${fmt(cat.m3, 1)} m³ (KBR I.G scaled)`),
+    kpi("ISBL plot", fmt(r.fpIsbl * SQFT_PER_M2, 0), `sqft · ${fmt(r.fpIsbl, 0)} m²`),
+  ].join("");
+  const fl = [];
+  if (I.basis !== "kbr") fl.push(`This is KBR's ISBL list. It is shown as an indicative reference for the ${I.basis === "duiker" ? "Duiker" : "Custom"} basis; Duiker's AHC unit has a different layout (no separate adiabatic pre-cracker or NH₃ distillation).`);
+  if (I.cap > 80 || I.cap < 12) fl.push(`${fmt(I.cap, 0)} ktpa is outside KBR's 12–80 ktpa range. Flows and catalyst are scaled linearly; KBR gives no train-split rule, so check whether one train still applies.`);
+  fl.push(`KBR gives no equipment sizes. Only flows (from the H₂ capacity and NH₃ ratio) and catalyst volumes (I.G at 12 ktpa × ${fmt(s, 2)}) are scaled here; duties, dimensions and materials follow the PEDP.`);
+  $("isblFlags").innerHTML = fl.map((x) => `<div class="flag">${x}</div>`).join("");
+  $("isblTable").innerHTML = `<thead><tr><th>Section</th><th>Tag</th><th>Description</th><th>Type</th><th>Qty</th><th class="n">Indicative size</th><th>Unit</th><th>Notes</th></tr></thead><tbody>${rows}</tbody>`;
+  $("isblNote").innerHTML = `Source: KBR I.D Process Description (Gentari-PR-GEN-PSD-001, Rev 0, 23 Dec 2025), list of equipment by section inside battery limits, valid for 12 / 24 / 68 / 80 kTPA; operating conditions from I.D and I.A; catalyst from I.G; long-lead items and proprietary equipment (furnace, adiabatic reactor, feed/effluent exchanger) from the proposal §4. ISBL runs from NH₃ receipt from storage to purified H₂ at the battery limit (20 barg minimum required, 28 barg delivered, no H₂ compressor). Pump spares (J/JA) are read as 1 operating + 1 spare.`;
 }
 
 // ---------- OSBL equipment list ----------
@@ -1477,6 +1696,15 @@ function renderOsbl(I) {
     <tr><td class="unit-h">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td>
     <td class="n${r[4] === TBD ? " tbd" : ""}"><b>${nf(r[4])}</b></td><td class="note">${r[5]}</td><td class="n">${r[6] === null ? "" : nf(r[6])}</td><td class="note">${r[7]}</td><td class="note">${r[8]}</td><td><span class="cf cf-${r[9]}">${r[9]}</span></td></tr>`).join("")}</tbody>`;
   $("osblNote").innerHTML = `Sized for ${fmt(I.cap, 1)} ktpa H₂ from KBR's Rev 0 package (I.A, I.C, I.E, I.F, I.H, Dec 2025), with the scaling rules of the Gentari-ammoniacracker workbook <code>tools/kbr_osbl_workbook.py</code>: power and natural gas from I.E at the capacity × the I.F maximum/normal ratio at 12 ktpa; cooling water, demin water, air and nitrogen scaled linearly from the I.F 12 ktpa maxima; power and NH₃ feed use KBR's highest-feed published firing mode. All results are derived, preliminary and not a KBR deliverable. Confidence: H mostly KBR data · M KBR data plus material assumptions · L mostly assumptions · TBD not sizable from the package.`;
+  const ts = [
+    ["NH₃ jetty / import facilities", "KBR §1 (OSBL)", "Not in I.H"],
+    ["NH₃ storage tanks", "KBR §1, §4.1 (OSBL)", `Not in I.H · cracker draws ${fmt(o.nh3 / 1000, 1)} t/h NH₃`],
+    ["NH₃ storage flare / BOG handling", "KBR §1 (OSBL)", "Not in I.H (Unit 108 is the cracker flare)"],
+    ["H₂ storage", "KBR §1 (OSBL)", "Not in I.H"],
+    ["H₂ compression above 20 barg", "KBR §1 battery limit", "KBR delivers 27–28 barg without compression"],
+  ];
+  $("tsblTable").innerHTML = `<thead><tr><th>Item</th><th>Named in</th><th>Status</th></tr></thead><tbody>${ts.map(([a, b, c]) => `<tr><td>${a}</td><td class="note">${b}</td><td class="note">${c}</td></tr>`).join("")}
+    <tr><td>Buildings &amp; laboratories</td><td class="note">KBR §1, §4.1 (OSBL)</td><td class="note">Not in I.H — confirm whether KBR's OSBL cost factor covers them</td></tr></tbody>`;
   drawOsblChart(I, A, rows);
 }
 
@@ -1691,6 +1919,7 @@ $("btnReset").addEventListener("click", () => {
   $("inPNgUnit").value = "mwh"; prevNgUnit = "mwh"; $("inPNg").value = 30; $("inPNg").step = "1";
   for (const [id, v] of Object.entries(OSBL_DEF)) $("os_" + id).value = v;
   for (const [id, v] of Object.entries(UTIL_DEF)) $("uc_" + id).value = v;
+  for (const [id, v] of Object.entries(FULL_DEF)) $("fc_" + id).value = v;
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
   populateModes(); $("inMode").value = "NG100";
   $("inTolling").value = TOLLING[0].id;
@@ -1741,11 +1970,13 @@ $("themeToggle").addEventListener("click", () => applyTheme(document.documentEle
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
   buildOsblInputs();
   buildUtilInputs();
+  buildFullInputs();
   populateModes();
   populateTollingSelect();
   setBfd("cf", true);
   let tab = "tech"; try { tab = localStorage.getItem(TAB_KEY) || "tech"; } catch (e) {}
-  showTab(["tech", "capex", "opex", "osbl"].includes(tab) ? tab : "tech");
+  if (tab === "capex" || tab === "opex") tab = "cost";
+  showTab(["tech", "cost", "isbl", "osbl"].includes(tab) ? tab : "tech");
   setRoute("own");
 })();
 </script>

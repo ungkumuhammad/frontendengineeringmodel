@@ -30,6 +30,10 @@ CAPEX = a × (H₂ ktpa)^b, least-squares fit in log space, computed at runtime.
   the price points and fuel modes (≈ 164 / 258 / 281 MM USD). This method reproduces
   the stated 120.9 at 12 ktpa. b ≈ 0.44. Implied OSBL falls from 55 % to ≈ 35 % of ISBL,
   consistent with KBR's note that OSBL "reduces for larger capacity".
+- **KBR OSBL** — total − ISBL at each point (42.9 / 54.4 / 66.8 / 72.4 MM USD), fitted as its own power
+  law: 23.03 × ktpa^0.259. Since 2026-10-03 the model's KBR CAPEX is **ISBL fit + OSBL fit**, and the CAPEX
+  tab shows both parts. This is within 0.4 % of the single total fit across 12–100 ktpa; the total fit stays
+  in the fit table as a reference and still sets the default Duiker exponent.
 - **Duiker** — €47M at 12 ktpa (lump-sum turnkey incl. buildings, civil, EPC and the
   construction licence fee, Table 8), converted at the FX input. Only one point, so the
   exponent is borrowed from the KBR total fit (editable).
@@ -53,7 +57,7 @@ plus reference-specific lines:
   the KBR fixed-cost exponent), operation licence fee €8.50/t H₂.
 
 LCOH = (CAPEX × CRF + OPEX) ÷ H₂. On KBR's basis at 12 ktpa NG100 the model gives
-4.94 USD/kg against KBR's published 4.90 (+0.9 %).
+4.95 USD/kg against KBR's published 4.90 (+0.9 %).
 
 ## Flagged discrepancies
 
@@ -171,3 +175,64 @@ Duiker licence-fee gaps: §4.2 says the operation fee is in "Table 7" (a perform
 utilities, labour, maintenance and catalyst only, so the fee is not visible there. Gentari-ammoniacracker
 `calc_opex.py` also annualises the €2.7M construction fee into OPEX over 25 yr while `data.py` treats it as additive to
 the €47M — a double count against Duiker's text.
+
+## KBR OSBL power law and 100 ktpa sensitivity (added 2026-10-03)
+
+OSBL at each KBR capacity = total installed − ISBL: 42.9 / 54.4 / 66.8 / 72.4 MM USD at 12 / 24 / 68 / 80 ktpa
+(55 % → 35 % of ISBL). Log-space fits: ISBL = 21.25 × ktpa^0.521, OSBL = 23.03 × ktpa^0.259 (R² 0.984).
+
+At 100 ktpa (extrapolated): ISBL **$234M**, OSBL **$76M**, total **$310M**. Sensitivity on OSBL, ISBL held at $234M:
+
+| Case | OSBL | Total |
+|---|---|---|
+| OSBL₈₀ × 1.25^b, b = 0.26 (KBR fit, base) | 76 | 310 |
+| b = 0.50 (KBR slope 68→80) | 81 | 315 |
+| b = 0.60 (six-tenths rule) | 83 | 316 |
+| b = 1.00 (no scale economy) | 91 | 324 |
+| 30 % of ISBL | 70 | 304 |
+| 35 % of ISBL (KBR at 68–80 ktpa) | 82 | 315 |
+| 45 % of ISBL | 105 | 339 |
+| 55 % of ISBL (KBR at 12 ktpa) | 129 | 362 |
+
+Two 50 ktpa trains instead of one would put ISBL at ≈ $326M.
+
+**Terminal & Storage B.L.** (Gentari definition, 2026-10-03): the scope outside KBR's OSBL, costed separately — NH₃ jetty,
+NH₃ storage and storage flare, H₂ storage, H₂ compression above 20 barg. Basis: KBR's OSBL equipment list (I.H, Units
+101–114) covers utilities, flare, air, N₂, water, waste water and H₂ export metering only; §1 and §4.1 name storage, jetty
+and H₂ storage as OSBL but KBR does not say what its ~55 % OSBL cost factor covers, so this split is Gentari's reading.
+Buildings and laboratories appear in §1/§4.1 but not in I.H; confirm with KBR.
+
+![KBR OSBL power law and 100 ktpa sensitivity](figures/kbr-osbl-sensitivity.png)
+
+## Total Cost tab, full CAPEX and ISBL equipment list (added 2026-10-03)
+
+Tabs are now **Technical & process · Total Cost · ISBL equipment · OSBL equipment**. Total Cost merges the former
+CAPEX and OPEX & LCOH tabs and opens with a **full project CAPEX build-up**:
+
+| # | Line | Default basis | Source |
+|---|---|---|---|
+| 1–2 | KBR ISBL + OSBL (licensor TIC) | Power-law fits | KBR §4.1, derived OSBL |
+| 3 | Commissioning & start-up | 6 months fixed O&M + 1 month power & consumables + 25 % of one month's NH₃ + NG + 2 % of TIC | NETL QGESS owner's costs |
+| 4 | Capital spares | 0.5 % of TIC | NETL QGESS |
+| 5 | Initial inventory | 60 days of consumables | NETL QGESS |
+| 6 | Catalyst first fill | KBR I.G volumes (12 ktpa) × capacity/12 × 1.05 margin × 30 USD/kg | KBR I.G; price from $15–50/kg market range |
+| 7 | Licence fee | €2.7M × FX (Duiker per-train fee as KBR proxy; zero for Duiker, inside its turnkey) | Duiker §4.2 |
+| 8 | Owner's costs | 7.5 % of TIC | Assumption |
+| 9 | Contingency | 25 % of TIC | Assumption |
+| 10 | Escalation | 3 %/yr × 2 yr on TIC | Assumption |
+
+All twelve factors are editable. At 80 ktpa KBR NG100 the defaults give 280 → **≈ 411 MM USD** (1.47 × TIC,
+5,131 USD per t/yr) and LCOH 3.96 USD/kg against 3.81 on licensor CAPEX. LCOH is shown on both bases; the KBR check
+still uses licensor CAPEX. Excluded rows: Terminal & Storage B.L., buildings & labs (KBR scope unclear), sales tax and
+import duties, IDC, land.
+
+Catalyst at 80 ktpa: (4.70 m³ × 1,000 + 4.50 m³ × 1,100 kg/m³) × 80/12 × 1.05 = 67.6 t. KBR lists the first fill in its
+scope of supply, so it may already sit in the TIC: set the price to 0 if KBR confirms.
+
+**ISBL equipment** tab: KBR's own list from I.D (Gentari-PR-GEN-PSD-001), 36 tagged items in six sections plus the ID
+fan, FD fan and SCR package inside 301-B. KBR gives no sizes, so only flows (NH₃ feed, H₂ product) and catalyst
+volumes are scaled; proprietary items (301-B, 301-D, 304-C) and long-lead times (furnace 23–26 months, PSA 18–23
+months) are flagged. Pressures: NH₃ at 2 barg, −33 °C; feed pump ≈ 44 barg; H₂ product 27–28 barg (20 barg minimum).
+
+**OSBL equipment** tab adds a Terminal & Storage B.L. table (NH₃ jetty, NH₃ storage, storage flare, H₂ storage,
+H₂ compression above 20 barg, plus buildings & labs to confirm).
