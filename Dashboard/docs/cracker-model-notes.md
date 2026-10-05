@@ -221,7 +221,7 @@ CAPEX and OPEX & LCOH tabs and opens with a **full project CAPEX build-up**:
 | 9 | Contingency | 25 % of TIC | Assumption |
 | 10 | Escalation | 3 %/yr × 2 yr on TIC | Assumption |
 
-All twelve factors are editable. At 80 ktpa KBR NG100 the defaults give 280 → **≈ 411 MM USD** (1.47 × TIC,
+All twelve factors are editable inline, in the table row they drive (2026-10-05); an OSBL cost basis selector above the table switches KBR OSBL between the power law and a user % of ISBL, and that override flows into TIC, every %-of-TIC line, LCOH and the CAPEX chart. "Reset cost assumptions" restores the defaults. At 80 ktpa KBR NG100 the defaults give 280 → **≈ 411 MM USD** (1.47 × TIC,
 5,131 USD per t/yr) and LCOH 3.96 USD/kg against 3.81 on licensor CAPEX. LCOH is shown on both bases; the KBR check
 still uses licensor CAPEX. Excluded rows: Terminal & Storage B.L., buildings & labs (KBR scope unclear), sales tax and
 import duties, IDC, land.
