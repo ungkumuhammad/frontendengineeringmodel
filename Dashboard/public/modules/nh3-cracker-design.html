@@ -90,6 +90,10 @@
   .cf { display:inline-block; min-width:22px; text-align:center; border-radius:4px; padding:0 5px; font-size:11px; font-weight:700; color:#1c1e26; }
   .cf-H { background:#C6E0B4; } .cf-M { background:#FFE699; } .cf-L { background:#FCE4D6; } .cf-TBD { background:#F8CBAD; }
   .dt td.tbd { color: var(--danger); font-weight: 700; }
+  .dt label.ci { display: flex; align-items: center; gap: 6px; white-space: nowrap; margin: 2px 0; font-size: 12px; color: var(--text2); }
+  .dt label.ci input { width: 76px; background: var(--bg3); border: 1px solid var(--border-hi); border-radius: 5px; padding: 3px 6px; font-size: 12.5px; color: var(--text); text-align: right; font-family: var(--sans); }
+  .dt label.ci input:focus { outline: 2px solid var(--brand); outline-offset: 0; }
+  .dt label.ci input:disabled { opacity: .45; }
   h4.sub-h { margin: 18px 0 6px; font-size: 13px; color: var(--text2); }
   .dt td.unit-h { font-weight: 700; color: var(--brand-ink); white-space: nowrap; }
   details.adv > summary { cursor: pointer; font-weight: 700; color: var(--text2); font-size: 12.5px; }
@@ -544,11 +548,16 @@
       <div class="panel-h"><span class="t">Total CAPEX — full project build-up</span><span class="s" id="fullSub"></span></div>
       <div class="panel-b">
         <div class="kpis" id="fullKpis"></div>
-        <details class="adv"><summary>Full-CAPEX assumptions (editable)</summary>
-          <div class="grid-inputs" id="fullInputs"></div>
-          <p class="note" style="margin-top:8px">Start-up, spares and inventory follow the NETL QGESS owner's-cost method. Catalyst volumes are KBR I.G (12 ktpa) scaled with capacity. Owner's costs, contingency and escalation are Gentari assumptions: replace them with internal factors where available.</p>
-        </details>
-        <div class="tbl-wrap"><table class="dt" id="fullTable"></table></div>
+        <div class="grid-inputs" style="max-width:760px;align-items:end">
+          <div class="field"><label for="inOsblMode">OSBL cost basis <span class="hint">KBR scope</span></label><select id="inOsblMode"><option value="fit">KBR power law (23.03 × ktpa^0.259)</option><option value="pct">% of ISBL (enter below)</option></select></div>
+          <div class="field"><label for="inOsblIsblPct">OSBL cost, % of ISBL <span class="hint">used when basis = % of ISBL</span></label><input type="number" step="1" min="0" id="inOsblIsblPct" value="35"/></div>
+          <div class="field"><button type="button" class="icon-btn" id="btnFullReset">↺ Reset cost assumptions</button></div>
+        </div>
+        <p class="note">Every value in the <b>Assumptions</b> column is editable. Changes recalculate the row, the total, specific CAPEX and LCOH straight away. Start-up, spares and inventory follow the NETL QGESS owner's-cost method; catalyst volumes are KBR I.G scaled with capacity; owner's costs, contingency and escalation are Gentari assumptions.</p>
+        <div class="tbl-wrap"><table class="dt" id="fullTable">
+          <thead><tr><th>#</th><th>Item</th><th>Assumptions (editable)</th><th class="n">MM USD</th><th class="n">% of TIC</th><th>Calculation</th><th>Source / status</th></tr></thead>
+          <tbody id="fullLic"></tbody><tbody id="fullAdd"></tbody><tbody id="fullEnd"></tbody>
+        </table></div>
         <div id="fullFlags"></div>
         <p class="note" id="fullNote"></p>
       </div>
@@ -979,6 +988,7 @@ function inputs() {
     pNg: num($("inPNg").value) * ($("inPNgUnit").value === "mmbtu" ? MMBTU_PER_MWH : 1),   // USD/MWh (LHV energy)
     fx: num($("inFx").value, 1.1448), rate: num($("inRate").value, 8) / 100, life: Math.max(1, num($("inLife").value, 25)),
     duikerExp: num($("inDuikerExp").value, FIT_KBR.b), osblPct: Math.max(0, num($("inOsblPct").value, 200)) / 100,
+    osblMode: $("inOsblMode").value, osblIsblPct: Math.max(0, num($("inOsblIsblPct").value, 35)) / 100,
   };
 }
 
@@ -1042,7 +1052,7 @@ function model(I) {
 
   // CAPEX
   r.capexIsbl = ref === "kbr" ? FIT_ISBL.f(I.cap) : null;
-  r.capexOsbl = ref === "kbr" ? FIT_OSBL.f(I.cap) : null;
+  r.capexOsbl = ref === "kbr" ? (I.osblMode === "pct" ? r.capexIsbl * I.osblIsblPct : FIT_OSBL.f(I.cap)) : null;
   r.capexBase = ref === "kbr" ? r.capexIsbl + r.capexOsbl : duikerCapexUsdM(I.cap, I);
   r.upliftUsd = I.basis === "custom" && (I.mode === "maxng" || (I.mode === "user" && CUSTOM.user.dpsa)) ? r.capexBase * I.uplift : 0;
   r.capex = r.capexBase + r.upliftUsd;
@@ -1215,7 +1225,7 @@ function renderCapex(I, r) {
   $("capexSub").textContent = r.ref === "kbr" ? "KBR curve · Class V ±50 %, Q3 2025 USD" : "Duiker curve · ±40 %, EUR converted at the FX input";
   const k = [kpi("CAPEX, total installed", fmt(r.capex, 0), `MM USD · range ${fmt(lo, 0)}–${fmt(hi, 0)}`, true)];
   if (r.capexIsbl !== null) k.push(kpi("of which ISBL", fmt(r.capexIsbl, 0), `MM USD, ${fmt(FIT_ISBL.a, 2)} × ktpa^${fmt(FIT_ISBL.b, 3)}`));
-  if (r.capexOsbl !== null) k.push(kpi("of which OSBL", fmt(r.capexOsbl, 0), `MM USD, ${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`));
+  if (r.capexOsbl !== null) k.push(kpi("of which OSBL", fmt(r.capexOsbl, 0), I.osblMode === "pct" ? `MM USD, user ${fmt(I.osblIsblPct * 100, 0)} % of ISBL (override)` : `MM USD, ${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`));
   if (r.upliftUsd > 0) k.push(kpi("Double-PSA uplift", fmt(r.upliftUsd, 1), `MM USD (${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)})`));
   k.push(kpi("Specific CAPEX", fmt(r.capex * 1e6 / r.h2t, 0), "USD per t/yr H₂ capacity"));
   k.push(kpi("Capital charge", fmt(r.capCharge, 1), `MM USD/yr (CRF ${fmt(crf(I.rate, I.life) * 100, 2)} %)`));
@@ -1316,7 +1326,7 @@ function renderOpex(I, r) {
     <tr class="total"><td>LCOH (cracking only) — full project CAPEX</td><td></td><td class="n">${fmt(r.full.capCharge + r.opexTotal, 2)}</td><td class="n">${fmt(r.full.lcoh, 3)}</td><td class="n"></td></tr></tbody>`;
 
   // Reconciliation against KBR's own LCOH at 12 ktpa NG100 on KBR's cost basis
-  const kI = { ...I, cap: 12, basis: "kbr", mode: "NG100", pNh3: 500, pEl: 140, pNg: 30, rate: 0.08, life: 25 };
+  const kI = { ...I, cap: 12, basis: "kbr", mode: "NG100", pNh3: 500, pEl: 140, pNg: 30, rate: 0.08, life: 25, osblMode: "fit" };
   const kr = model(kI);
   const dev = (kr.lcoh / 4.90 - 1) * 100;
   $("checkBox").innerHTML = `<div class="${Math.abs(dev) < 2 ? "ok" : "flag"}">Model check: KBR 12 ktpa NG100 on KBR's basis (NH₃ 500 USD/t, power 140, NG 30, 8 %, 25 yr) gives ${fmt(kr.lcoh, 2)} USD/kg against KBR's published 4.90 (${dev >= 0 ? "+" : ""}${fmt(dev, 1)} %).</div>`;
@@ -1374,17 +1384,30 @@ function renderSources() {
 // Start-up, spares and inventory: NETL QGESS "Cost Estimation Methodology" owner's costs (pre-production = 6 months of
 // operating labour + 1 month of maintenance materials and non-fuel consumables + 25 % of one month's fuel + 2 % of TPC;
 // spare parts 0.5 % of TPC; 60-day consumables inventory). Owner's costs, contingency and escalation are Gentari assumptions.
-const FULL_FIELDS = [   // id, label, default, step, min
-  ["suMonths", "Start-up: months of fixed O&M", 6, 1, 0], ["suFuelPct", "Start-up: % of one month's NH₃ + NG", 25, 5, 0],
-  ["suTicPct", "Start-up: % of licensor CAPEX", 2, 0.5, 0], ["sparePct", "Capital spares, % of licensor CAPEX", 0.5, 0.1, 0],
-  ["invDays", "Initial inventory, days of consumables", 60, 5, 0], ["catPrice", "Ni catalyst price, USD/kg", 30, 1, 0],
-  ["catMargin", "Catalyst loading margin, %", 5, 1, 0], ["licEur", "Licence fee, € M (KBR proxy: Duiker per-train fee)", 2.7, 0.1, 0],
-  ["ownerPct", "Owner's costs, % of licensor CAPEX", 7.5, 0.5, 0], ["contPct", "Contingency, % of licensor CAPEX", 25, 1, 0],
-  ["escRate", "Escalation, %/yr", 3, 0.5, 0], ["escYears", "Years from Q3 2025 to mid-construction", 2, 0.5, 0],
+const FULL_FIELDS = [   // id, label (inline unit), default, step, min
+  ["suMonths", "months of fixed O&M", 6, 1, 0], ["suFuelPct", "% of 1 month NH₃ + NG", 25, 5, 0], ["suTicPct", "% of TIC", 2, 0.5, 0],
+  ["sparePct", "% of TIC", 0.5, 0.1, 0], ["invDays", "days of consumables", 60, 5, 0],
+  ["catPrice", "USD/kg catalyst", 30, 1, 0], ["catMargin", "% loading margin", 5, 1, 0], ["licEur", "€ M per train", 2.7, 0.1, 0],
+  ["ownerPct", "% of TIC", 7.5, 0.5, 0], ["contPct", "% of TIC", 25, 1, 0], ["escRate", "%/yr", 3, 0.5, 0], ["escYears", "years from Q3 2025", 2, 0.5, 0],
 ];
 const FULL_DEF = Object.fromEntries(FULL_FIELDS.map((f) => [f[0], f[2]]));
+const ADD_ROWS = [   // key, item, assumption fields
+  ["su", "Commissioning & start-up", ["suMonths", "suFuelPct", "suTicPct"]],
+  ["spare", "Capital spares", ["sparePct"]],
+  ["inv", "Initial inventory (chemicals & consumables)", ["invDays"]],
+  ["cat", "Catalyst first fill (Ni)", ["catPrice", "catMargin"]],
+  ["lic", "Licence fee & royalties", ["licEur"]],
+  ["owner", "Owner's costs (owner's team/PMC, permitting, insurance)", ["ownerPct"]],
+  ["cont", "Contingency (incl. currency risk)", ["contPct"]],
+  ["esc", "Escalation from Q3 2025", ["escRate", "escYears"]],
+];
+// The add-on rows and their inputs are built once, so a cell keeps focus while typing; recalc only rewrites the value cells.
 function buildFullInputs() {
-  $("fullInputs").innerHTML = FULL_FIELDS.map(([id, label, def, step, min]) => `<div class="field"><label for="fc_${id}">${label}</label><input type="number" id="fc_${id}" step="${step}" min="${min}" value="${def}"/></div>`).join("");
+  const fld = Object.fromEntries(FULL_FIELDS.map((f) => [f[0], f]));
+  $("fullAdd").innerHTML = ADD_ROWS.map(([key, item, ids]) => `<tr><td id="fn_${key}"></td><td>${item}</td><td>${ids.map((id) => {
+    const [, label, def, step, min] = fld[id];
+    return `<label class="ci"><input type="number" id="fc_${id}" step="${step}" min="${min}" value="${def}" aria-label="${item}: ${label}"/><span>${label}</span></label>`;
+  }).join("")}</td><td class="n"><b id="fv_${key}"></b></td><td class="n" id="fp_${key}"></td><td class="note" id="fb_${key}"></td><td class="note" id="fs_${key}"></td></tr>`).join("");
   FULL_FIELDS.forEach(([id]) => $("fc_" + id).addEventListener("input", recalc));
 }
 function fullInputs() {
@@ -1401,61 +1424,69 @@ function catalystFill(cap, F) {   // KBR I.G volumes at 12 ktpa, scaled linearly
 function fullCapex(I, r) {
   const F = fullInputs(), tic = r.capex, sum = (ts) => r.opex.filter((o) => ts.includes(o.t)).reduce((a, o) => a + o.v, 0);
   const fixed = sum(["fixed"]), nonFuel = sum(["el", "cons", "lic"]), consum = sum(["cons"]), fuel = sum(["nh3", "ng"]);
-  const L = [];
-  const add = (k, v, basis, src, cls) => L.push({ k, v, basis, src, cls });
-  const isK = r.ref === "kbr";
+  const isK = r.ref === "kbr", lic = [], add = {};
   if (isK && r.capexIsbl !== null) {
-    add("KBR ISBL TIC", r.capexIsbl, `${fmt(FIT_ISBL.a, 2)} × ktpa^${fmt(FIT_ISBL.b, 3)}`, "KBR §4.1 (stated 78 / 110 / 191 / 209 at 12 / 24 / 68 / 80 ktpa)", "lic");
-    add("KBR OSBL (utilities & offsites, I.H)", r.capexOsbl, `${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`, "Derived from KBR LCOH; excludes Terminal & Storage B.L.", "lic");
-  } else add("Duiker lump-sum turnkey", r.capexBase, `€47M × ${fmt(I.fx, 4)}, exponent ${fmt(I.duikerExp, 2)}`, "Duiker Table 8: incl. buildings, civil, EPC, construction licence fee", "lic");
-  if (r.upliftUsd > 0) add("Double-PSA uplift", r.upliftUsd, `${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)}`, "Assumption (Custom pathway)", "lic");
+    const pct = I.osblMode === "pct";
+    lic.push({ k: "KBR ISBL TIC", v: r.capexIsbl, a: "", basis: `${fmt(FIT_ISBL.a, 2)} × ktpa^${fmt(FIT_ISBL.b, 3)}`, src: "KBR §4.1 (stated 78 / 110 / 191 / 209 at 12 / 24 / 68 / 80 ktpa)" });
+    lic.push({ k: "KBR OSBL (utilities & offsites, I.H)", v: r.capexOsbl, a: pct ? `${fmt(I.osblIsblPct * 100, 0)} % of ISBL (set above)` : "KBR power law (set above)",
+      basis: pct ? `${fmt(r.capexIsbl, 1)} × ${fmt(I.osblIsblPct * 100, 0)} %` : `${fmt(FIT_OSBL.a, 2)} × ktpa^${fmt(FIT_OSBL.b, 3)} · ${fmt(r.capexOsbl / r.capexIsbl * 100, 0)} % of ISBL`,
+      src: pct ? "User override; excludes Terminal & Storage B.L." : "Derived from KBR LCOH; excludes Terminal & Storage B.L." });
+  } else lic.push({ k: "Duiker lump-sum turnkey", v: r.capexBase, a: "", basis: `€47M × ${fmt(I.fx, 4)}, exponent ${fmt(I.duikerExp, 2)}`, src: "Duiker Table 8: incl. buildings, civil, EPC, construction licence fee" });
+  if (r.upliftUsd > 0) lic.push({ k: "Double-PSA uplift", v: r.upliftUsd, a: `${fmt(I.uplift * 100, 0)} % (set in inputs)`, basis: `${fmt(I.uplift * 100, 0)} % of ${fmt(r.capexBase, 0)}`, src: "Assumption (Custom pathway)" });
   const suLab = fixed * F.suMonths / 12, suCons = nonFuel / 12, suFuel = fuel / 12 * F.suFuelPct / 100, suTic = tic * F.suTicPct / 100;
-  const su = suLab + suCons + suFuel + suTic;
-  add("Commissioning & start-up", su, `${fmt(F.suMonths, 0)} mo fixed O&M ${fmt(suLab, 1)} + 1 mo power & consumables ${fmt(suCons, 1)} + ${fmt(F.suFuelPct, 0)} % of 1 mo NH₃/NG ${fmt(suFuel, 1)} + ${fmt(F.suTicPct, 1)} % ${fmt(suTic, 1)}`, "NETL QGESS pre-production costs; excluded by KBR §4.1");
-  add("Capital spares", tic * F.sparePct / 100, `${fmt(F.sparePct, 1)} % of licensor CAPEX`, "NETL QGESS; excluded by KBR §4.1");
-  add("Initial inventory (chemicals & consumables)", consum * F.invDays / 365, `${fmt(F.invDays, 0)} days of consumables (${fmt(consum, 2)} MM USD/yr)`, "NETL QGESS inventory capital");
+  add.su = { v: suLab + suCons + suFuel + suTic, basis: `${fmt(suLab, 1)} fixed O&M + ${fmt(suCons, 1)} (1 month power & consumables) + ${fmt(suFuel, 1)} NH₃/NG + ${fmt(suTic, 1)} (% of TIC)`, src: "NETL QGESS pre-production costs; excluded by KBR §4.1" };
+  add.spare = { v: tic * F.sparePct / 100, basis: `${fmt(tic, 1)} × ${fmt(F.sparePct, 1)} %`, src: "NETL QGESS; excluded by KBR §4.1" };
+  add.inv = { v: consum * F.invDays / 365, basis: `${fmt(consum, 2)} MM USD/yr consumables × ${fmt(F.invDays, 0)} / 365`, src: "NETL QGESS inventory capital" };
   const cat = isK ? catalystFill(I.cap, F) : null;
-  if (cat) add("Catalyst first fill (Ni)", cat.usdM, `${fmt(cat.t, 1)} t (${fmt(cat.m3, 1)} m³ + ${fmt(F.catMargin, 0)} %) × ${fmt(F.catPrice, 0)} USD/kg`, "KBR I.G volumes scaled; KBR supplies first fill, may already be in TIC — confirm");
-  else add("Catalyst first fill", 0, "No catalyst volumes in the Duiker package", "Not estimated");
-  const lic = isK ? F.licEur * I.fx : 0;
-  add("Licence fee & royalties", lic, isK ? `€${fmt(F.licEur, 1)}M × ${fmt(I.fx, 4)}` : "Inside the Duiker turnkey price", isK ? "Not quoted by KBR; Duiker §4.2 per-train fee as proxy — ask KBR" : "Duiker Table 8");
-  add("Owner's costs (owner's team/PMC, permitting, insurance)", tic * F.ownerPct / 100, `${fmt(F.ownerPct, 1)} % of licensor CAPEX`, "Assumption");
-  add("Contingency (incl. currency risk)", tic * F.contPct / 100, `${fmt(F.contPct, 0)} % of licensor CAPEX`, `Assumption; licensor accuracy ±${fmt(r.accuracy * 100, 0)} %`);
-  const esc = tic * (Math.pow(1 + F.escRate / 100, F.escYears) - 1);
-  add("Escalation from Q3 2025", esc, `${fmt(F.escRate, 1)} %/yr × ${fmt(F.escYears, 1)} yr on licensor CAPEX`, "Assumption; KBR has no forward escalation");
-  const total = L.reduce((a, x) => a + x.v, 0), capCharge = total * crf(I.rate, I.life);
-  return { F, L, tic, total, cat, capCharge, lcoh: (capCharge + r.opexTotal) / (r.h2t / 1000) };
+  add.cat = cat ? { v: cat.usdM, basis: `${fmt(cat.t, 1)} t (${fmt(cat.m3, 1)} m³ × density × ${fmt(1 + F.catMargin / 100, 2)}) × ${fmt(F.catPrice, 0)} USD/kg`, src: "KBR I.G volumes scaled; KBR supplies first fill, may already be in TIC — set price to 0 if so" }
+    : { v: 0, basis: "No catalyst volumes in the Duiker package", src: "Not estimated" };
+  add.lic = isK ? { v: F.licEur * I.fx, basis: `€${fmt(F.licEur, 1)}M × ${fmt(I.fx, 4)} USD/EUR`, src: "Not quoted by KBR; Duiker §4.2 per-train fee as proxy — ask KBR" }
+    : { v: 0, basis: "Inside the Duiker turnkey price", src: "Duiker Table 8" };
+  add.owner = { v: tic * F.ownerPct / 100, basis: `${fmt(tic, 1)} × ${fmt(F.ownerPct, 1)} %`, src: "Assumption" };
+  add.cont = { v: tic * F.contPct / 100, basis: `${fmt(tic, 1)} × ${fmt(F.contPct, 1)} %`, src: `Assumption; licensor accuracy ±${fmt(r.accuracy * 100, 0)} %` };
+  const escF = Math.pow(1 + F.escRate / 100, F.escYears) - 1;
+  add.esc = { v: tic * escF, basis: `${fmt(tic, 1)} × ((1 + ${fmt(F.escRate, 1)} %)^${fmt(F.escYears, 1)} − 1) = ${fmt(escF * 100, 1)} %`, src: "Assumption; KBR has no forward escalation" };
+  const total = tic + Object.values(add).reduce((a, x) => a + x.v, 0), capCharge = total * crf(I.rate, I.life);
+  return { F, lic, add, tic, total, cat, capCharge, lcoh: (capCharge + r.opexTotal) / (r.h2t / 1000) };
 }
 function renderFull(I, r) {
-  const f = r.full, tic = f.tic, h = r.h2t;
-  $("fullSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · ${r.basisLabel} · overnight, ${r.ref === "kbr" ? "Q3 2025 USD + escalation" : "EUR converted at the FX input"}`;
+  const f = r.full, tic = f.tic, h = r.h2t, isK = r.ref === "kbr";
+  $("fullSub").textContent = `${fmt(I.cap, 1)} ktpa H₂ · ${r.basisLabel} · overnight, ${isK ? "Q3 2025 USD + escalation" : "EUR converted at the FX input"}`;
   $("fullKpis").innerHTML = [
     kpi("Total overnight CAPEX", fmt(f.total, 0), `MM USD · ${fmt(f.total / tic, 2)} × licensor CAPEX`, true),
-    kpi("Licensor CAPEX (TIC)", fmt(tic, 0), r.ref === "kbr" ? "MM USD · KBR ISBL + OSBL" : "MM USD · Duiker turnkey"),
+    kpi("Licensor CAPEX (TIC)", fmt(tic, 0), isK ? "MM USD · KBR ISBL + OSBL" : "MM USD · Duiker turnkey"),
     kpi("Add-ons", fmt(f.total - tic, 0), "MM USD · start-up, spares, catalyst, licence, owner's, contingency, escalation"),
     kpi("Specific CAPEX", fmt(f.total * 1e6 / h, 0), "USD per t/yr H₂ capacity"),
     kpi("LCOH, full CAPEX", fmt(f.lcoh, 2), `USD/kg H₂ (licensor CAPEX: ${fmt(r.lcoh, 2)})`, true),
   ].join("");
-  const row = (x, i) => `<tr${x.cls === "lic" ? ' class="active"' : ""}><td>${i + 1}</td><td>${x.k}</td><td class="n"><b>${fmt(x.v, 1)}</b></td><td class="n">${fmt(x.v / tic * 100, 1)} %</td><td class="note">${x.basis}</td><td class="note">${x.src}</td></tr>`;
-  const nLic = f.L.filter((x) => x.cls === "lic").length;
+  $("fullLic").innerHTML = f.lic.map((x, i) => `<tr class="active"><td>${i + 1}</td><td>${x.k}</td><td class="note">${x.a}</td><td class="n"><b>${fmt(x.v, 1)}</b></td><td class="n">${fmt(x.v / tic * 100, 1)} %</td><td class="note">${x.basis}</td><td class="note">${x.src}</td></tr>`).join("")
+    + `<tr class="total"><td></td><td>Licensor CAPEX (TIC)</td><td></td><td class="n">${fmt(tic, 1)}</td><td class="n">100 %</td><td class="note">${isK ? "Includes engineering, procurement and construction" : "Lump-sum turnkey"}</td><td class="note">Class ${isK ? "V ±50 %" : "±40 %"}</td></tr>`;
+  ADD_ROWS.forEach(([key], i) => {
+    const x = f.add[key];
+    $("fn_" + key).textContent = f.lic.length + i + 1;
+    $("fv_" + key).textContent = fmt(x.v, 1);
+    $("fp_" + key).textContent = `${fmt(x.v / tic * 100, 1)} %`;
+    $("fb_" + key).textContent = x.basis;
+    $("fs_" + key).textContent = x.src;
+  });
+  ["catPrice", "catMargin", "licEur"].forEach((id) => { $("fc_" + id).disabled = !isK; });
+  $("inOsblMode").disabled = !isK; $("inOsblIsblPct").disabled = !isK || I.osblMode !== "pct";
   const ex = [
     ["Terminal & Storage B.L.", "NH₃ jetty, NH₃ storage and storage flare, H₂ storage, H₂ compression above 20 barg — use the NH₃ Storage Design module"],
-    ["Buildings & laboratories", r.ref === "kbr" ? "Named as OSBL in KBR §1/§4.1 but not in the I.H equipment list — confirm whether KBR's OSBL factor covers them" : "Included in the Duiker turnkey price"],
+    ["Buildings & laboratories", isK ? "Named as OSBL in KBR §1/§4.1 but not in the I.H equipment list — confirm whether KBR's OSBL factor covers them" : "Included in the Duiker turnkey price"],
     ["Sales tax & import duties", "Depends on Malaysian incentives and exemptions"],
     ["Interest during construction / financing", "Not part of overnight cost"],
     ["Land", "Site-specific"],
   ];
-  $("fullTable").innerHTML = `<thead><tr><th>#</th><th>Item</th><th class="n">MM USD</th><th class="n">% of TIC</th><th>Basis</th><th>Source / status</th></tr></thead><tbody>
-    ${f.L.slice(0, nLic).map(row).join("")}
-    <tr class="total"><td></td><td>Licensor CAPEX (TIC)</td><td class="n">${fmt(tic, 1)}</td><td class="n">100 %</td><td class="note">${r.ref === "kbr" ? "Includes engineering, procurement and construction" : "Lump-sum turnkey"}</td><td class="note">Class ${r.ref === "kbr" ? "V ±50 %" : "±40 %"}</td></tr>
-    ${f.L.slice(nLic).map((x, i) => row(x, i + nLic)).join("")}
-    <tr class="total"><td></td><td>Total overnight CAPEX</td><td class="n">${fmt(f.total, 1)}</td><td class="n">${fmt(f.total / tic * 100, 0)} %</td><td class="note">${fmt(f.total * 1e6 / h, 0)} USD per t/yr H₂</td><td></td></tr>
-    ${ex.map(([k, d]) => `<tr><td></td><td class="note">Excluded: ${k}</td><td class="n note">—</td><td></td><td class="note" colspan="2">${d}</td></tr>`).join("")}</tbody>`;
+  $("fullEnd").innerHTML = `<tr class="total"><td></td><td>Total overnight CAPEX</td><td></td><td class="n">${fmt(f.total, 1)}</td><td class="n">${fmt(f.total / tic * 100, 0)} %</td><td class="note">${fmt(f.total * 1e6 / h, 0)} USD per t/yr H₂</td><td></td></tr>`
+    + ex.map(([k, d]) => `<tr><td></td><td class="note">Excluded: ${k}</td><td></td><td class="n note">—</td><td></td><td class="note" colspan="2">${d}</td></tr>`).join("");
   const fl = [];
-  if (f.cat) fl.push(`Catalyst: ${f.cat.beds.map((b) => `${b.name} ${fmt(b.m3, 1)} m³`).join(" + ")} = ${fmt(f.cat.t, 1)} t incl. ${fmt(f.F.catMargin, 0)} % margin (KBR I.G note 2: 3–5 %), ${KBR.cat.life}-year life. Volumes are KBR's 12 ktpa figures scaled with capacity; KBR note 3 says final volumes follow equipment design. SCR catalyst (WO₃/V₂O₅, vendor) is not included. Price default ${fmt(FULL_DEF.catPrice, 0)} USD/kg sits in the $15–50/kg range from market sources, not a vendor quote.`);
-  if (r.ref === "kbr") fl.push("KBR lists the catalyst first fill and its proprietary equipment in its scope of supply. If the ISBL TIC already carries the first fill, set the catalyst price to 0 to avoid double counting.");
+  if (isK && I.osblMode === "pct") fl.push(`OSBL override: ${fmt(I.osblIsblPct * 100, 0)} % of ISBL = ${fmt(r.capexOsbl, 1)} MM USD, against ${fmt(FIT_OSBL.f(I.cap), 1)} on KBR's power law (${fmt(FIT_OSBL.f(I.cap) / r.capexIsbl * 100, 0)} % of ISBL). The override flows into TIC, every %-of-TIC line, LCOH and the CAPEX chart point.`);
+  if (f.cat) fl.push(`Catalyst: ${f.cat.beds.map((b) => `${b.name} ${fmt(b.m3, 1)} m³`).join(" + ")} = ${fmt(f.cat.t, 1)} t incl. ${fmt(f.F.catMargin, 0)} % margin (KBR I.G note 2: 3–5 %), ${KBR.cat.life}-year life. Volumes are KBR's 12 ktpa figures scaled with capacity; KBR note 3 says final volumes follow equipment design. SCR catalyst (WO₃/V₂O₅, vendor) is not included. Default price ${fmt(FULL_DEF.catPrice, 0)} USD/kg sits in the $15–50/kg market range, not a vendor quote.`);
+  if (isK) fl.push("KBR lists the catalyst first fill and its proprietary equipment in its scope of supply. If the ISBL TIC already carries the first fill, set the catalyst price to 0 to avoid double counting.");
+  else fl.push("Duiker basis: the OSBL, catalyst and licence inputs are disabled (no ISBL/OSBL split, no catalyst volumes, licence fee inside the turnkey price).");
   $("fullFlags").innerHTML = fl.map((x) => `<div class="flag">${x}</div>`).join("");
-  $("fullNote").innerHTML = `Licensor CAPEX is the total installed cost: engineering, procurement and construction. KBR §4.1 excludes contingency, permitting, sales tax, import duties, capital spares, commissioning spares, O&M spares, commissioning & start-up, owner's cost, licence fees, royalties and currency risk, with no forward escalation; rows 3 onward add those back. Start-up uses the NETL QGESS pre-production method with this case's OPEX lines; for a cracker the NH₃ burned during start-up is the largest driver. Contingency, owner's costs and escalation are applied to licensor CAPEX only.`;
+  $("fullNote").innerHTML = `Licensor CAPEX is the total installed cost: engineering, procurement and construction. KBR §4.1 excludes contingency, permitting, sales tax, import duties, capital spares, commissioning spares, O&M spares, commissioning & start-up, owner's cost, licence fees, royalties and currency risk, with no forward escalation; the add-on rows put those back. Start-up uses the NETL QGESS pre-production method with this case's OPEX lines, so it moves with NH₃ price and capacity. Contingency, owner's costs, spares and escalation are applied to licensor CAPEX only.`;
 }
 
 // ---------- ISBL equipment list ----------
@@ -1907,6 +1938,13 @@ $("inPNgUnit").addEventListener("change", (e) => {     // keep the same price, s
   }
   recalc();
 });
+$("inOsblMode").addEventListener("change", recalc);
+$("inOsblIsblPct").addEventListener("input", recalc);
+$("btnFullReset").addEventListener("click", () => {
+  for (const [id, v] of Object.entries(FULL_DEF)) $("fc_" + id).value = v;
+  $("inOsblMode").value = "fit"; $("inOsblIsblPct").value = 35;
+  recalc();
+});
 ["inCap", "inDays", "inOsblPct", "inPsaUplift", "inPNh3", "inPEl", "inPNg", "inFx", "inRate", "inLife", "inDuikerExp"].forEach((id) => $(id).addEventListener("input", recalc));
 $("inH2KtpaToll").addEventListener("input", recalcToll);
 $("inTolling").addEventListener("change", recalcToll);
@@ -1920,6 +1958,7 @@ $("btnReset").addEventListener("click", () => {
   for (const [id, v] of Object.entries(OSBL_DEF)) $("os_" + id).value = v;
   for (const [id, v] of Object.entries(UTIL_DEF)) $("uc_" + id).value = v;
   for (const [id, v] of Object.entries(FULL_DEF)) $("fc_" + id).value = v;
+  $("inOsblMode").value = "fit"; $("inOsblIsblPct").value = 35; $("inOsblIsblPct").disabled = true;
   $("inDuikerExp").value = FIT_KBR.b.toFixed(2);
   populateModes(); $("inMode").value = "NG100";
   $("inTolling").value = TOLLING[0].id;
