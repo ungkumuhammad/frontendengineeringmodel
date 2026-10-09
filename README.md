@@ -29,3 +29,8 @@ npm run dev
 
 The original calculators are preserved verbatim under
 `Dashboard/public/modules/` and are surfaced as modules inside the dashboard.
+
+## Brand
+
+This repository uses the **Gentari** brand. Logo, colours and typography are in
+**[`brand/`](./brand)**; follow it for the dashboard, modules, decks and documents.
