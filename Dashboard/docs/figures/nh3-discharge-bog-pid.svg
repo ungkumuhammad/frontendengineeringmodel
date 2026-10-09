@@ -1,0 +1,236 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 790" width="1500" height="790" font-family="Arial, Helvetica, sans-serif">
+<style>
+.bg{fill:#fff}.pl{stroke:#1a1a1a;stroke-width:2.6;fill:none}.pv{stroke:#1a1a1a;stroke-width:2.6;fill:none;stroke-dasharray:14 4 2 4}
+.il{stroke:#1a5fb4;stroke-width:1.2;fill:none;stroke-dasharray:3 3}
+.eq{stroke:#1a1a1a;stroke-width:2.2;fill:#f6f6f2}.liq{fill:#cfe3f5;stroke:none}
+.vv{stroke:#1a1a1a;stroke-width:1.6;fill:#fff}.esd{fill:#f4c7c3}.esdb{fill:#fff;stroke:#1a1a1a;stroke-width:1.2}
+.ib{fill:#fff;stroke:#1a1a1a;stroke-width:1.4}.ibl{stroke:#1a1a1a;stroke-width:1.2}
+.it{font-size:9.5px;font-weight:700;fill:#1a1a1a}.tag{font-size:12px;font-weight:700;fill:#1a1a1a}
+.sm{font-size:11px;fill:#444}.h{font-size:13px;font-weight:700;fill:#1a1a1a;letter-spacing:.5px}.ttl{font-size:20px;font-weight:700;fill:#1a1a1a}
+.zone{fill:none;stroke:#888;stroke-width:1.2;stroke-dasharray:10 5}.key{fill:#fff;stroke:#1a1a1a;stroke-width:1}
+</style>
+<rect class="bg" width="1500" height="790"/>
+<text x="750" y="32" class="ttl" text-anchor="middle">P&amp;ID — Refrigerated NH3 ship discharge: instrumentation required to calculate BOG at reduced unloading rate</text>
+<text x="750" y="52" class="sm" text-anchor="middle">PRELIMINARY / FOR DISCUSSION · tags indicative (ISA-5.1) · scope = what the BOG energy &amp; mass balance needs, not a construction drawing</text>
+<rect x="25" y="64" width="310" height="546" class="zone"/>
+<text x="180" y="84" class="h" text-anchor="middle">VESSEL (SHIP)</text>
+<rect x="355" y="64" width="480" height="546" class="zone"/>
+<text x="595" y="84" class="h" text-anchor="middle">JETTY &amp; TRANSFER LINE</text>
+<rect x="855" y="64" width="620" height="546" class="zone"/>
+<text x="872" y="84" class="h" text-anchor="start">SHORE TANK &amp; BOG HANDLING</text>
+<rect x="60" y="170" width="200" height="230" rx="40" class="eq"/><rect x="62" y="290" width="196" height="108" rx="38" class="liq"/>
+<text x="160" y="205" class="tag" text-anchor="middle">Ship cargo tanks</text>
+<text x="160" y="222" class="sm" text-anchor="middle">saturated NH3 ≈ −33 °C</text>
+<text x="160" y="350" class="sm" text-anchor="middle">LIQUID NH3</text>
+<path d="M260,210 L283,210" class="il"/>
+<circle cx="300" cy="210" r="17" class="ib"/><line x1="283" y1="210" x2="317" y2="210" class="ibl"/>
+<text x="300" y="207" class="it" text-anchor="middle">LT</text>
+<text x="300" y="221" class="it" text-anchor="middle">S01</text>
+<path d="M260,265 L283,265" class="il"/>
+<circle cx="300" cy="265" r="17" class="ib"/><line x1="283" y1="265" x2="317" y2="265" class="ibl"/>
+<text x="300" y="262" class="it" text-anchor="middle">PT</text>
+<text x="300" y="276" class="it" text-anchor="middle">S02</text>
+<path d="M260,320 L283,320" class="il"/>
+<circle cx="300" cy="320" r="17" class="ib"/><line x1="283" y1="320" x2="317" y2="320" class="ibl"/>
+<text x="300" y="317" class="it" text-anchor="middle">TT</text>
+<text x="300" y="331" class="it" text-anchor="middle">S03</text>
+<text x="300" y="352" class="sm" text-anchor="middle">ship tank</text>
+<text x="300" y="364" class="sm" text-anchor="middle">L / P / T</text>
+<circle cx="110" cy="465" r="20" class="eq"/><path d="M110,445 L130,465 L110,485" class="eq" fill="none"/>
+<circle cx="190" cy="465" r="20" class="eq"/><path d="M190,445 L210,465 L190,485" class="eq" fill="none"/>
+<path d="M110,400 L110,445" class="pl"/>
+<path d="M190,400 L190,445" class="pl"/>
+<text x="150" y="548" class="sm" text-anchor="middle">P-S1/S2 cargo pumps</text>
+<path d="M110,485 L110,520 L335,520" class="pl"/>
+<path d="M190,485 L190,520" class="pl"/>
+<circle cx="60" cy="465" r="17" class="ib"/><line x1="43" y1="465" x2="77" y2="465" class="ibl"/>
+<text x="60" y="462" class="it" text-anchor="middle">JI</text>
+<text x="60" y="476" class="it" text-anchor="middle">S05</text>
+<path d="M77,465 L90,465" class="il"/>
+<text x="60" y="495" class="sm" text-anchor="middle">pump kW</text>
+<circle cx="250" cy="440" r="17" class="ib"/><line x1="233" y1="440" x2="267" y2="440" class="ibl"/>
+<text x="250" y="437" class="it" text-anchor="middle">PT</text>
+<text x="250" y="451" class="it" text-anchor="middle">S04</text>
+<path d="M250,457 L250,520" class="il"/>
+<text x="250" y="408" class="sm" text-anchor="middle">pump disch. P</text>
+<path d="M160,170 L160,140 L335,140" class="pv"/>
+<polygon transform="translate(210,140)" points="8,-5 -4,0 8,5" fill="#1a1a1a"/>
+<text x="160" y="125" class="sm" text-anchor="middle">vapour space / return</text>
+<text x="330" y="548" class="sm" text-anchor="end">ship manifold →</text>
+<path d="M335,520 L835,520" class="pl"/>
+<path d="M366,513 L384,527 L384,513 L366,527 Z" class="vv"/>
+<text x="375" y="548" class="sm" text-anchor="middle">HV</text>
+<path d="M416,513 L434,527 L434,513 L416,527 Z" class="vv esd"/>
+<rect x="420" y="499" width="10" height="9" class="esdb"/>
+<path d="M425,508 L425,519" class="il"/>
+<text x="425" y="548" class="sm" text-anchor="middle">XV-J01</text>
+<circle cx="480" cy="450" r="17" class="ib"/><line x1="463" y1="450" x2="497" y2="450" class="ibl"/>
+<text x="480" y="447" class="it" text-anchor="middle">PT</text>
+<text x="480" y="461" class="it" text-anchor="middle">J01</text>
+<path d="M480,467 L480,520" class="il"/>
+<circle cx="530" cy="450" r="17" class="ib"/><line x1="513" y1="450" x2="547" y2="450" class="ibl"/>
+<text x="530" y="447" class="it" text-anchor="middle">TT</text>
+<text x="530" y="461" class="it" text-anchor="middle">J02</text>
+<path d="M530,467 L530,520" class="il"/>
+<rect x="575" y="510" width="40" height="20" class="eq"/>
+<text x="595" y="524" class="tag" text-anchor="middle">FE</text>
+<circle cx="595" cy="450" r="17" class="ib"/><line x1="578" y1="450" x2="612" y2="450" class="ibl"/>
+<text x="595" y="447" class="it" text-anchor="middle">FT</text>
+<text x="595" y="461" class="it" text-anchor="middle">J01</text>
+<path d="M595,467 L595,510" class="il"/>
+<text x="595" y="548" class="sm" text-anchor="middle">mass flow + density</text>
+<text x="595" y="562" class="sm" text-anchor="middle">(Coriolis, custody grade)</text>
+<rect x="680" y="508" width="40" height="24" fill="#fff"/>
+<path d="M676,530 L688,510" class="pl"/>
+<path d="M712,530 L724,510" class="pl"/>
+<text x="715" y="504" class="tag" text-anchor="middle">INSULATED TRANSFER LINE, L ≈ 500 m</text>
+<text x="715" y="490" class="sm" text-anchor="middle">DN __ · PUR/PIR + vapour barrier</text>
+<circle cx="760" cy="568" r="17" class="ib"/><line x1="743" y1="568" x2="777" y2="568" class="ibl"/>
+<text x="760" y="565" class="it" text-anchor="middle">TT</text>
+<text x="760" y="579" class="it" text-anchor="middle">L01</text>
+<path d="M760,551 L760,520" class="il"/>
+<text x="760" y="596" class="sm" text-anchor="middle">line skin T</text>
+<circle cx="815" cy="568" r="17" class="ib"/><line x1="798" y1="568" x2="832" y2="568" class="ibl"/>
+<text x="815" y="565" class="it" text-anchor="middle">TI</text>
+<text x="815" y="579" class="it" text-anchor="middle">L02</text>
+<text x="815" y="596" class="sm" text-anchor="middle">ambient T</text>
+<polygon transform="translate(640,520)" points="-8,-5 4,0 -8,5" fill="#1a1a1a"/>
+<polygon transform="translate(790,520)" points="-8,-5 4,0 -8,5" fill="#1a1a1a"/>
+<path d="M335,140 L845,140" class="pv"/>
+<polygon transform="translate(520,140)" points="8,-5 -4,0 8,5" fill="#1a1a1a"/>
+<polygon transform="translate(760,140)" points="8,-5 -4,0 8,5" fill="#1a1a1a"/>
+<text x="530" y="124" class="sm" text-anchor="middle">VAPOUR RETURN ARM VA-1</text>
+<path d="M421,133 L439,147 L439,133 L421,147 Z" class="vv esd"/>
+<rect x="425" y="119" width="10" height="9" class="esdb"/>
+<path d="M430,128 L430,139" class="il"/>
+<text x="430" y="168" class="sm" text-anchor="middle">XV-J02</text>
+<circle cx="480" cy="195" r="17" class="ib"/><line x1="463" y1="195" x2="497" y2="195" class="ibl"/>
+<text x="480" y="192" class="it" text-anchor="middle">PT</text>
+<text x="480" y="206" class="it" text-anchor="middle">V01</text>
+<path d="M480,178 L480,140" class="il"/>
+<circle cx="530" cy="195" r="17" class="ib"/><line x1="513" y1="195" x2="547" y2="195" class="ibl"/>
+<text x="530" y="192" class="it" text-anchor="middle">TT</text>
+<text x="530" y="206" class="it" text-anchor="middle">V02</text>
+<path d="M530,178 L530,140" class="il"/>
+<rect x="600" y="130" width="40" height="20" class="eq"/>
+<text x="620" y="144" class="tag" text-anchor="middle">FE</text>
+<circle cx="620" cy="195" r="17" class="ib"/><line x1="603" y1="195" x2="637" y2="195" class="ibl"/>
+<text x="620" y="192" class="it" text-anchor="middle">FT</text>
+<text x="620" y="206" class="it" text-anchor="middle">V01</text>
+<path d="M620,178 L620,150" class="il"/>
+<text x="620" y="228" class="sm" text-anchor="middle">vapour return flow</text>
+<text x="620" y="241" class="sm" text-anchor="middle">(thermal mass / vortex)</text>
+<rect x="990" y="210" width="210" height="330" rx="30" class="eq"/><rect x="992" y="380" width="206" height="158" rx="28" class="liq"/>
+<text x="1095" y="245" class="tag" text-anchor="middle">TK-201 shore NH3 tank</text>
+<text x="1095" y="262" class="sm" text-anchor="middle">refrigerated, full containment</text>
+<text x="1095" y="460" class="sm" text-anchor="middle">LIQUID</text>
+<path d="M835,520 L930,520 L930,300 L990,300" class="pl"/>
+<polygon transform="translate(880,520)" points="-8,-5 4,0 -8,5" fill="#1a1a1a"/>
+<polygon transform="translate(930,420)" points="-5,8 0,-4 5,8" fill="#1a1a1a"/>
+<path d="M921,478 L939,492 L939,478 L921,492 Z" class="vv esd"/>
+<rect x="925" y="464" width="10" height="9" class="esdb"/>
+<path d="M930,473 L930,484" class="il"/>
+<text x="962" y="489" class="sm" text-anchor="middle">XV-T01</text>
+<path d="M921,423 L939,437 L939,423 L921,437 Z" class="vv"/>
+<text x="962" y="434" class="sm" text-anchor="middle">HV</text>
+<circle cx="890" cy="330" r="17" class="ib"/><line x1="873" y1="330" x2="907" y2="330" class="ibl"/>
+<text x="890" y="327" class="it" text-anchor="middle">TT</text>
+<text x="890" y="341" class="it" text-anchor="middle">T07</text>
+<path d="M907,330 L930,330" class="il"/>
+<circle cx="890" cy="372" r="17" class="ib"/><line x1="873" y1="372" x2="907" y2="372" class="ibl"/>
+<text x="890" y="369" class="it" text-anchor="middle">PT</text>
+<text x="890" y="383" class="it" text-anchor="middle">T08</text>
+<path d="M907,372 L930,372" class="il"/>
+<text x="890" y="404" class="sm" text-anchor="middle">inlet T / P</text>
+<path d="M1200,240 L1218,240" class="il"/>
+<circle cx="1235" cy="240" r="17" class="ib"/><line x1="1218" y1="240" x2="1252" y2="240" class="ibl"/>
+<text x="1235" y="237" class="it" text-anchor="middle">PT</text>
+<text x="1235" y="251" class="it" text-anchor="middle">T01</text>
+<text x="1262" y="244" class="sm" text-anchor="start">tank P</text>
+<path d="M1200,292 L1218,292" class="il"/>
+<circle cx="1235" cy="292" r="17" class="ib"/><line x1="1218" y1="292" x2="1252" y2="292" class="ibl"/>
+<text x="1235" y="289" class="it" text-anchor="middle">PIC</text>
+<text x="1235" y="303" class="it" text-anchor="middle">T02</text>
+<text x="1262" y="296" class="sm" text-anchor="start">P control</text>
+<text x="1262" y="309" class="sm" text-anchor="start">→ BOG compressor</text>
+<path d="M1200,344 L1218,344" class="il"/>
+<circle cx="1235" cy="344" r="17" class="ib"/><line x1="1218" y1="344" x2="1252" y2="344" class="ibl"/>
+<text x="1235" y="341" class="it" text-anchor="middle">LT</text>
+<text x="1235" y="355" class="it" text-anchor="middle">T03</text>
+<text x="1262" y="348" class="sm" text-anchor="start">level (servo/radar)</text>
+<path d="M1200,396 L1218,396" class="il"/>
+<circle cx="1235" cy="396" r="17" class="ib"/><line x1="1218" y1="396" x2="1252" y2="396" class="ibl"/>
+<text x="1235" y="393" class="it" text-anchor="middle">LAHH</text>
+<text x="1235" y="407" class="it" text-anchor="middle">T04</text>
+<text x="1262" y="400" class="sm" text-anchor="start">overfill trip</text>
+<path d="M1200,448 L1218,448" class="il"/>
+<circle cx="1235" cy="448" r="17" class="ib"/><line x1="1218" y1="448" x2="1252" y2="448" class="ibl"/>
+<text x="1235" y="445" class="it" text-anchor="middle">TT</text>
+<text x="1235" y="459" class="it" text-anchor="middle">T05</text>
+<text x="1262" y="452" class="sm" text-anchor="start">vapour-space T</text>
+<path d="M1200,500 L1218,500" class="il"/>
+<circle cx="1235" cy="500" r="17" class="ib"/><line x1="1218" y1="500" x2="1252" y2="500" class="ibl"/>
+<text x="1235" y="497" class="it" text-anchor="middle">TT</text>
+<text x="1235" y="511" class="it" text-anchor="middle">T06</text>
+<text x="1262" y="504" class="sm" text-anchor="start">bottom liquid T</text>
+<path d="M1095,210 L1095,140" class="pv"/>
+<path d="M1095,140 L1250,140" class="pv"/>
+<polygon transform="translate(1170,140)" points="-8,-5 4,0 -8,5" fill="#1a1a1a"/>
+<path d="M1095,140 L845,140" class="pv"/>
+<circle cx="960" cy="140" r="18" class="eq"/><polygon points="950,128 976,140 950,152" class="eq" fill="none"/>
+<text x="960" y="108" class="tag" text-anchor="middle">K-401</text>
+<text x="960" y="120" class="sm" text-anchor="middle">return blower (opt.)</text>
+<rect x="1150" y="130" width="40" height="20" class="eq"/>
+<text x="1170" y="144" class="tag" text-anchor="middle">FE</text>
+<circle cx="1170" cy="100" r="17" class="ib"/><line x1="1153" y1="100" x2="1187" y2="100" class="ibl"/>
+<text x="1170" y="97" class="it" text-anchor="middle">FT</text>
+<text x="1170" y="111" class="it" text-anchor="middle">B01</text>
+<path d="M1170,117 L1170,130" class="il"/>
+<circle cx="1125" cy="100" r="17" class="ib"/><line x1="1108" y1="100" x2="1142" y2="100" class="ibl"/>
+<text x="1125" y="97" class="it" text-anchor="middle">TT</text>
+<text x="1125" y="111" class="it" text-anchor="middle">B02</text>
+<path d="M1125,117 L1125,140" class="il"/>
+<circle cx="1235" cy="100" r="17" class="ib"/><line x1="1218" y1="100" x2="1252" y2="100" class="ibl"/>
+<text x="1235" y="97" class="it" text-anchor="middle">AT</text>
+<text x="1235" y="111" class="it" text-anchor="middle">B04</text>
+<path d="M1235,117 L1235,140" class="il"/>
+<text x="1290" y="104" class="sm" text-anchor="start">NH3 / inerts (opt.)</text>
+<path d="M1040,212 L1040,190" class="pv"/>
+<path d="M1031,190 L1049,190 L1040,173 Z" class="vv"/>
+<text x="1100" y="228" class="sm" text-anchor="middle"></text>
+<text x="1028" y="180" class="sm" text-anchor="end">PSV-T01/02 → flare</text>
+<rect x="1250" y="115" width="75" height="50" rx="10" class="eq"/>
+<text x="1287" y="136" class="tag" text-anchor="middle">V-301</text>
+<text x="1287" y="151" class="sm" text-anchor="middle">KO drum</text>
+<path d="M1325,140 L1360,140" class="pv"/>
+<circle cx="1385" cy="140" r="22" class="eq"/><polygon points="1370,128 1400,120 1400,160 1370,152" class="eq" fill="none"/>
+<text x="1385" y="185" class="tag" text-anchor="middle">K-301A/B</text>
+<text x="1385" y="198" class="sm" text-anchor="middle">BOG compressors</text>
+<path d="M1407,140 L1450,140 L1450,225" class="pv"/>
+<polygon transform="translate(1450,205)" points="-5,-8 0,4 5,-8" fill="#1a1a1a"/>
+<text x="1420" y="245" class="sm" text-anchor="middle">to recondenser /</text>
+<text x="1420" y="258" class="sm" text-anchor="middle">send-out line</text>
+<rect x="25" y="630" width="1450" height="140" class="key" rx="6"/>
+<text x="45" y="652" class="h" text-anchor="start">LEGEND</text>
+<path d="M45,677 L115,677" class="pl"/>
+<text x="125" y="681" class="sm" text-anchor="start">Liquid NH3</text>
+<path d="M45,702 L115,702" class="pv"/>
+<text x="125" y="706" class="sm" text-anchor="start">NH3 vapour</text>
+<path d="M45,727 L115,727" class="il"/>
+<text x="125" y="731" class="sm" text-anchor="start">Signal / impulse</text>
+<circle cx="285" cy="677" r="13" class="ib"/><line x1="272" y1="677" x2="298" y2="677" class="ibl"/>
+<text x="310" y="681" class="sm" text-anchor="start">DCS / historian point (log ≤ 1 s)</text>
+<rect x="272" y="692" width="26" height="20" class="eq"/>
+<text x="285" y="706" class="tag" text-anchor="middle">FE</text>
+<text x="310" y="706" class="sm" text-anchor="start">Primary flow element</text>
+<path d="M276,730 L294,744 L294,730 L276,744 Z" class="vv esd"/>
+<rect x="280" y="716" width="10" height="9" class="esdb"/>
+<path d="M285,725 L285,736" class="il"/>
+<text x="310" y="741" class="sm" text-anchor="start">ESD valve (fail-closed) · HV = manual block</text>
+<text x="620" y="652" class="h" text-anchor="start">HOW TO READ</text>
+<text x="620" y="675" class="sm" text-anchor="start">Flow  FT-J01 = liquid mass flow &amp; density at the manifold (this IS the 'slower flowrate' being studied).</text>
+<text x="620" y="696" class="sm" text-anchor="start">Vapour  FT-V01 = displaced vapour returned to ship; FT-B01 = vapour to BOG compressors. Both are needed to separate displacement from generation.</text>
+<text x="620" y="717" class="sm" text-anchor="start">Heat in  PT/TT-S04/J01 → T07/T08 (line ends), TT-L01/TI-L02 (line &amp; ambient), JI-S05 (pump power) give flash across pump + line + nozzle.</text>
+<text x="620" y="738" class="sm" text-anchor="start">Tank  PT-T01, LT-T03, TT-T05/T06 give shore tank heat-leak by mass balance, independent of rate.  Ship  LT/PT/TT-S01..03 give ship-side BOG.</text>
+<text x="620" y="759" class="sm" text-anchor="start">Calculation basis and worked slow-rate case: see docs/nh3-discharge-bog.md</text>
+</svg>
