@@ -1,0 +1,122 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Gentari Brand Guideline</title>
+<style>
+  :root{--purple:#60269E;--cyan:#00C8E8;--ink:#0F1729;--sub:#65758B;--line:#E1E7EF;--bg:#F8FAFC}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1600px;background:#fff;color:var(--ink);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  header{background:var(--purple);color:#fff;padding:64px 80px 56px;position:relative;overflow:hidden}
+  header img{position:absolute;right:60px;top:-30px;width:300px;opacity:.95}
+  header .eyebrow{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);font-weight:600}
+  header h1{font-size:60px;font-weight:700;letter-spacing:-.02em;margin-top:12px}
+  header p{font-size:19px;margin-top:14px;max-width:900px;color:#E6DAF3;line-height:1.5}
+  main{padding:56px 80px 64px}
+  section{margin-bottom:56px}
+  h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);font-weight:700;display:flex;gap:14px;align-items:center;margin-bottom:24px}
+  h2 span{color:var(--sub);font-weight:600}
+  h2::after{content:"";flex:1;height:1px;background:var(--line)}
+  .note{font-size:15px;color:var(--sub);line-height:1.55;margin-top:14px}
+  .logos{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:20px}
+  .tile{border:1px solid var(--line);border-radius:14px;height:300px;display:flex;align-items:center;justify-content:center;position:relative}
+  .tile img{max-height:200px;max-width:80%}
+  .tile.sm img{max-height:130px}
+  .tile .cap{position:absolute;left:16px;bottom:12px;font-size:13px;color:var(--sub);font-weight:500}
+  .tile.dark{background:var(--ink);border-color:var(--ink)} .tile.dark .cap{color:#94A3B8}
+  .tile.pur{background:var(--purple);border-color:var(--purple)} .tile.pur .cap{color:#D9C8EE}
+  .core{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .big{border-radius:16px;height:240px;padding:28px;color:#fff;display:flex;flex-direction:column;justify-content:flex-end}
+  .big b{font-size:30px;font-weight:700}
+  .big code{font-family:"Inter",monospace;font-size:18px;margin-top:6px;opacity:.95}
+  .big small{font-size:14px;margin-top:6px;opacity:.85}
+  .ui{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+  .sw{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sw i{display:block;height:96px}
+  .sw div{padding:12px 14px}
+  .sw b{font-size:14px;display:block}
+  .sw code{font-size:13px;color:var(--sub);font-family:"Inter",monospace}
+  .type{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+  .card{border:1px solid var(--line);border-radius:14px;padding:28px}
+  .card .t1{font-size:44px;font-weight:700;letter-spacing:-.02em}
+  .card .t2{font-size:26px;font-weight:600;margin-top:10px}
+  .card .t3{font-size:17px;color:var(--sub);margin-top:10px;line-height:1.5}
+  ul{list-style:none} li{font-size:16px;line-height:1.5;padding:9px 0;border-bottom:1px solid var(--line);display:flex;gap:12px}
+  li:last-child{border:0}
+  li::before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--cyan);margin-top:8px}
+  .gap li::before{background:#F59F0A}
+  footer{padding:22px 80px;border-top:1px solid var(--line);font-size:13px;color:var(--sub);display:flex;justify-content:space-between}
+</style></head>
+<body>
+<header>
+  <img src="../Dashboard/public/branding/gentari-icon.png" alt="">
+  <div class="eyebrow">Repository brand guideline</div>
+  <h1>Gentari brand guideline</h1>
+  <p>The main brand for the <b>frontendengineeringmodel</b> repository. Use it for the dashboard, modules, decks and documents made here. It is built from the logo files and theme tokens in the repo, not from Gentari's corporate brand book; rules the repo doesn't have yet are listed at the end.</p>
+</header>
+<main>
+  <section>
+    <h2>01 Logo <span>Dashboard/public/branding</span></h2>
+    <div class="logos">
+      <div class="tile"><img src="../Dashboard/public/branding/gentari-logo.png" alt="Gentari logo"><span class="cap">Primary lockup · gentari-logo.png (703×479)</span></div>
+      <div class="tile sm"><img src="../Dashboard/public/branding/gentari-icon.png" alt="Gentari icon"><span class="cap">Icon · gentari-icon.png (282×282)</span></div>
+      <div class="tile sm pur"><img src="../Dashboard/public/branding/gentari-icon.png" alt=""><span class="cap">Icon on Gentari Purple</span></div>
+      <div class="tile sm dark"><img src="../Dashboard/public/branding/gentari-icon.png" alt=""><span class="cap">Icon on dark</span></div>
+    </div>
+    <p class="note">Only full-colour versions exist in the repo. The lockup's purple wordmark needs a light background. No white or mono version is supplied, so on purple or dark backgrounds use the icon on its own.</p>
+  </section>
+
+  <section>
+    <h2>02 Core colours <span>sampled from the logo</span></h2>
+    <div class="core">
+      <div class="big" style="background:#60269E"><b>Gentari Purple</b><code>#60269E · RGB 96 38 158</code><small>Wordmark colour. Use for headings, title backgrounds and primary actions.</small></div>
+      <div class="big" style="background:#00C8E8;color:#0F1729"><b>Gentari Cyan</b><code>#00C8E8 · RGB 0 200 232</code><small>Icon colour. Use for accents and highlights. White text on cyan fails contrast, so use dark text.</small></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>03 Dashboard UI palette <span>Dashboard/app/globals.css · light theme</span></h2>
+    <div class="ui">
+      <div class="sw"><i style="background:#6B2E99"></i><div><b>primary</b><code>#6B2E99</code></div></div>
+      <div class="sw"><i style="background:#441D62"></i><div><b>accent-foreground</b><code>#441D62</code></div></div>
+      <div class="sw"><i style="background:#F1EAF6"></i><div><b>accent</b><code>#F1EAF6</code></div></div>
+      <div class="sw"><i style="background:#0F1729"></i><div><b>foreground</b><code>#0F1729</code></div></div>
+      <div class="sw"><i style="background:#65758B"></i><div><b>muted-foreground</b><code>#65758B</code></div></div>
+      <div class="sw"><i style="background:#E1E7EF"></i><div><b>border</b><code>#E1E7EF</code></div></div>
+      <div class="sw"><i style="background:#F8FAFC"></i><div><b>background</b><code>#F8FAFC</code></div></div>
+      <div class="sw"><i style="background:#F1F5F9"></i><div><b>muted</b><code>#F1F5F9</code></div></div>
+      <div class="sw"><i style="background:#FFFFFF"></i><div><b>card</b><code>#FFFFFF</code></div></div>
+      <div class="sw"><i style="background:#21C45D"></i><div><b>success</b><code>#21C45D</code></div></div>
+      <div class="sw"><i style="background:#F59F0A"></i><div><b>warning</b><code>#F59F0A</code></div></div>
+      <div class="sw"><i style="background:#DC2828"></i><div><b>destructive</b><code>#DC2828</code></div></div>
+    </div>
+    <p class="note">The dashboard's <b>primary</b> (#6B2E99) is close to the logo purple (#60269E) but not the same. For brand work such as decks, use #60269E. The dashboard's dark theme switches its primary to blue (#3C83F6), which is not a brand colour.</p>
+  </section>
+
+  <section>
+    <h2>04 Typography <span>not defined in the repo</span></h2>
+    <div class="type">
+      <div class="card">
+        <div class="t1" style="color:#60269E">Headline 44 / Bold</div>
+        <div class="t2">Subheading 26 / Semibold</div>
+        <div class="t3">Body 17 / Regular. Muted text in #65758B for captions, sources and notes. This sheet is set in Inter as a neutral stand-in.</div>
+      </div>
+      <div class="card"><ul>
+        <li>The dashboard sets no font, so it uses the browser's default sans-serif.</li>
+        <li>The wordmark is lettering in the logo file, not a font you can install.</li>
+        <li>Until the official typeface is confirmed, use Inter or another clean geometric sans.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="gap">
+    <h2>05 Not in the repo <span>get these from Gentari Brand / Comms</span></h2>
+    <div class="card"><ul>
+      <li>Official brand typeface(s) and type scale</li>
+      <li>Logo clear space, minimum size, and misuse rules</li>
+      <li>White, mono and horizontal logo versions, plus vector (SVG/EPS) files</li>
+      <li>Secondary and extended colour palette, and approved gradients</li>
+      <li>Photography, iconography, graphic devices, and tone of voice</li>
+      <li>Official PowerPoint master / slide template</li>
+    </ul></div>
+  </section>
+</main>
+<footer><span>Source: Dashboard/public/branding, Dashboard/app/globals.css · see brand/README.md</span><span>Edit brand/gentari-brand-guideline.html, then re-render the PNG</span></footer>
+</body></html>
