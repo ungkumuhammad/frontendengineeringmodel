@@ -503,8 +503,8 @@
           <div class="field"><label>Location factor <span class="hint">× reference</span></label><input type="number" step="0.05" min="0" data-path="capex.locationFactor"/></div>
           <div class="field db-tepsa"><label>Jetty / marine <span class="hint">€M fixed</span></label><input type="number" step="1" min="0" data-path="capex.marineEurM"/></div>
           <div class="field db-tepsa"><label>Dredging, pipeline, other <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.otherEurM"/></div>
-          <div class="field db-sg hidden"><label>Jetty / marine <span class="hint">US$M, of the total</span></label><input type="number" step="1" min="0" data-path="register.vopakSg.marineUsdM"/></div>
-          <div class="field db-sg hidden"><label>Export piping, other <span class="hint">US$M, of the total</span></label><input type="number" step="1" min="0" data-path="register.vopakSg.otherUsdM"/></div>
+          <div class="field db-sg hidden"><label>Jetty / marine <span class="hint">US$M, added to the tank</span></label><input type="number" step="1" min="0" data-path="register.vopakSg.marineUsdM"/></div>
+          <div class="field db-sg hidden"><label>Dredging, pipeline, other <span class="hint">US$M, added</span></label><input type="number" step="1" min="0" data-path="register.vopakSg.otherUsdM"/></div>
         </div>
         <div class="field db-tepsa"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="capex.accuracyPct"/></div>
         <div class="field db-sg hidden"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="register.vopakSg.accuracyPct"/></div>
@@ -804,7 +804,10 @@ const DEFAULTS = {
       status: "Indicative, non-binding · cost estimate accuracy ±50 %",
       scope: "Very preliminary cost estimate for a new tank at Vopak Singapore. Fee S$75.00 per MT, annual escalation to apply (CPI for the fee, CPI & WI for opex). Non-binding. Premised on: 60,000 m³ new tank; total terminal throughput 500 kTPA, which includes Gentari's 60 kTPA (Vopak is marketing the capacity to other buyers); assumed contracted period 15 years; parcel size 15 kT per vessel; delivery conditions −30 °C / 15 barg; no heating required; export piping 3\" × 3 km. Vopak awaits the end-user's inputs for an economics sense check.",
       feeSgdPerT: 75, fxUsdPerSgd: 0.77, terminalKtpa: 500, gentariKtpa: 60, termYears: 15, parcelKt: 15,
-      tankM3: 60000, netToNominalPct: 84.3, marineUsdM: 0, otherUsdM: 0, accuracyPct: 50,
+      tankM3: 60000, netToNominalPct: 84.3, accuracyPct: 50,
+      // Terminal scope outside the fee-funded tank, duplicated from the TEPSA assumptions: jetty / marine EUR 20M x 1.10 = US$22M,
+      // dredging, pipeline, other EUR 0M. Not in Vopak's fee; added on top of the tank CAPEX. Editable.
+      marineUsdM: 22, otherUsdM: 0,
     },
     vopak: {
       status: "Non-binding tariff indication",
@@ -831,7 +834,7 @@ const DEFAULTS = {
       "Vopak: is '40 kt' net (usable) or gross capacity?",
       "Vopak SG: is the 60,000 m³ nominal or net (usable)? Net/nominal ratio set to the TEPSA calibration (84.3 %)",
       "Vopak SG: S$/US$ rate behind the US$ conversion (0.77 is a placeholder), and whether the fee is flat per tonne or take-or-pay",
-      "Vopak SG: does the S$75/MT include energy & utilities, jetty and 3\" × 3 km export piping? What is the CPI / WI split of the escalation?",
+      "Vopak SG: does the S$75/MT include energy & utilities and the 3\" × 3 km export piping? The jetty is assumed NOT in the fee and is added from the TEPSA assumption (€20M). What is the CPI / WI split of the escalation?",
       "Vopak SG: delivery at −30 °C / 15 barg is not the −33 °C atmospheric storage condition used elsewhere here — confirm the tank type and the cracker's feed condition",
       "Vopak: confirm utility pass-through basis equals TEPSA",
       "Titan: year of estimate; dredging / marine civil scope",
@@ -855,6 +858,7 @@ const DEFAULTS = {
       { date: "2026-09-28", text: "Storage CAPEX scales on loadable volume per tank (TEPSA €185M = 40,000 t loadable), not gross tank size" },
       { date: "2026-09-30", text: "Voyage & fleet inputs reduced to round trip days (all-in) and ships chartered; chartered fleet is the default. Distance, speed, sea margin, load-port and canal days removed" },
       { date: "2026-09-30", text: "Fleet basis switch: number of chartered ships can be an input; arrival interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only)" },
+      { date: "2026-10-15", text: "Vopak SG: jetty / marine (TEPSA's €20M = US$22M at 1.10) and other terminal scope (€0M) added on top of the fee-funded tank CAPEX, duplicated from the TEPSA assumptions; editable" },
       { date: "2026-10-14", text: "Cost database switch (CAPEX basis): TEPSA (EUR, quoted CAPEX) or Vopak Singapore (USD). Vopak SG gives only a fee (S$75/MT, 500 ktpa terminal, 60,000 m³ tank, ±50 %), so its CAPEX is back-calculated with the same finance engine and scaled on loadable volume like the TEPSA reference. CAPEX and tariff outputs can be shown in EUR or USD for either database (Currency field; FX = USD per EUR, editable, default 1.10)" },
     ],
   },
@@ -1015,7 +1019,8 @@ function sgRef() {
   const netM3 = num(r.tankM3) * num(r.netToNominalPct) / 100;
   const netT = netM3 * num(P.product.density) / 1000;
   const marine = num(r.marineUsdM), other = num(r.otherUsdM);
-  return { feeUsdT, ic, netM3, netT, marine, other, total: ic.overnight, storage: Math.max(0, ic.overnight - marine - other) };
+  // storage = the tank the fee funds; the jetty and other terminal scope are added on top (TEPSA assumptions, not in Vopak's fee).
+  return { feeUsdT, ic, netM3, netT, marine, other, storage: ic.overnight, total: ic.overnight, terminal: ic.overnight + marine + other };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1354,7 +1359,7 @@ function renderSummaries(sz, cx) {
     $("sgRefStorage").value = fmt(cx.ref.storage, 1);
     $("sgRefNet").value = fmt(cx.ref.netT);
     const r = P.register.vopakSg;
-    $("sgBasisNote").innerHTML = `Reference = Vopak Singapore indicative fee S$${fmt(num(r.feeSgdPerT), 2)}/MT × ${fmt(num(r.fxUsdPerSgd), 4)} US$/S$ = US$${fmt(cx.ref.feeUsdT, 2)}/t on ${fmt(num(r.terminalKtpa))} ktpa, back-calculated to the <b>US$${fmt(cx.ref.total, 1)}M</b> overnight CAPEX it would fund at the Financial assumptions below (${fmt(cx.f.h * 100, 1)} % return, ${cx.f.term}-yr term, ${fmt(cx.f.cpi * 100, 1)} % CPI). It is the cost of a ${fmt(num(r.tankM3))} m³ tank, taken as ${fmt(num(r.netToNominalPct), 1)} % loadable = ${fmt(cx.ref.netT)} t. Scaling: CAPEX ∝ loadable volume per tank<sup>exponent</sup>. Results are shown in ${CCY.code} (FX ${fmt(num(P.voyage.fxUsdPerEur), 2)} US$ per €). Edit the quote under Economics register.`;
+    $("sgBasisNote").innerHTML = `Reference = Vopak Singapore indicative fee S$${fmt(num(r.feeSgdPerT), 2)}/MT × ${fmt(num(r.fxUsdPerSgd), 4)} US$/S$ = US$${fmt(cx.ref.feeUsdT, 2)}/t on ${fmt(num(r.terminalKtpa))} ktpa, back-calculated to the <b>US$${fmt(cx.ref.total, 1)}M</b> overnight CAPEX it would fund at the Financial assumptions below (${fmt(cx.f.h * 100, 1)} % return, ${cx.f.term}-yr term, ${fmt(cx.f.cpi * 100, 1)} % CPI). It is the cost of a ${fmt(num(r.tankM3))} m³ tank, taken as ${fmt(num(r.netToNominalPct), 1)} % loadable = ${fmt(cx.ref.netT)} t. The jetty / marine (US$${fmt(cx.ref.marine, 1)}M, TEPSA's €20M at the FX) and other terminal scope (US$${fmt(cx.ref.other, 1)}M) are not in Vopak's fee and are added on top, unscaled. Scaling: CAPEX ∝ loadable volume per tank<sup>exponent</sup>. Results are shown in ${CCY.code} (FX ${fmt(num(P.voyage.fxUsdPerEur), 2)} US$ per €). Edit the quote under Economics register.`;
   }
   $("sumPlot").textContent = `${fmt(sz.plot.ha, 2)} ha`;
   $("sumFin").textContent = `${fmt(cx.f.h * 100, 1)} % · ${cx.f.term} yr`;
@@ -1861,7 +1866,7 @@ function renderCapex(sz, cx) {
     { head: ["Item", CCY.m, "Basis"] },
     { cells: [`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, fmt(cx.storage, 1), storageBasis] },
     { cells: ["Jetty / marine", fmt(cx.marine, 1), marineBasis] },
-    { cells: [cx.sg ? "Export piping, other" : "Dredging, pipeline, other", fmt(cx.other, 1), ""] },
+    { cells: ["Dredging, pipeline, other", fmt(cx.other, 1), ""] },
     { cls: "total", cells: ["Total, before financing", fmt(cx.total, 1), `±${fmt(cx.acc * 100)} %`] },
     { cells: ["Financing during construction", fmt(cx.be.capexCod - cx.total, 1), `${fmt(cx.f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`] },
     { cls: "total", cells: ["CAPEX at start of operations", fmt(cx.be.capexCod, 1), ""] },
@@ -1960,8 +1965,8 @@ function buildStaticTables() {
     sgRow("Contracted period", "register.vopakSg.termYears", 1, "years", "As quoted. The model uses Financial assumptions → Contract term") +
     sgRow("Parcel size", "register.vopakSg.parcelKt", 1, "kt per vessel", "Delivery −30 °C / 15 barg · no heating · export piping 3&quot; × 3 km") +
     sgRow("Cost estimate accuracy", "register.vopakSg.accuracyPct", 5, "± %", "Class of estimate as stated by Vopak") +
-    sgRow("Of the CAPEX: jetty / marine", "register.vopakSg.marineUsdM", 1, "US$M", "Not quoted separately; carve-out of the implied total") +
-    sgRow("Of the CAPEX: export piping, other", "register.vopakSg.otherUsdM", 1, "US$M", "Not quoted separately; carve-out of the implied total");
+    sgRow("Added: jetty / marine", "register.vopakSg.marineUsdM", 1, "US$M", "Not in the Vopak fee. Duplicated from TEPSA (€20M × 1.10 FX), added on top of the tank CAPEX") +
+    sgRow("Added: dredging, pipeline, other", "register.vopakSg.otherUsdM", 1, "US$M", "Duplicated from TEPSA (€0M). Export piping 3\" × 3 km is assumed inside the fee");
   $("vopakInputs").innerHTML =
     `<tr><th>Quoted tariff €/t</th><th class="num">Throughput A, ktpa</th><th class="num">A low</th><th class="num">A high</th><th class="num">Throughput B, ktpa</th><th class="num">B low</th><th class="num">B high</th></tr>` +
     ["t40", "t60"].map((s) => `<tr><td class="lbl">${s === "t40" ? "40 kt tank" : "60 kt tank"}</td>
@@ -1995,8 +2000,11 @@ function renderRegister() {
     const at = (label, kt, fee) => { const ic = impliedCapex(fee, kt, f); return { cells: [label, fmt(fee, 2), fmt(fee + uUsd, 2), fmt(ic.revEurM, 2), fmt(ic.cod, 1), fmt(ic.overnight, 1)] }; };
     $("vopakSgTable").innerHTML = rows([
       { head: ["Case", "Fee US$/t", "All-in US$/t", "Revenue US$M/yr", "CAPEX incl. financing US$M", "CAPEX before financing US$M"] },
-      { cls: "total", ...at(`Terminal ${fmt(t)} ktpa — reference CAPEX`, t, ref.feeUsdT) },
+      { cls: "total", ...at(`Terminal ${fmt(t)} ktpa — tank CAPEX funded by the fee`, t, ref.feeUsdT) },
       { cells: [`Estimate range ±${fmt(acc * 100)} %`, "", "", "", `${fmt(ref.ic.cod * (1 - acc))}–${fmt(ref.ic.cod * (1 + acc))}`, `${fmt(ref.total * (1 - acc))}–${fmt(ref.total * (1 + acc))}`] },
+      { cells: ["+ Jetty / marine (TEPSA assumption)", "", "", "", "", fmt(ref.marine, 1)] },
+      { cells: ["+ Dredging, pipeline, other (TEPSA assumption)", "", "", "", "", fmt(ref.other, 1)] },
+      { cls: "total", cells: ["Terminal CAPEX at the reference tank", "", "", "", "", fmt(ref.terminal, 1)] },
       { cells: [`Gentari ${fmt(gk)} ktpa — revenue at the same fee`, fmt(ref.feeUsdT, 2), fmt(ref.feeUsdT + uUsd, 2), fmt(ref.feeUsdT * gk / 1000, 2), "", ""] },
       { cells: [`Reference tank: ${fmt(num(g.tankM3))} m³ × ${fmt(num(g.netToNominalPct), 1)} % × ${fmt(num(P.product.density), 1)} kg/m³`, "", "", "", `${fmt(ref.netT)} t loadable`, `US$${fmt(ref.total * 1e6 / ref.netT)} per t`] },
     ]) + `<tr><td colspan="6" class="lbl" style="font-size:11.5px">The quote gives a fee, not a CAPEX. The CAPEX shown is what S$${fmt(num(g.feeSgdPerT), 2)}/MT on ${fmt(t)} ktpa would fund over ${f.term} years at ${fmt(f.h * 100, 1)} % post-tax return, ${fmt(f.cpi * 100, 1)} % CPI, ${fmt(f.opex * 100, 1)} % fixed OPEX and the build spend profile, from the Financial assumptions. The estimate range applies Vopak's accuracy to that CAPEX. Utility fee at the model's power price, converted at ${fmt(num(P.voyage.fxUsdPerEur), 2)} US$/€.</td></tr>`;
@@ -2457,7 +2465,7 @@ const INPUT_GROUPS = [
   ["Utilities & boil-off", [["utilities.powerKWhPerT", "Power", "kWh/t"], ["utilities.powerPriceEurMWh", "Power price", "€/MWh"], ["utilities.markupPct", "Admin mark-up", "%"], ["utilities.bogPctPerDay", "Boil-off rate", "% of full tank / d"]]],
   ["CAPEX basis", [["capex.db", "Cost database", "", "TEPSA = quoted CAPEX (EUR) · Vopak Singapore = fee back-calculated to CAPEX (USD)"], ["capex.currency", "Currency shown", "", "FX = voyage FX, USD per EUR"], ["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refNetT", "At reference loadable volume", "t per tank", "TEPSA 40,000 t (58,651 m³ × 682 kg/m³)"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
     ["capex.marineEurM", "Jetty / marine", "€M"], ["capex.otherEurM", "Dredging, pipeline, other", "€M"], ["capex.accuracyPct", "Estimate accuracy", "± %"],
-    ["register.vopakSg.marineUsdM", "Vopak SG: jetty / marine", "US$M", "of the implied total"], ["register.vopakSg.otherUsdM", "Vopak SG: export piping, other", "US$M", "of the implied total"],
+    ["register.vopakSg.marineUsdM", "Vopak SG: jetty / marine", "US$M", "added to the tank; duplicated from TEPSA"], ["register.vopakSg.otherUsdM", "Vopak SG: dredging, pipeline, other", "US$M", "added to the tank; duplicated from TEPSA"],
     ["register.vopakSg.accuracyPct", "Vopak SG: estimate accuracy", "± %"]]],
   ["Financial assumptions", [["fin.hurdlePct", "Operator return", "% nominal, post-tax"], ["fin.cpiPct", "CPI indexation", "%/yr"], ["fin.taxPct", "Corporate tax", "%"], ["fin.depYears", "Tax depreciation", "yrs, SL"],
     ["fin.opexPct", "Fixed OPEX", "% CAPEX/yr"], ["fin.termYears", "Contract term", "yrs"], ["fin.residualPct", "Residual value", "% CAPEX"], ["fin.buildYears", "Build period", "yrs"], ["fin.spendProfile", "Spend profile", "% per build year"]]],
@@ -2567,7 +2575,7 @@ async function exportExcel(full) {
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
     R("Storage CAPEX", cx.storage, CCY.m, `${sz.N} × ${fmt(sz.perTankT)} t loadable on the reference curve`, null, XF.d1);
     R("Jetty / marine", cx.marine, CCY.m, "", null, XF.d1);
-    R(cx.sg ? "Export piping, other" : "Dredging, pipeline, other", cx.other, CCY.m, "", null, XF.d1);
+    R("Dredging, pipeline, other", cx.other, CCY.m, "", null, XF.d1);
     R("Total CAPEX, before financing", cx.total, CCY.m, `±${fmt(cx.acc * 100)} %`, "key", XF.d1);
     R("CAPEX at start of operations", cx.be.capexCod, CCY.m, `incl. financing over ${f.profile.length} build yrs`, null, XF.d1);
     R("Break-even storage tariff", cx.be.eurT, CCY.t, `year 1, CPI-indexed after`, "key", XF.d1);
@@ -2759,7 +2767,7 @@ async function exportExcel(full) {
         ? `${CCY.sym}${fmt(cx.refStorage, 1)}M (from the S$${fmt(num(P.register.vopakSg.feeSgdPerT), 2)}/MT fee${CCY.code === "USD" ? "" : `; US$${fmt(cx.ref.storage, 1)}M`}) × (${fmt(sz.perTankT)} ÷ ${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`
         : `${CCY.sym}${fmt(cx.refStorage, 1)}M (TEPSA €${fmt(num(c.refStorageEurM))}M) × (${fmt(sz.perTankT)} ÷ ${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`);
       R("Jetty / marine", cx.marine, CCY.m, `${CCY.sym}${fmt(cx.marineFixed)}M + ${shipName(sz.shipKey)} adder`);
-      R(cx.sg ? "Export piping, other" : "Dredging, pipeline, other", cx.other, CCY.m);
+      R("Dredging, pipeline, other", cx.other, CCY.m);
       R("Total, before financing", cx.total, CCY.m, `±${fmt(cx.acc * 100)} % → ${CCY.sym}${fmt(cx.low)}–${fmt(cx.high)}M`, "key");
       R("Financing during construction", cx.be.capexCod - cx.total, CCY.m, `${fmt(f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`);
       R("CAPEX at start of operations", cx.be.capexCod, CCY.m, "", "total");
@@ -2815,7 +2823,7 @@ async function exportExcel(full) {
           ["Tank capacity", num(g.tankM3), "m³", XF.int], ["Loadable ÷ nominal", num(g.netToNominalPct) / 100, "", XF.pct], ["Reference loadable volume", ref.netT, "t", XF.int],
           ["Terminal throughput", num(g.terminalKtpa), "ktpa", XF.int], ["Gentari throughput", num(g.gentariKtpa), "ktpa", XF.int], ["Contracted period", num(g.termYears), "years", XF.int],
           ["Parcel size", num(g.parcelKt), "kt per vessel", XF.int], ["Estimate accuracy", acc, "±", XF.pct0],
-          ["Implied CAPEX incl. financing", ref.ic.cod, "US$M", XF.d1], ["Implied CAPEX before financing", ref.total, "US$M", XF.d1],
+          ["Implied CAPEX incl. financing", ref.ic.cod, "US$M", XF.d1], ["Implied tank CAPEX before financing", ref.total, "US$M", XF.d1], ["Jetty / marine (TEPSA assumption, added)", ref.marine, "US$M", XF.d1], ["Dredging, pipeline, other (added)", ref.other, "US$M", XF.d1], ["Terminal CAPEX at the reference tank", ref.terminal, "US$M", XF.d1],
           ["Range low (before financing)", ref.total * (1 - acc), "US$M", XF.d1], ["Range high (before financing)", ref.total * (1 + acc), "US$M", XF.d1],
           ["Year-1 revenue at the terminal throughput", ref.ic.revEurM, "US$M/yr", XF.d2], ["Utility fee (model power price, converted)", uUsd, "US$ per t", XF.d2]]
           .forEach(([l, val, un, fm]) => S.row([l, val, un], { fmt: [null, fm] }));
