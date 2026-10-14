@@ -804,7 +804,7 @@ const DEFAULTS = {
       status: "Indicative, non-binding · cost estimate accuracy ±50 %",
       scope: "Very preliminary cost estimate for a new tank at Vopak Singapore. Fee S$75.00 per MT, annual escalation to apply (CPI for the fee, CPI & WI for opex). Non-binding. Premised on: 60,000 m³ new tank; total terminal throughput 500 kTPA, which includes Gentari's 60 kTPA (Vopak is marketing the capacity to other buyers); assumed contracted period 15 years; parcel size 15 kT per vessel; delivery conditions −30 °C / 15 barg; no heating required; export piping 3\" × 3 km. Vopak awaits the end-user's inputs for an economics sense check.",
       feeSgdPerT: 75, fxUsdPerSgd: 0.77, terminalKtpa: 500, gentariKtpa: 60, termYears: 15, parcelKt: 15,
-      tankM3: 60000, netToNominalPct: 84.3, accuracyPct: 50,
+      tankM3: 60000, netToNominalPct: 100, accuracyPct: 50,
       // Terminal scope outside the fee-funded tank, duplicated from the TEPSA assumptions: jetty / marine EUR 20M x 1.10 = US$22M,
       // dredging, pipeline, other EUR 0M. Not in Vopak's fee; added on top of the tank CAPEX. Editable.
       marineUsdM: 22, otherUsdM: 0,
@@ -832,7 +832,6 @@ const DEFAULTS = {
       "TEPSA: soil remediation included?",
       "TEPSA: 1.7 ships/month vs 1.44 implied by 30 kt parcels",
       "Vopak: is '40 kt' net (usable) or gross capacity?",
-      "Vopak SG: is the 60,000 m³ nominal or net (usable)? Net/nominal ratio set to the TEPSA calibration (84.3 %)",
       "Vopak SG: S$/US$ rate behind the US$ conversion (0.77 is a placeholder), and whether the fee is flat per tonne or take-or-pay",
       "Vopak SG: does the S$75/MT include energy & utilities and the 3\" × 3 km export piping? The jetty is assumed NOT in the fee and is added from the TEPSA assumption (€20M). What is the CPI / WI split of the escalation?",
       "Vopak SG: delivery at −30 °C / 15 barg is not the −33 °C atmospheric storage condition used elsewhere here — confirm the tank type and the cracker's feed condition",
@@ -858,6 +857,7 @@ const DEFAULTS = {
       { date: "2026-09-28", text: "Storage CAPEX scales on loadable volume per tank (TEPSA €185M = 40,000 t loadable), not gross tank size" },
       { date: "2026-09-30", text: "Voyage & fleet inputs reduced to round trip days (all-in) and ships chartered; chartered fleet is the default. Distance, speed, sea margin, load-port and canal days removed" },
       { date: "2026-09-30", text: "Fleet basis switch: number of chartered ships can be an input; arrival interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only)" },
+      { date: "2026-10-15", text: "Vopak SG 60,000 m³ is net (loadable) volume per Vopak: loadable ratio 100 % (reference tank 40,896 t), not the TEPSA 84.3 %" },
       { date: "2026-10-15", text: "Vopak SG: jetty / marine (TEPSA's €20M = US$22M at 1.10) and other terminal scope (€0M) added on top of the fee-funded tank CAPEX, duplicated from the TEPSA assumptions; editable" },
       { date: "2026-10-14", text: "Cost database switch (CAPEX basis): TEPSA (EUR, quoted CAPEX) or Vopak Singapore (USD). Vopak SG gives only a fee (S$75/MT, 500 ktpa terminal, 60,000 m³ tank, ±50 %), so its CAPEX is back-calculated with the same finance engine and scaled on loadable volume like the TEPSA reference. CAPEX and tariff outputs can be shown in EUR or USD for either database (Currency field; FX = USD per EUR, editable, default 1.10)" },
     ],
@@ -1010,8 +1010,8 @@ function fromUsd(v) { return v / Math.max(0.01, num(P.voyage.fxUsdPerEur, 1.1)) 
 
 // Vopak Singapore cost database. The quote is a fee, not a CAPEX, so the reference CAPEX is the overnight CAPEX
 // that the fee at the quoted terminal throughput would fund under the current financial assumptions (the same
-// back-calculation as the market check). The tank is 60,000 m³ nominal; the loadable volume uses a net/nominal
-// ratio (TEPSA calibration, 84.3 %) because the quote does not say whether 60,000 m³ is net or nominal.
+// back-calculation as the market check). The 60,000 m³ is Vopak's net (loadable) volume
+// (confirmed by the user), so the loadable ratio defaults to 100 %; lower it only if Vopak's figure turns out to be nominal.
 function sgRef() {
   const r = P.register.vopakSg;
   const feeUsdT = num(r.feeSgdPerT) * num(r.fxUsdPerSgd);
@@ -1958,8 +1958,8 @@ function buildStaticTables() {
     sgRow("Indicative fee", "register.vopakSg.feeSgdPerT", 0.5, "S$ per MT", "Annual escalation applies: CPI for the fee, CPI &amp; WI for opex. The model indexes at the CPI input.") +
     sgRow("Exchange rate", "register.vopakSg.fxUsdPerSgd", 0.005, "US$ per S$", "Placeholder, not from the quote — set the rate to use") +
     `<tr><td class="lbl">Fee in USD</td><td class="num" id="sgFeeUsd"></td><td class="lbl">US$ per MT</td><td class="lbl" style="font-size:11px;color:var(--text3)">fee × exchange rate</td></tr>` +
-    sgRow("Tank capacity", "register.vopakSg.tankM3", 1000, "m³", "New tank. Nominal or net is not stated") +
-    sgRow("Loadable ÷ nominal", "register.vopakSg.netToNominalPct", 0.5, "%", "TEPSA calibration (84.3 %), applied because the quote is silent") +
+    sgRow("Tank capacity", "register.vopakSg.tankM3", 1000, "m³", "New tank, net (loadable) volume — confirmed") +
+    sgRow("Loadable ÷ quoted capacity", "register.vopakSg.netToNominalPct", 0.5, "%", "100 % because the 60,000 m³ is already net (loadable)") +
     sgRow("Terminal throughput", "register.vopakSg.terminalKtpa", 10, "ktpa", "Includes Gentari; Vopak is marketing the rest to other buyers. The fee is back-calculated on this volume") +
     sgRow("Gentari throughput", "register.vopakSg.gentariKtpa", 5, "ktpa", "Share of the terminal throughput") +
     sgRow("Contracted period", "register.vopakSg.termYears", 1, "years", "As quoted. The model uses Financial assumptions → Contract term") +
@@ -2820,7 +2820,7 @@ async function exportExcel(full) {
         S.note(g.scope);
         S.header(["Item", "Value", "Unit", "", "", "", "", ""], [0, 2]);
         [["Indicative fee", num(g.feeSgdPerT), "S$ per MT", XF.d2], ["Exchange rate", num(g.fxUsdPerSgd), "US$ per S$", "0.0000"], ["Fee in USD", ref.feeUsdT, "US$ per MT", XF.d2],
-          ["Tank capacity", num(g.tankM3), "m³", XF.int], ["Loadable ÷ nominal", num(g.netToNominalPct) / 100, "", XF.pct], ["Reference loadable volume", ref.netT, "t", XF.int],
+          ["Tank capacity", num(g.tankM3), "m³", XF.int], ["Loadable ÷ quoted capacity", num(g.netToNominalPct) / 100, "", XF.pct], ["Reference loadable volume", ref.netT, "t", XF.int],
           ["Terminal throughput", num(g.terminalKtpa), "ktpa", XF.int], ["Gentari throughput", num(g.gentariKtpa), "ktpa", XF.int], ["Contracted period", num(g.termYears), "years", XF.int],
           ["Parcel size", num(g.parcelKt), "kt per vessel", XF.int], ["Estimate accuracy", acc, "±", XF.pct0],
           ["Implied CAPEX incl. financing", ref.ic.cod, "US$M", XF.d1], ["Implied tank CAPEX before financing", ref.total, "US$M", XF.d1], ["Jetty / marine (TEPSA assumption, added)", ref.marine, "US$M", XF.d1], ["Dredging, pipeline, other (added)", ref.other, "US$M", XF.d1], ["Terminal CAPEX at the reference tank", ref.terminal, "US$M", XF.d1],

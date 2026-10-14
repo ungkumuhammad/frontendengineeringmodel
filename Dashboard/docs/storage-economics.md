@@ -193,7 +193,7 @@ The quote is a fee, not a CAPEX. The model back-calculates the CAPEX the way it 
 fee (US$/t)       = S$75.00 × 0.77 US$/S$ = 57.75        (exchange rate is a placeholder, editable)
 reference CAPEX   = overnight CAPEX that the fee × 500 ktpa funds at the Financial assumptions
                     (9 % post-tax return, 15 yr, 2.5 % CPI, 2.5 % fixed OPEX, 30/40/30 build)  → US$166.7M
-reference tank    = 60,000 m³ × 84.3 % loadable × density = 34,475 t loadable
+reference tank    = 60,000 m³ net (loadable, per Vopak) × density = 40,896 t loadable
 tank CAPEX        = reference CAPEX × (loadable per tank ÷ 34,475)^exponent × location factor
 terminal CAPEX    = tank CAPEX + jetty / marine + dredging, pipeline, other   (added, not scaled)
 ```
@@ -203,8 +203,7 @@ marine €20M × 1.10 = US$22M, dredging / pipeline / other €0M. Both are edit
 Singapore fields, or the register panel). At the default design this gives US$173.5M tank + US$22M jetty =
 US$195.5M before financing.
 
-Assumptions to confirm with Vopak (also in the register's open questions): whether 60,000 m³ is nominal or
-net (84.3 % is the TEPSA calibration), the S$/US$ rate, whether the fee covers energy and the export
+Assumptions to confirm with Vopak (also in the register's open questions): the S$/US$ rate, whether the fee covers energy and the export
 piping, and whether a jetty is needed, and the CPI / WI split. The 3" × 3 km export piping is assumed to sit inside the fee. The
 back-calculated CAPEX moves with the Financial assumptions (term, return, tax, OPEX), so it is a
 cross-check, not a quoted number.
@@ -248,3 +247,4 @@ throughout, gridlines off, frozen table headers and landscape/portrait print set
 | 2026-09-30 | Fleet basis switch: number of chartered ships can be an input; interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only) |
 | 2026-10-14 | Cost database switch (TEPSA / Vopak Singapore) and a Euro / USD currency choice with editable FX. Vopak SG CAPEX is back-calculated from the S$75/MT fee (US$166.7M for 60,000 m³ at 500 ktpa, ±50 %) |
 | 2026-10-15 | Vopak SG: jetty / marine (TEPSA €20M = US$22M at 1.10) and other terminal scope added on top of the fee-funded tank CAPEX, duplicated from the TEPSA assumptions |
+| 2026-10-15 | Vopak SG 60,000 m³ is net (loadable) volume per Vopak, so the loadable ratio is 100 % (reference tank 40,896 t), not the TEPSA 84.3 % |
