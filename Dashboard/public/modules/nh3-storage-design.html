@@ -808,6 +808,7 @@ const DEFAULTS = {
       // Terminal scope outside the fee-funded tank, duplicated from the TEPSA assumptions: jetty / marine EUR 20M x 1.10 = US$22M,
       // dredging, pipeline, other EUR 0M. Not in Vopak's fee; added on top of the tank CAPEX. Editable.
       marineUsdM: 22, otherUsdM: 0,
+      scopeRev: 2,   // 2 = jetty added and loadable ratio 100 %; see migrateProject()
     },
     vopak: {
       status: "Non-binding tariff indication",
@@ -2291,8 +2292,20 @@ function drawOptChart(data, best) {
 // ═══════════════════════════════════════════════════════════════
 //   PERSISTENCE, IMPORT / EXPORT
 // ═══════════════════════════════════════════════════════════════
+// Saved projects and project files written before scopeRev 2 carry marineUsdM 0 and a loadable ratio of 84.3, and they
+// override the new Vopak SG defaults. Bring them forward once: a zero jetty becomes the TEPSA-duplicated default and the
+// old 84.3 % guess becomes 100 % (Vopak's 60,000 m³ is net). Values the user changed to anything else are kept.
+function migrateProject(o) {
+  const g = o && o.register && o.register.vopakSg;
+  if (g && g.scopeRev !== DEFAULTS.register.vopakSg.scopeRev) {
+    if (!num(g.marineUsdM)) g.marineUsdM = DEFAULTS.register.vopakSg.marineUsdM;
+    if (num(g.netToNominalPct) === 84.3) g.netToNominalPct = DEFAULTS.register.vopakSg.netToNominalPct;
+    g.scopeRev = DEFAULTS.register.vopakSg.scopeRev;
+  }
+  return o;
+}
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch (e) {} }
-function load() { try { const s = localStorage.getItem(STORE_KEY); if (s) P = deepMerge(DEFAULTS, JSON.parse(s)); } catch (e) { P = clone(DEFAULTS); } }
+function load() { try { const s = localStorage.getItem(STORE_KEY); if (s) P = deepMerge(DEFAULTS, migrateProject(JSON.parse(s))); } catch (e) { P = clone(DEFAULTS); } }
 function download(name, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 function slug() { return (P.project.name || "project").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project"; }
 
@@ -2300,7 +2313,7 @@ $("btnExportJson").addEventListener("click", () => download(`${slug()}.storage.j
 $("btnImport").addEventListener("click", () => $("fileInput").click());
 $("fileInput").addEventListener("change", async (e) => {
   const file = e.target.files[0]; if (!file) return;
-  try { P = deepMerge(DEFAULTS, JSON.parse(await file.text())); syncInputs(); recalc(); }
+  try { P = deepMerge(DEFAULTS, migrateProject(JSON.parse(await file.text()))); syncInputs(); recalc(); }
   catch (err) { alert("Could not read project file: " + err.message); }
   e.target.value = "";
 });
