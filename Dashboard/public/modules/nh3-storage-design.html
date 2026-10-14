@@ -645,11 +645,8 @@
         <div class="panel-h"><span class="t">Estimated CAPEX &amp; break-even storage tariff</span><span class="s" id="capexHeroSub"></span></div>
         <div class="panel-b">
           <div class="row2" style="margin-bottom:12px">
-            <div class="field"><label>Cost database <span class="hint">CAPEX reference</span></label>
-              <select data-path="capex.db">
-                <option value="tepsa">TEPSA — quoted CAPEX (EUR)</option>
-                <option value="vopaksg">Vopak Singapore — fee to CAPEX (USD)</option>
-              </select></div>
+            <div class="field" style="grid-column:1/-1"><label>CAPEX basis <span class="hint">choose the cost database for the figures below</span></label>
+              <div class="radio-group" id="dbPick" role="radiogroup" aria-label="CAPEX basis" style="grid-template-columns:repeat(2,1fr);margin-bottom:0"></div></div>
             <div class="field"><label>Currency <span class="hint">shown in</span></label><select data-path="capex.currency"><option value="eur">Euro (€)</option><option value="usd">US dollar (US$)</option></select></div>
             <div class="field"><label>FX <span class="hint">USD per EUR, editable</span></label><input type="number" step="0.01" min="0.01" data-path="voyage.fxUsdPerEur"/></div>
           </div>
@@ -1170,8 +1167,8 @@ function size(shipKey = P.shipClass) {
 // All money in the result is in the display currency (CCY): the reference CAPEX comes from the selected database
 // and is converted from its own currency, and the € inputs (marine adder, utility fee) are converted with CCY.k. `eurT` / `revEurM` field names
 // are historical: they hold the display currency.
-function capexFor(sz) {
-  const c = P.capex, LF = num(c.locationFactor, 1), sg = c.db === "vopaksg";
+function capexFor(sz, db) {
+  const c = P.capex, LF = num(c.locationFactor, 1), sg = (db || c.db) === "vopaksg";
   const ref = sg ? sgRef() : null;
   // Reference amounts converted from the database's own currency (EUR for TEPSA, USD for Vopak SG) to the display currency.
   const conv = (v) => (sg ? fromUsd(v) : v * CCY.k);
@@ -1266,6 +1263,11 @@ function renderShipPicker() {
 $("roundPick").addEventListener("click", (e) => {
   const b = e.target.closest("[data-dir], [data-ull]"); if (!b || b.disabled) return;
   if (b.dataset.dir) P.buffer.roundDir = b.dataset.dir; else P.buffer.ullage = b.dataset.ull;
+  syncInputs(); recalc();
+});
+$("dbPick").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-db]"); if (!b || P.capex.db === b.dataset.db) return;
+  P.capex.db = b.dataset.db; P.capex.currency = b.dataset.db === "vopaksg" ? "usd" : "eur";   // start in the quote's own currency
   syncInputs(); recalc();
 });
 $("shipPicker").addEventListener("click", (e) => {
@@ -1843,6 +1845,10 @@ function capexRange(cx) {
 function renderCapex(sz, cx) {
   const q = sz.thrT / 1000, $c = CCY.sym;
   $("capexHeroSub").textContent = `${fmt(sz.net)} t loadable volume · ${fmt(sz.gross)} t storage size (gross) · ${fmt(q)} ktpa · ${shipName(sz.shipKey)} · ${cx.sg ? "Vopak Singapore database" : "TEPSA database"} · ${CCY.code}`;
+  $("dbPick").innerHTML = [["tepsa", "TEPSA basis", "quoted CAPEX, EUR"], ["vopaksg", "Vopak Singapore basis", "fee → CAPEX, USD"]].map(([k, t, sub]) => {
+    const o = k === (cx.sg ? "vopaksg" : "tepsa") ? cx : capexFor(sz, k);
+    return `<button type="button" role="radio" aria-checked="${o === cx}" data-db="${k}" class="${o === cx ? "active" : ""}">${t}<small>${CCY.sym}${fmt(o.total)}M · ${sub}</small></button>`;
+  }).join("");
   $("capSensT1").textContent = `Total CAPEX, ${CCY.m} before financing`;
   $("capSensT2").textContent = `Break-even storage tariff, ${CCY.t}`;
   $("capexTblSub").textContent = `${CCY.m}, before financing`;
