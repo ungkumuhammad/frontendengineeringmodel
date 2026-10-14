@@ -30,7 +30,7 @@ separate module (or a terminal-type switch) rather than reusing the demand-drive
 | PGS 12 tank & levels | Section through a full-containment tank with the liquid levels to scale, level schedule per tank, live PGS 12 check of the design, open items and sources |
 | CAPEX & tariff | CAPEX from the reference cost curve, break-even storage tariff, throughput sensitivity of CAPEX and tariff (± 5 × 100 ktpa), market check against registered offers |
 | Optimum size | Repeats the sizing for MGC / LGC / VLAC / Other and picks the lowest storage + utilities + freight cost per tonne |
-| Economics register | Vopak tariffs, TEPSA quote, Project Titan benchmark, open questions, decision log — all editable, derived values live |
+| Economics register | Vopak Singapore fee (USD), Vopak tariffs, TEPSA quote, Project Titan benchmark, open questions, decision log — all editable, derived values live |
 
 ## Sizing method
 
@@ -167,10 +167,41 @@ the round trip. Default round trip (33 d) and hire, fuel and port costs are plac
   chosen (rounded up or down) under Required storage.
   Default reference: TEPSA €185M storage + €20M jetty for its 40,000 t loadable tank
   (58,651 m³ × 682 kg/m³; 69,557 m³ nominal).
+- **Cost database** (CAPEX basis, also on the CAPEX & tariff tab): *TEPSA* uses the quoted €185M + €20M
+  above; *Vopak Singapore* uses CAPEX back-calculated from its fee (next section). Both scale on loadable
+  volume per tank with the same exponent and location factor.
+- **Currency**: CAPEX, tariffs, revenue and the Optimum tab can be shown in **EUR or USD for either
+  database**. Quotes are converted with one editable FX (USD per EUR, default 1.10, the Voyage & fleet
+  field). Picking a database sets its own currency (TEPSA → EUR, Vopak SG → USD); the Currency field
+  overrides that. Inputs stay in their own units (€ power price, € freight and marine adder are
+  converted for display).
 - **Break-even tariff**: post-tax NPV = 0 at the operator return over the contract term;
   CPI-indexed revenue and fixed OPEX, straight-line tax depreciation, optional residual value;
   CAPEX capitalised to start of operations over the build spend profile.
 - **Vopak** implied CAPEX and **TEPSA** implied return use the same model.
+
+## Vopak Singapore cost database
+
+Source: Vopak email (received 2026-10-14), a very preliminary, non-binding estimate for a **new tank**:
+S$75.00 per MT, annual escalation (CPI for the fee, CPI & WI for opex); cost accuracy ±50 %; 60,000 m³
+tank; 500 kTPA terminal throughput including Gentari's 60 kTPA (Vopak is marketing the rest); 15-year
+contract; 15 kT parcels; delivery −30 °C / 15 barg; no heating; export piping 3" × 3 km.
+
+The quote is a fee, not a CAPEX. The model back-calculates the CAPEX the way it does for every other offer:
+
+```
+fee (US$/t)       = S$75.00 × 0.77 US$/S$ = 57.75        (exchange rate is a placeholder, editable)
+reference CAPEX   = overnight CAPEX that the fee × 500 ktpa funds at the Financial assumptions
+                    (9 % post-tax return, 15 yr, 2.5 % CPI, 2.5 % fixed OPEX, 30/40/30 build)  → US$166.7M
+reference tank    = 60,000 m³ × 84.3 % loadable × density = 34,475 t loadable
+design CAPEX      = reference CAPEX × (loadable per tank ÷ 34,475)^exponent × location factor
+```
+
+Assumptions to confirm with Vopak (also in the register's open questions): whether 60,000 m³ is nominal or
+net (84.3 % is the TEPSA calibration), the S$/US$ rate, whether the fee covers energy, jetty and the export
+piping, and the CPI / WI split. Jetty/marine and export piping are carve-outs of the total (default 0). The
+back-calculated CAPEX moves with the Financial assumptions (term, return, tax, OPEX), so it is a
+cross-check, not a quoted number.
 
 ## Excel export
 
@@ -209,3 +240,4 @@ throughout, gridlines off, frozen table headers and landscape/portrait print set
 | 2026-09-27 | Buffer rule default: outage + one ship-timing event (reproduces TEPSA 40,000 t) |
 | 2026-09-27 | Freight calculated from voyage; fleet sized from round trip vs arrival interval |
 | 2026-09-30 | Fleet basis switch: number of chartered ships can be an input; interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only) |
+| 2026-10-14 | Cost database switch (TEPSA / Vopak Singapore) and a Euro / USD currency choice with editable FX. Vopak SG CAPEX is back-calculated from the S$75/MT fee (US$166.7M for 60,000 m³ at 500 ktpa, ±50 %) |

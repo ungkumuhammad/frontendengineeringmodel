@@ -485,16 +485,31 @@
     <details class="grp">
       <summary>CAPEX basis<span class="sum-note" id="sumCapex"></span></summary>
       <div class="grp-body">
+        <div class="field"><label>Cost database <span class="hint">sets the CAPEX reference</span></label>
+          <select data-path="capex.db">
+            <option value="tepsa">TEPSA — quoted CAPEX (EUR)</option>
+            <option value="vopaksg">Vopak Singapore — fee to CAPEX (USD)</option>
+          </select></div>
         <div class="row2">
-          <div class="field"><label>Reference storage CAPEX <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.refStorageEurM"/></div>
-          <div class="field"><label>At reference loadable volume <span class="hint">t per tank</span></label><input type="number" step="1000" min="1" data-path="capex.refNetT"/></div>
+          <div class="field"><label>Currency <span class="hint">CAPEX &amp; tariff results</span></label><select data-path="capex.currency"><option value="eur">Euro (€)</option><option value="usd">US dollar (US$)</option></select></div>
+          <div class="field"><label>FX <span class="hint">USD per EUR</span></label><input type="number" step="0.01" min="0.01" data-path="voyage.fxUsdPerEur"/></div>
+        </div>
+        <div class="row2">
+          <div class="field db-tepsa"><label>Reference storage CAPEX <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.refStorageEurM"/></div>
+          <div class="field db-tepsa"><label>At reference loadable volume <span class="hint">t per tank</span></label><input type="number" step="1000" min="1" data-path="capex.refNetT"/></div>
+          <div class="field db-sg hidden"><label>Reference storage CAPEX <span class="hint">US$M, from the fee</span></label><input type="text" id="sgRefStorage" readonly/></div>
+          <div class="field db-sg hidden"><label>At reference loadable volume <span class="hint">t per tank</span></label><input type="text" id="sgRefNet" readonly/></div>
           <div class="field"><label>Scale exponent</label><input type="number" step="0.05" min="0" max="1.2" data-path="capex.exponent"/></div>
           <div class="field"><label>Location factor <span class="hint">× reference</span></label><input type="number" step="0.05" min="0" data-path="capex.locationFactor"/></div>
-          <div class="field"><label>Jetty / marine <span class="hint">€M fixed</span></label><input type="number" step="1" min="0" data-path="capex.marineEurM"/></div>
-          <div class="field"><label>Dredging, pipeline, other <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.otherEurM"/></div>
+          <div class="field db-tepsa"><label>Jetty / marine <span class="hint">€M fixed</span></label><input type="number" step="1" min="0" data-path="capex.marineEurM"/></div>
+          <div class="field db-tepsa"><label>Dredging, pipeline, other <span class="hint">€M</span></label><input type="number" step="1" min="0" data-path="capex.otherEurM"/></div>
+          <div class="field db-sg hidden"><label>Jetty / marine <span class="hint">US$M, of the total</span></label><input type="number" step="1" min="0" data-path="register.vopakSg.marineUsdM"/></div>
+          <div class="field db-sg hidden"><label>Export piping, other <span class="hint">US$M, of the total</span></label><input type="number" step="1" min="0" data-path="register.vopakSg.otherUsdM"/></div>
         </div>
-        <div class="field"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="capex.accuracyPct"/></div>
-        <p class="note">Default reference = TEPSA quote: €185M storage + €20M jetty (HAROPA, Le Havre) for a 40,000 t loadable tank (58,651 m³ × 682 kg/m³; 69,557 m³ nominal). Scaling: CAPEX ∝ loadable volume per tank<sup>exponent</sup>.</p>
+        <div class="field db-tepsa"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="capex.accuracyPct"/></div>
+        <div class="field db-sg hidden"><label>Estimate accuracy <span class="hint">± %</span></label><input type="number" step="5" min="0" data-path="register.vopakSg.accuracyPct"/></div>
+        <p class="note db-tepsa">Default reference = TEPSA quote: €185M storage + €20M jetty (HAROPA, Le Havre) for a 40,000 t loadable tank (58,651 m³ × 682 kg/m³; 69,557 m³ nominal). Scaling: CAPEX ∝ loadable volume per tank<sup>exponent</sup>.</p>
+        <p class="note db-sg hidden" id="sgBasisNote"></p>
       </div>
     </details>
 
@@ -628,19 +643,30 @@
     <div class="tabpane" id="pane-capex">
       <div class="panel hero">
         <div class="panel-h"><span class="t">Estimated CAPEX &amp; break-even storage tariff</span><span class="s" id="capexHeroSub"></span></div>
-        <div class="panel-b"><div class="kpis" id="capexKpis"></div></div>
+        <div class="panel-b">
+          <div class="row2" style="margin-bottom:12px">
+            <div class="field"><label>Cost database <span class="hint">CAPEX reference</span></label>
+              <select data-path="capex.db">
+                <option value="tepsa">TEPSA — quoted CAPEX (EUR)</option>
+                <option value="vopaksg">Vopak Singapore — fee to CAPEX (USD)</option>
+              </select></div>
+            <div class="field"><label>Currency <span class="hint">shown in</span></label><select data-path="capex.currency"><option value="eur">Euro (€)</option><option value="usd">US dollar (US$)</option></select></div>
+            <div class="field"><label>FX <span class="hint">USD per EUR, editable</span></label><input type="number" step="0.01" min="0.01" data-path="voyage.fxUsdPerEur"/></div>
+          </div>
+          <div class="kpis" id="capexKpis"></div>
+        </div>
       </div>
       <div class="panel">
         <div class="panel-h"><span class="t">Throughput sensitivity — CAPEX &amp; break-even tariff</span><span class="s" id="capSensSub"></span></div>
         <div class="panel-b two-col">
-          <div><div class="chart-t">Total CAPEX, €M before financing</div><div class="chart" id="capSensChart"></div></div>
-          <div><div class="chart-t">Break-even storage tariff, €/t</div><div class="chart" id="tarSensChart"></div></div>
+          <div><div class="chart-t" id="capSensT1">Total CAPEX, €M before financing</div><div class="chart" id="capSensChart"></div></div>
+          <div><div class="chart-t" id="capSensT2">Break-even storage tariff, €/t</div><div class="chart" id="tarSensChart"></div></div>
         </div>
         <div class="tbl-wrap"><table class="dt" id="capSensTable"></table></div>
       </div>
       <div class="two-col">
         <div class="panel">
-          <div class="panel-h"><span class="t">CAPEX breakdown</span><span class="s">€M, before financing</span></div>
+          <div class="panel-h"><span class="t">CAPEX breakdown</span><span class="s" id="capexTblSub">€M, before financing</span></div>
           <div class="tbl-wrap"><table class="dt" id="capexTable"></table></div>
         </div>
         <div class="panel">
@@ -676,7 +702,7 @@ Break-even tariff: NPV = 0 at the operator return, over the contract term —
         <div class="tbl-wrap"><table class="dt" id="shipEditTable"></table></div>
       </div>
       <div class="panel">
-        <div class="panel-h"><span class="t">Cost per tonne by ship class</span><span class="s">€/t, year-1</span></div>
+        <div class="panel-h"><span class="t">Cost per tonne by ship class</span><span class="s" id="optCostSub">€/t, year-1</span></div>
         <div class="panel-b">
           <div class="legend" id="optLegend"></div>
           <div class="chart" id="optChart"></div>
@@ -691,6 +717,13 @@ Break-even tariff: NPV = 0 at the operator return, over the contract term —
     <!-- ---------- REGISTER ---------- -->
     <div class="tabpane" id="pane-register">
       <div class="msg msg-info">All figures are indicative and non-binding. Derived values are recalculated live from the <b>Financial assumptions</b> and <b>Utilities</b> inputs. Edit any registered number below; it is saved with the project file.</div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="t">Vopak Singapore — new tank, indicative fee (USD)</span><span class="s" id="vopakSgSub"></span></div>
+        <div class="panel-b" style="padding-bottom:0"><p class="note" id="vopakSgScope"></p></div>
+        <div class="tbl-wrap"><table class="dt" id="vopakSgInputs"></table></div>
+        <div class="tbl-wrap"><table class="dt" id="vopakSgTable"></table></div>
+      </div>
 
       <div class="panel">
         <div class="panel-h"><span class="t">Vopak — non-binding tariff indication</span><span class="s" id="vopakSub"></span></div>
@@ -762,9 +795,20 @@ const DEFAULTS = {
   levels: { freeboardM: 0.5, extraFreeboardM: 0, tripMin: 5, alarmMin: 30, lallM: 1.5, lowAlarmMin: 30 },
   utilities: { powerKWhPerT: 10.3, powerPriceEurMWh: 150, markupPct: 10, bogPctPerDay: 0.04 },
   // refNetT: TEPSA's €185M is for its 40,000 t loadable tank (58,651 m³ × 682 kg/m³), so CAPEX scales on loadable volume.
-  capex: { refStorageEurM: 185, refNetT: 40000, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
+  // db: which cost database sets the CAPEX reference: "tepsa" (quoted in EUR) or "vopaksg" (quoted in S$, held in USD;
+  // CAPEX back-calculated from the fee, see register.vopakSg). currency: "eur" | "usd", the currency CAPEX and tariffs
+  // are shown in, for either database; the rate is voyage.fxUsdPerEur.
+  capex: { db: "tepsa", currency: "eur", refStorageEurM: 185, refNetT: 40000, exponent: 0.6, locationFactor: 1.0, marineEurM: 20, otherEurM: 0, accuracyPct: 40 },
   fin: { hurdlePct: 9, cpiPct: 2.5, taxPct: 25, depYears: 20, opexPct: 2.5, termYears: 15, residualPct: 0, buildYears: 3, spendProfile: "30/40/30" },
   register: {
+    // Vopak Singapore, new-tank scenario (email to Sriram / Joe, received 2026-10-14). Quoted in S$ per MT; the model works in USD.
+    // The quote gives a fee, not a CAPEX: CAPEX is back-calculated with the same finance engine used for every other offer.
+    vopakSg: {
+      status: "Indicative, non-binding · cost estimate accuracy ±50 %",
+      scope: "Very preliminary cost estimate for a new tank at Vopak Singapore. Fee S$75.00 per MT, annual escalation to apply (CPI for the fee, CPI & WI for opex). Non-binding. Premised on: 60,000 m³ new tank; total terminal throughput 500 kTPA, which includes Gentari's 60 kTPA (Vopak is marketing the capacity to other buyers); assumed contracted period 15 years; parcel size 15 kT per vessel; delivery conditions −30 °C / 15 barg; no heating required; export piping 3\" × 3 km. Vopak awaits the end-user's inputs for an economics sense check.",
+      feeSgdPerT: 75, fxUsdPerSgd: 0.77, terminalKtpa: 500, gentariKtpa: 60, termYears: 15, parcelKt: 15,
+      tankM3: 60000, netToNominalPct: 84.3, marineUsdM: 0, otherUsdM: 0, accuracyPct: 50,
+    },
     vopak: {
       status: "Non-binding tariff indication",
       scope: "1 refrigerated tank (steel/steel/concrete), direct pipeline to on-site cracker, jetty and dredging works. Excludes energy & utilities (set = TEPSA basis), non-pipeline send-out (e.g. rail), soil remediation of 3.7 ha plot (awaiting HAROPA), VAT. CAPEX accuracy ±40 %. 15-yr commitment, CPI-indexed.",
@@ -788,6 +832,10 @@ const DEFAULTS = {
       "TEPSA: soil remediation included?",
       "TEPSA: 1.7 ships/month vs 1.44 implied by 30 kt parcels",
       "Vopak: is '40 kt' net (usable) or gross capacity?",
+      "Vopak SG: is the 60,000 m³ nominal or net (usable)? Net/nominal ratio set to the TEPSA calibration (84.3 %)",
+      "Vopak SG: S$/US$ rate behind the US$ conversion (0.77 is a placeholder), and whether the fee is flat per tonne or take-or-pay",
+      "Vopak SG: does the S$75/MT include energy & utilities, jetty and 3\" × 3 km export piping? What is the CPI / WI split of the escalation?",
+      "Vopak SG: delivery at −30 °C / 15 barg is not the −33 °C atmospheric storage condition used elsewhere here — confirm the tank type and the cracker's feed condition",
       "Vopak: confirm utility pass-through basis equals TEPSA",
       "Titan: year of estimate; dredging / marine civil scope",
       "Supply load port: round trip days to Le Havre, all-in (default 33 d placeholder)",
@@ -810,6 +858,7 @@ const DEFAULTS = {
       { date: "2026-09-28", text: "Storage CAPEX scales on loadable volume per tank (TEPSA €185M = 40,000 t loadable), not gross tank size" },
       { date: "2026-09-30", text: "Voyage & fleet inputs reduced to round trip days (all-in) and ships chartered; chartered fleet is the default. Distance, speed, sea margin, load-port and canal days removed" },
       { date: "2026-09-30", text: "Fleet basis switch: number of chartered ships can be an input; arrival interval = round trip ÷ ships sets the parcel and loadable volume (selected ship class only)" },
+      { date: "2026-10-14", text: "Cost database switch (CAPEX basis): TEPSA (EUR, quoted CAPEX) or Vopak Singapore (USD). Vopak SG gives only a fee (S$75/MT, 500 ktpa terminal, 60,000 m³ tank, ±50 %), so its CAPEX is back-calculated with the same finance engine and scaled on loadable volume like the TEPSA reference. CAPEX and tariff outputs can be shown in EUR or USD for either database (Currency field; FX = USD per EUR, editable, default 1.10)" },
     ],
   },
 };
@@ -942,6 +991,35 @@ function impliedIrr(eurT, qKt, capexEurM, withIdc = true, over = {}) {
   return (lo + hi) / 2;
 }
 function utilityFee() { const u = P.utilities; return num(u.powerKWhPerT) * num(u.powerPriceEurMWh) / 1000 * (1 + num(u.markupPct) / 100); }
+
+// Display currency is its own choice (Euro or USD) for either cost database: TEPSA is quoted in EUR, Vopak Singapore in
+// S$ (held in USD). Quotes are converted to the chosen currency with the editable USD-per-EUR FX.
+// The finance engine is currency-neutral (NPV is linear in money), so CAPEX, tariffs and revenue are computed
+// straight in the database currency. EUR inputs (power price, freight, marine adder) are converted with k.
+//   k = display units per EUR (1 for EUR, the USD-per-EUR FX under Voyage & fleet for USD); m = "€M"; t = "€/t".
+const CCY = { code: "EUR", sym: "€", k: 1, m: "€M", t: "€/t" };
+function setCurrency() {
+  const usd = P.capex.currency === "usd";
+  CCY.code = usd ? "USD" : "EUR"; CCY.sym = usd ? "US$" : "€";
+  CCY.k = usd ? Math.max(0.01, num(P.voyage.fxUsdPerEur, 1.1)) : 1;
+  CCY.m = CCY.sym + "M"; CCY.t = CCY.sym + "/t";
+}
+// A US$ amount in the display currency (the Vopak Singapore quote is held in USD).
+function fromUsd(v) { return v / Math.max(0.01, num(P.voyage.fxUsdPerEur, 1.1)) * CCY.k; }
+
+// Vopak Singapore cost database. The quote is a fee, not a CAPEX, so the reference CAPEX is the overnight CAPEX
+// that the fee at the quoted terminal throughput would fund under the current financial assumptions (the same
+// back-calculation as the market check). The tank is 60,000 m³ nominal; the loadable volume uses a net/nominal
+// ratio (TEPSA calibration, 84.3 %) because the quote does not say whether 60,000 m³ is net or nominal.
+function sgRef() {
+  const r = P.register.vopakSg;
+  const feeUsdT = num(r.feeSgdPerT) * num(r.fxUsdPerSgd);
+  const ic = impliedCapex(feeUsdT, Math.max(1, num(r.terminalKtpa)), finParams());   // USD M
+  const netM3 = num(r.tankM3) * num(r.netToNominalPct) / 100;
+  const netT = netM3 * num(P.product.density) / 1000;
+  const marine = num(r.marineUsdM), other = num(r.otherUsdM);
+  return { feeUsdT, ic, netM3, netT, marine, other, total: ic.overnight, storage: Math.max(0, ic.overnight - marine - other) };
+}
 
 // ═══════════════════════════════════════════════════════════════
 //   SIZING ENGINE
@@ -1089,18 +1167,26 @@ function size(shipKey = P.shipClass) {
   };
 }
 
+// All money in the result is in the display currency (CCY): the reference CAPEX comes from the selected database
+// and is converted from its own currency, and the € inputs (marine adder, utility fee) are converted with CCY.k. `eurT` / `revEurM` field names
+// are historical: they hold the display currency.
 function capexFor(sz) {
-  const c = P.capex, LF = num(c.locationFactor, 1);
-  const refT = Math.max(1, num(c.refNetT));
-  const storage = sz.N * num(c.refStorageEurM) * Math.pow(sz.perTankT / refT, num(c.exponent)) * LF;
-  const marine = (num(c.marineEurM) + num(P.ships[sz.shipKey].marineAdderEurM)) * LF;
-  const other = num(c.otherEurM) * LF;
+  const c = P.capex, LF = num(c.locationFactor, 1), sg = c.db === "vopaksg";
+  const ref = sg ? sgRef() : null;
+  // Reference amounts converted from the database's own currency (EUR for TEPSA, USD for Vopak SG) to the display currency.
+  const conv = (v) => (sg ? fromUsd(v) : v * CCY.k);
+  const refStorage = conv(sg ? ref.storage : num(c.refStorageEurM));
+  const refT = Math.max(1, sg ? ref.netT : num(c.refNetT));
+  const marineFixed = conv(sg ? ref.marine : num(c.marineEurM)), otherFixed = conv(sg ? ref.other : num(c.otherEurM));
+  const storage = sz.N * refStorage * Math.pow(sz.perTankT / refT, num(c.exponent)) * LF;
+  const marine = (marineFixed + num(P.ships[sz.shipKey].marineAdderEurM) * CCY.k) * LF;
+  const other = otherFixed * LF;
   const total = storage + marine + other;
-  const acc = num(c.accuracyPct) / 100;
+  const acc = num(sg ? P.register.vopakSg.accuracyPct : c.accuracyPct) / 100;
   const f = finParams();
   const be = breakEvenTariff(total, sz.thrT / 1000, f);
-  const util = utilityFee();
-  return { storage, marine, other, total, low: total * (1 - acc), high: total * (1 + acc), acc, f, be,
+  const util = utilityFee() * CCY.k;
+  return { sg, ref, refStorage, refT, marineFixed, otherFixed, storage, marine, other, total, low: total * (1 - acc), high: total * (1 + acc), acc, f, be,
     beLow: breakEvenTariff(total * (1 - acc), sz.thrT / 1000, f).eurT, beHigh: breakEvenTariff(total * (1 + acc), sz.thrT / 1000, f).eurT,
     util, allIn: be.eurT + util, idc: idcFactor(f.h, f.profile) };
 }
@@ -1163,7 +1249,8 @@ function onInput(e) {
     const cur = getPath(P, el.dataset.path);
     setPath(P, el.dataset.path, typeof cur === "number" || el.type === "number" ? num(el.value, cur) : el.value);
   } else return;
-  if (el.dataset.shipField || (el.dataset.path || "").startsWith("ships.")) syncInputs();
+  if (el.dataset.path === "capex.db") P.capex.currency = el.value === "vopaksg" ? "usd" : "eur";   // start in the quote's own currency; the Currency field overrides
+  if (el.dataset.shipField || (el.dataset.path || "").startsWith("ships.") || ["capex.db", "capex.currency", "voyage.fxUsdPerEur"].includes(el.dataset.path)) syncInputs();
   recalc();
 }
 document.addEventListener("input", onInput);
@@ -1218,6 +1305,7 @@ function applyDerived() {
 
 function recalc() {
   applyDerived();
+  setCurrency();
   const sz = size();
   const cx = capexFor(sz);
   renderSummaries(sz, cx);
@@ -1255,8 +1343,17 @@ function renderSummaries(sz, cx) {
     ? `Density ${fmt(sz.dens, 1)} kg/m³ at ${fmt(tC, 1)} °C — PGS 12:2025 Tabel 7${PGS12.rho.some((r) => r[0] === tC) ? "" : ", interpolated"}.`
     : `Manual density. PGS 12 Tabel 7 gives ${fmt(rhoPGS(tC), 1)} kg/m³ at ${fmt(tC, 1)} °C.`) +
     ` Operating ΔP 20–55 mbar, ≤ 70 mbar while filling (M86); design P 100–500 mbar, ≈250 practical.`;
-  $("sumUtil").textContent = `€${fmt(cx.util, 2)}/t`;
-  $("sumCapex").textContent = `€${fmt(cx.total)}M`;
+  $("sumUtil").textContent = `${CCY.sym}${fmt(cx.util, 2)}/t`;
+  $("sumCapex").textContent = `${CCY.sym}${fmt(cx.total)}M`;
+  // Cost database: show the fields of the selected database; the Vopak Singapore reference is derived, not typed.
+  document.querySelectorAll(".db-tepsa").forEach((el) => el.classList.toggle("hidden", cx.sg));
+  document.querySelectorAll(".db-sg").forEach((el) => el.classList.toggle("hidden", !cx.sg));
+  if (cx.sg) {
+    $("sgRefStorage").value = fmt(cx.ref.storage, 1);
+    $("sgRefNet").value = fmt(cx.ref.netT);
+    const r = P.register.vopakSg;
+    $("sgBasisNote").innerHTML = `Reference = Vopak Singapore indicative fee S$${fmt(num(r.feeSgdPerT), 2)}/MT × ${fmt(num(r.fxUsdPerSgd), 4)} US$/S$ = US$${fmt(cx.ref.feeUsdT, 2)}/t on ${fmt(num(r.terminalKtpa))} ktpa, back-calculated to the <b>US$${fmt(cx.ref.total, 1)}M</b> overnight CAPEX it would fund at the Financial assumptions below (${fmt(cx.f.h * 100, 1)} % return, ${cx.f.term}-yr term, ${fmt(cx.f.cpi * 100, 1)} % CPI). It is the cost of a ${fmt(num(r.tankM3))} m³ tank, taken as ${fmt(num(r.netToNominalPct), 1)} % loadable = ${fmt(cx.ref.netT)} t. Scaling: CAPEX ∝ loadable volume per tank<sup>exponent</sup>. Results are shown in ${CCY.code} (FX ${fmt(num(P.voyage.fxUsdPerEur), 2)} US$ per €). Edit the quote under Economics register.`;
+  }
   $("sumPlot").textContent = `${fmt(sz.plot.ha, 2)} ha`;
   $("sumFin").textContent = `${fmt(cx.f.h * 100, 1)} % · ${cx.f.term} yr`;
   $("ruleNote").textContent = sz.withUllage ? sz.rule.note
@@ -1740,24 +1837,31 @@ function drawSection(sz) {
 // Low / mid / high strip for the Total CAPEX card: mid is the point estimate, low and high apply
 // the estimate accuracy (Estimate accuracy, ± %).
 function capexRange(cx) {
-  const cell = (label, v, cls) => `<div class="${cls || ""}"><div class="rl">${label}</div><div class="rv">€${fmt(v)}M</div></div>`;
+  const cell = (label, v, cls) => `<div class="${cls || ""}"><div class="rl">${label}</div><div class="rv">${CCY.sym}${fmt(v)}M</div></div>`;
   return `<div class="rng" role="group" aria-label="Total CAPEX range">${cell("Low", cx.low)}${cell("Mid", cx.total, "mid")}${cell("High", cx.high)}</div>`;
 }
 function renderCapex(sz, cx) {
-  const q = sz.thrT / 1000;
-  $("capexHeroSub").textContent = `${fmt(sz.net)} t loadable volume · ${fmt(sz.gross)} t storage size (gross) · ${fmt(q)} ktpa · ${shipName(sz.shipKey)}`;
+  const q = sz.thrT / 1000, $c = CCY.sym;
+  $("capexHeroSub").textContent = `${fmt(sz.net)} t loadable volume · ${fmt(sz.gross)} t storage size (gross) · ${fmt(q)} ktpa · ${shipName(sz.shipKey)} · ${cx.sg ? "Vopak Singapore database" : "TEPSA database"} · ${CCY.code}`;
+  $("capSensT1").textContent = `Total CAPEX, ${CCY.m} before financing`;
+  $("capSensT2").textContent = `Break-even storage tariff, ${CCY.t}`;
+  $("capexTblSub").textContent = `${CCY.m}, before financing`;
+  $("optCostSub").textContent = `${CCY.t}, year-1`;
   $("capexKpis").innerHTML =
-    kpi("Total CAPEX", "€" + fmt(cx.total), "M", `estimate accuracy ±${fmt(cx.acc * 100)} %` + capexRange(cx), true) +
-    kpi("Incl. financing", "€" + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
-    kpi("Break-even storage tariff", "€" + fmt(cx.be.eurT, 1), "/t", `range €${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`) +
-    kpi("All-in incl. utilities", "€" + fmt(cx.allIn, 1), "/t", `+ €${fmt(cx.util, 2)}/t utility fee`) +
-    kpi("Annual revenue", "€" + fmt(cx.be.revEurM, 1), "M/yr", "year 1, CPI-indexed after");
+    kpi("Total CAPEX", $c + fmt(cx.total), "M", `estimate accuracy ±${fmt(cx.acc * 100)} %` + capexRange(cx), true) +
+    kpi("Incl. financing", $c + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
+    kpi("Break-even storage tariff", $c + fmt(cx.be.eurT, 1), "/t", `range ${$c}${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`) +
+    kpi("All-in incl. utilities", $c + fmt(cx.allIn, 1), "/t", `+ ${$c}${fmt(cx.util, 2)}/t utility fee`) +
+    kpi("Annual revenue", $c + fmt(cx.be.revEurM, 1), "M/yr", "year 1, CPI-indexed after");
   const c = P.capex;
+  const fxNote = (CCY.code === "USD") === cx.sg ? "" : ` (${cx.sg ? `US$${fmt(cx.ref.storage, 1)}M` : `€${fmt(num(c.refStorageEurM), 1)}M`} at ${fmt(num(P.voyage.fxUsdPerEur), 2)} US$/€)`;
+  const storageBasis = `${$c}${fmt(cx.refStorage, 1)}M${fxNote}${cx.sg ? " from the Vopak SG fee" : ""} × (${fmt(sz.perTankT)}/${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`;
+  const marineBasis = `${$c}${fmt(cx.marineFixed)}M + ${shipName(sz.shipKey)} adder ${$c}${fmt(num(P.ships[sz.shipKey].marineAdderEurM) * CCY.k)}M`;
   $("capexTable").innerHTML = rows([
-    { head: ["Item", "€M", "Basis"] },
-    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, fmt(cx.storage, 1), `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)}/${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`] },
-    { cells: ["Jetty / marine", fmt(cx.marine, 1), `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder €${fmt(num(P.ships[sz.shipKey].marineAdderEurM))}M`] },
-    { cells: ["Dredging, pipeline, other", fmt(cx.other, 1), ""] },
+    { head: ["Item", CCY.m, "Basis"] },
+    { cells: [`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, fmt(cx.storage, 1), storageBasis] },
+    { cells: ["Jetty / marine", fmt(cx.marine, 1), marineBasis] },
+    { cells: [cx.sg ? "Export piping, other" : "Dredging, pipeline, other", fmt(cx.other, 1), ""] },
     { cls: "total", cells: ["Total, before financing", fmt(cx.total, 1), `±${fmt(cx.acc * 100)} %`] },
     { cells: ["Financing during construction", fmt(cx.be.capexCod - cx.total, 1), `${fmt(cx.f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`] },
     { cls: "total", cells: ["CAPEX at start of operations", fmt(cx.be.capexCod, 1), ""] },
@@ -1766,30 +1870,38 @@ function renderCapex(sz, cx) {
   // Decompose year-1 revenue into capital recovery and fixed OPEX (year-1 OPEX is exact).
   const opex1 = cx.f.opex * cx.be.capexCod;
   $("tariffTable").innerHTML = rows([
-    { head: ["Component", "€M / yr", "€/t"] },
+    { head: ["Component", `${CCY.m} / yr`, CCY.t] },
     { cells: ["Fixed OPEX (year 1)", fmt(opex1, 1), fmt(opex1 * 1000 / q, 1)] },
     { cells: ["Capital recovery, return & tax", fmt(cx.be.revEurM - opex1, 1), fmt((cx.be.revEurM - opex1) * 1000 / q, 1)] },
     { cls: "total", cells: ["Break-even storage tariff", fmt(cx.be.revEurM, 1), fmt(cx.be.eurT, 1)] },
     { cells: ["Utility fee (pass-through)", fmt(cx.util * q / 1000, 2), fmt(cx.util, 2)] },
     { cls: "total", cells: ["All-in", fmt(cx.be.revEurM + cx.util * q / 1000, 1), fmt(cx.allIn, 1)] },
   ]);
-  const vl = vopakAt("t40", q, "low"), vm = vopakAt("t40", q, "mid"), vh = vopakAt("t40", q, "high"), tp = tepsaAt(q);
-  const u = cx.util;
+  const mk = marketRows(q, cx);
   $("marketTable").innerHTML = rows([
-    { head: ["Source", "Storage €/t", "All-in €/t", "Revenue €M/yr", "Implied CAPEX €M*"] },
-    { cells: ["This design (break-even)", fmt(cx.be.eurT, 1), fmt(cx.allIn, 1), fmt(cx.be.revEurM, 1), fmt(cx.total)] },
-    { cells: ["TEPSA indicative fee", fmt(tp.eurT, 1), fmt(tp.eurT + u, 1), fmt(tp.rev, 1), fmt(impliedCapex(tp.eurT, q).overnight)] },
-    { cells: ["Vopak — low", fmt(vl.eurT, 1), fmt(vl.eurT + u, 1), fmt(vl.rev, 1), fmt(impliedCapex(vl.eurT, q).overnight)] },
-    { cells: ["Vopak — mid", fmt(vm.eurT, 1), fmt(vm.eurT + u, 1), fmt(vm.rev, 1), fmt(impliedCapex(vm.eurT, q).overnight)] },
-    { cells: ["Vopak — high", fmt(vh.eurT, 1), fmt(vh.eurT + u, 1), fmt(vh.rev, 1), fmt(impliedCapex(vh.eurT, q).overnight)] },
-  ]) + `<tr><td colspan="5" class="lbl" style="font-size:10.5px;color:var(--text3)">* CAPEX before financing that the fee would fund at the current financial assumptions. Offers are interpolated on fixed annual revenue between their quoted throughputs.</td></tr>`;
+    { head: ["Source", `Storage ${CCY.t}`, `All-in ${CCY.t}`, `Revenue ${CCY.m}/yr`, `Implied CAPEX ${CCY.m}*`] },
+    ...mk.map((r) => ({ cells: [r.label, fmt(r.fee, 1), fmt(r.fee + cx.util, 1), fmt(r.rev, 1), fmt(r.capex)] })),
+  ]) + `<tr><td colspan="5" class="lbl" style="font-size:10.5px;color:var(--text3)">* CAPEX before financing that the fee would fund at the current financial assumptions. Offers are interpolated on fixed annual revenue between their quoted throughputs; the Vopak Singapore fee is held flat per tonne (quoted at ${fmt(num(P.register.vopakSg.terminalKtpa))} ktpa). Quoted in EUR (TEPSA, Vopak) or S$ (Vopak Singapore) and shown in ${CCY.code}.</td></tr>`;
+}
+// Registered offers at the project throughput, in the display currency (quotes are EUR, or S$ via USD for Vopak Singapore).
+function marketRows(q, cx) {
+  const vl = vopakAt("t40", q, "low"), vm = vopakAt("t40", q, "mid"), vh = vopakAt("t40", q, "high"), tp = tepsaAt(q), k = CCY.k;
+  const sgFee = fromUsd(sgRef().feeUsdT);
+  const row = (label, fee, rev, capex) => ({ label, fee, rev, capex });
+  const fromFee = (label, fee) => row(label, fee, fee * q / 1000, impliedCapex(fee, q).overnight);
+  return [
+    row("This design (break-even)", cx.be.eurT, cx.be.revEurM, cx.total),
+    fromFee("Vopak Singapore indicative fee", sgFee),
+    fromFee("TEPSA indicative fee", tp.eurT * k),
+    fromFee("Vopak — low", vl.eurT * k), fromFee("Vopak — mid", vm.eurT * k), fromFee("Vopak — high", vh.eurT * k),
+  ];
 }
 
 function optimumData() {
   return SHIP_KEYS.map((k) => {
     const sz = size(k), cx = capexFor(sz);
-    const vy = voyage(sz), freight = vy.freight;
-    return { k, sz, cx, vy, storage: cx.be.eurT, util: cx.util, freight, total: cx.be.eurT + cx.util + freight };
+    const vy = voyage(sz), freight = vy.freight;   // freight in €/t; converted to the display currency below
+    return { k, sz, cx, vy, storage: cx.be.eurT, util: cx.util, freight: freight * CCY.k, total: cx.be.eurT + cx.util + freight * CCY.k };
   });
 }
 function renderOptimum() {
@@ -1802,14 +1914,14 @@ function renderOptimum() {
     kpi("Best ship class", shipName(best.k), "", `${fmt(best.sz.parcel)} t parcel`, true) +
     kpi("Optimum tank (net)", fmt(best.sz.net), "t", `Ø${fmt(best.sz.D, 1)} × ${fmt(best.sz.H, 1)} m · ${best.sz.N} tank(s)`) +
     kpi("Plot required", fmt(best.sz.plot.ha, 2), "ha", `${fmt(best.sz.plot.sqft)} sq ft · ${fmt(best.sz.plot.acre, 2)} acres`) +
-    kpi("CAPEX", "€" + fmt(best.cx.total), "M", "before financing") +
-    kpi("Landed logistics cost", "€" + fmt(best.total, 1), "/t", `storage + utilities + freight (${best.vy.manual ? "manual" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share"})`) +
-    kpi("Annual logistics cost", "€" + fmt(best.total * q / 1000, 1), "M/yr", `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`);
+    kpi("CAPEX", CCY.sym + fmt(best.cx.total), "M", "before financing") +
+    kpi("Landed logistics cost", CCY.sym + fmt(best.total, 1), "/t", `storage + utilities + freight (${best.vy.manual ? "manual" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share"})`) +
+    kpi("Annual logistics cost", CCY.sym + fmt(best.total * q / 1000, 1), "M/yr", `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`);
 
   data.forEach((d) => { $("parcel-" + d.k).textContent = fmt(d.sz.parcel); $("frtcalc-" + d.k).textContent = fmt(d.vy.calcEurT, 1); });
 
   $("optTable").innerHTML = rows([
-    { head: ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Inner Ø m", "Ships / yr", "Round trip d", "Vessels", "CAPEX €M", "Storage €/t", "Freight €/t", "Total €/t"] },
+    { head: ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Inner Ø m", "Ships / yr", "Round trip d", "Vessels", `CAPEX ${CCY.m}`, `Storage ${CCY.t}`, `Freight ${CCY.t}`, `Total ${CCY.t}`] },
     ...data.map((d) => ({
       cls: d === best ? "best" : "",
       cells: [shipName(d.k) + (d === best ? '<span class="tag best">lowest</span>' : "") + (d.k === P.shipClass ? '<span class="tag">selected</span>' : ""),
@@ -1835,6 +1947,21 @@ function buildStaticTables() {
       <td class="num" id="frtcalc-${k}"></td>
       <td class="num"><input type="number" step="0.5" data-path="ships.${k}.freightEurT" style="width:72px"/></td>
       <td class="num"><input type="number" step="1" data-path="ships.${k}.marineAdderEurM"/></td></tr>`).join("");
+  const sgRow = (label, path, step, unit, note) => `<tr><td class="lbl">${label}</td><td class="num">${inp(path, step, 90)}</td><td class="lbl">${unit}</td><td class="lbl" style="font-size:11px;color:var(--text3)">${note || ""}</td></tr>`;
+  $("vopakSgInputs").innerHTML =
+    `<tr><th>Quoted input</th><th class="num">Value</th><th>Unit</th><th>Note</th></tr>` +
+    sgRow("Indicative fee", "register.vopakSg.feeSgdPerT", 0.5, "S$ per MT", "Annual escalation applies: CPI for the fee, CPI &amp; WI for opex. The model indexes at the CPI input.") +
+    sgRow("Exchange rate", "register.vopakSg.fxUsdPerSgd", 0.005, "US$ per S$", "Placeholder, not from the quote — set the rate to use") +
+    `<tr><td class="lbl">Fee in USD</td><td class="num" id="sgFeeUsd"></td><td class="lbl">US$ per MT</td><td class="lbl" style="font-size:11px;color:var(--text3)">fee × exchange rate</td></tr>` +
+    sgRow("Tank capacity", "register.vopakSg.tankM3", 1000, "m³", "New tank. Nominal or net is not stated") +
+    sgRow("Loadable ÷ nominal", "register.vopakSg.netToNominalPct", 0.5, "%", "TEPSA calibration (84.3 %), applied because the quote is silent") +
+    sgRow("Terminal throughput", "register.vopakSg.terminalKtpa", 10, "ktpa", "Includes Gentari; Vopak is marketing the rest to other buyers. The fee is back-calculated on this volume") +
+    sgRow("Gentari throughput", "register.vopakSg.gentariKtpa", 5, "ktpa", "Share of the terminal throughput") +
+    sgRow("Contracted period", "register.vopakSg.termYears", 1, "years", "As quoted. The model uses Financial assumptions → Contract term") +
+    sgRow("Parcel size", "register.vopakSg.parcelKt", 1, "kt per vessel", "Delivery −30 °C / 15 barg · no heating · export piping 3&quot; × 3 km") +
+    sgRow("Cost estimate accuracy", "register.vopakSg.accuracyPct", 5, "± %", "Class of estimate as stated by Vopak") +
+    sgRow("Of the CAPEX: jetty / marine", "register.vopakSg.marineUsdM", 1, "US$M", "Not quoted separately; carve-out of the implied total") +
+    sgRow("Of the CAPEX: export piping, other", "register.vopakSg.otherUsdM", 1, "US$M", "Not quoted separately; carve-out of the implied total");
   $("vopakInputs").innerHTML =
     `<tr><th>Quoted tariff €/t</th><th class="num">Throughput A, ktpa</th><th class="num">A low</th><th class="num">A high</th><th class="num">Throughput B, ktpa</th><th class="num">B low</th><th class="num">B high</th></tr>` +
     ["t40", "t60"].map((s) => `<tr><td class="lbl">${s === "t40" ? "40 kt tank" : "60 kt tank"}</td>
@@ -1858,6 +1985,22 @@ function inp(path, step = 1, w) { return `<input type="number" step="${step}" da
 
 function renderRegister() {
   const R = P.register, f = finParams(), u = utilityFee();
+  // ---- Vopak Singapore (USD)
+  {
+    const g = R.vopakSg, ref = sgRef(), uUsd = u * Math.max(0.01, num(P.voyage.fxUsdPerEur, 1.1)), acc = num(g.accuracyPct) / 100;
+    $("vopakSgSub").textContent = `${g.status} · ${num(g.termYears)}-yr, CPI`;
+    $("vopakSgScope").textContent = g.scope;
+    $("sgFeeUsd").textContent = fmt(ref.feeUsdT, 2);
+    const t = num(g.terminalKtpa), gk = num(g.gentariKtpa);
+    const at = (label, kt, fee) => { const ic = impliedCapex(fee, kt, f); return { cells: [label, fmt(fee, 2), fmt(fee + uUsd, 2), fmt(ic.revEurM, 2), fmt(ic.cod, 1), fmt(ic.overnight, 1)] }; };
+    $("vopakSgTable").innerHTML = rows([
+      { head: ["Case", "Fee US$/t", "All-in US$/t", "Revenue US$M/yr", "CAPEX incl. financing US$M", "CAPEX before financing US$M"] },
+      { cls: "total", ...at(`Terminal ${fmt(t)} ktpa — reference CAPEX`, t, ref.feeUsdT) },
+      { cells: [`Estimate range ±${fmt(acc * 100)} %`, "", "", "", `${fmt(ref.ic.cod * (1 - acc))}–${fmt(ref.ic.cod * (1 + acc))}`, `${fmt(ref.total * (1 - acc))}–${fmt(ref.total * (1 + acc))}`] },
+      { cells: [`Gentari ${fmt(gk)} ktpa — revenue at the same fee`, fmt(ref.feeUsdT, 2), fmt(ref.feeUsdT + uUsd, 2), fmt(ref.feeUsdT * gk / 1000, 2), "", ""] },
+      { cells: [`Reference tank: ${fmt(num(g.tankM3))} m³ × ${fmt(num(g.netToNominalPct), 1)} % × ${fmt(num(P.product.density), 1)} kg/m³`, "", "", "", `${fmt(ref.netT)} t loadable`, `US$${fmt(ref.total * 1e6 / ref.netT)} per t`] },
+    ]) + `<tr><td colspan="6" class="lbl" style="font-size:11.5px">The quote gives a fee, not a CAPEX. The CAPEX shown is what S$${fmt(num(g.feeSgdPerT), 2)}/MT on ${fmt(t)} ktpa would fund over ${f.term} years at ${fmt(f.h * 100, 1)} % post-tax return, ${fmt(f.cpi * 100, 1)} % CPI, ${fmt(f.opex * 100, 1)} % fixed OPEX and the build spend profile, from the Financial assumptions. The estimate range applies Vopak's accuracy to that CAPEX. Utility fee at the model's power price, converted at ${fmt(num(P.voyage.fxUsdPerEur), 2)} US$/€.</td></tr>`;
+  }
   // ---- Vopak
   const v = R.vopak;
   $("vopakSub").textContent = `${v.status} · ${num(v.termYears)}-yr, CPI`;
@@ -2014,8 +2157,8 @@ function mountChart(id, svg) {
 }
 const SENS_FMT = {
   storage: { yFmt: (v) => `${fmt(v / 1000)}k t`, tipFmt: (v) => `${fmt(v)} t` },
-  capex: { yFmt: (v) => `€${fmt(v)}M`, tipFmt: (v) => `€${fmt(v, 1)}M` },
-  tariff: { yFmt: (v) => `€${fmt(v, v % 1 ? 1 : 0)}`, tipFmt: (v) => `€${fmt(v, 2)}/t` },
+  capex: { yFmt: (v) => `${CCY.sym}${fmt(v)}M`, tipFmt: (v) => `${CCY.sym}${fmt(v, 1)}M` },
+  tariff: { yFmt: (v) => `${CCY.sym}${fmt(v, v % 1 ? 1 : 0)}`, tipFmt: (v) => `${CCY.sym}${fmt(v, 2)}/t` },
 };
 function renderSensitivity(d) {
   const ser = sensSeries(d), sz0 = (d.find((p) => p.base) || d[0] || {}).sz;
@@ -2030,7 +2173,7 @@ function renderSensitivity(d) {
     ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.netReq), fmt(p.sz.req.gross), fmt(p.sz.gross), fmt(p.sz.net), fmt(p.sz.D, 1), fmt(p.sz.stockDays, 1)])),
   ]);
   $("capSensTable").innerHTML = rows([
-    { head: ["Throughput, ktpa", "Loadable volume, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range, €M", "Break-even tariff, €/t", "All-in tariff, €/t"] },
+    { head: ["Throughput, ktpa", "Loadable volume, t", `Storage CAPEX, ${CCY.m}`, `Total CAPEX, ${CCY.m}`, `Range, ${CCY.m}`, `Break-even tariff, ${CCY.t}`, `All-in tariff, ${CCY.t}`] },
     ...d.map((p) => row(p, [fmt(p.t) + (p.base ? " (current)" : ""), fmt(p.sz.net), fmt(p.cx.storage, 1), fmt(p.cx.total, 1), `${fmt(p.cx.low)}–${fmt(p.cx.high)}`, fmt(p.cx.be.eurT, 2), fmt(p.cx.allIn, 2)])),
   ]);
 }
@@ -2113,7 +2256,7 @@ function drawOptChart(data, best) {
   const { top: max, ticks } = niceTicks(Math.max(...data.map((d) => d.total).filter(Number.isFinite), 1));
   const x = (v) => L + (v / max) * (W - L - R);
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Landed cost per tonne by ship class">`;
-  svg += `<g class="axis">` + ticks.map((t) => `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - 22}" stroke="var(--grid)" stroke-width="1"/><text x="${x(t)}" y="${H - 6}" text-anchor="middle">€${fmt(t)}</text>`).join("") + `</g>`;
+  svg += `<g class="axis">` + ticks.map((t) => `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - 22}" stroke="var(--grid)" stroke-width="1"/><text x="${x(t)}" y="${H - 6}" text-anchor="middle">${CCY.sym}${fmt(t)}</text>`).join("") + `</g>`;
   data.forEach((d, i) => {
     const yy = T + i * rowH + (rowH - barH) / 2;
     svg += `<text class="lbl-txt" x="${L - 10}" y="${yy + barH / 2 + 4}" text-anchor="end">${esc(shipName(d.k))}${d === best ? " ★" : ""}</text>`;
@@ -2124,10 +2267,10 @@ function drawOptChart(data, best) {
       const gap = j > 0 ? 2 : 0; const last = segs.slice(j + 1).every(([k2]) => !(d[k2] > 0));
       const w = Math.max(0, x1 - x0 - gap), rx = last ? 4 : 0;
       svg += last
-        ? `<path d="M${x0 + gap},${yy}h${Math.max(0, w - rx)}a${rx},${rx} 0 0 1 ${rx},${rx}v${barH - 2 * rx}a${rx},${rx} 0 0 1 -${rx},${rx}h-${Math.max(0, w - rx)}z" fill="${col}" data-tip="${esc(shipName(d.k))} · ${label}: <b>€${fmt(v, 1)}/t</b>"/>`
-        : `<rect x="${x0 + gap}" y="${yy}" width="${w}" height="${barH}" fill="${col}" data-tip="${esc(shipName(d.k))} · ${label}: <b>€${fmt(v, 1)}/t</b>"/>`;
+        ? `<path d="M${x0 + gap},${yy}h${Math.max(0, w - rx)}a${rx},${rx} 0 0 1 ${rx},${rx}v${barH - 2 * rx}a${rx},${rx} 0 0 1 -${rx},${rx}h-${Math.max(0, w - rx)}z" fill="${col}" data-tip="${esc(shipName(d.k))} · ${label}: <b>${CCY.sym}${fmt(v, 1)}/t</b>"/>`
+        : `<rect x="${x0 + gap}" y="${yy}" width="${w}" height="${barH}" fill="${col}" data-tip="${esc(shipName(d.k))} · ${label}: <b>${CCY.sym}${fmt(v, 1)}/t</b>"/>`;
     });
-    svg += `<text class="val-txt" x="${x(d.total) + 8}" y="${yy + barH / 2 + 4}">€${fmt(d.total, 1)}</text>`;
+    svg += `<text class="val-txt" x="${x(d.total) + 8}" y="${yy + barH / 2 + 4}">${CCY.sym}${fmt(d.total, 1)}</text>`;
   });
   svg += `</svg>`;
   host.innerHTML = svg;
@@ -2312,8 +2455,10 @@ const INPUT_GROUPS = [
     ["levels.lallM", "Pump low-low trip (heel)", "m", "placeholder — pump vendor (M10/M30)"], ["levels.lowAlarmMin", "Low alarm → action", "min", "placeholder"]]],
   ["Plot area reference", [["site.refPlotHa", "Reference plot, incl. jetty", "ha", "user-supplied"], ["site.refTankT", "At tank size", "t"], ["site.jettyToTankM", "Jetty → tank distance", "m"]]],
   ["Utilities & boil-off", [["utilities.powerKWhPerT", "Power", "kWh/t"], ["utilities.powerPriceEurMWh", "Power price", "€/MWh"], ["utilities.markupPct", "Admin mark-up", "%"], ["utilities.bogPctPerDay", "Boil-off rate", "% of full tank / d"]]],
-  ["CAPEX basis", [["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refNetT", "At reference loadable volume", "t per tank", "TEPSA 40,000 t (58,651 m³ × 682 kg/m³)"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
-    ["capex.marineEurM", "Jetty / marine", "€M"], ["capex.otherEurM", "Dredging, pipeline, other", "€M"], ["capex.accuracyPct", "Estimate accuracy", "± %"]]],
+  ["CAPEX basis", [["capex.db", "Cost database", "", "TEPSA = quoted CAPEX (EUR) · Vopak Singapore = fee back-calculated to CAPEX (USD)"], ["capex.currency", "Currency shown", "", "FX = voyage FX, USD per EUR"], ["capex.refStorageEurM", "Reference storage CAPEX", "€M", "TEPSA quote"], ["capex.refNetT", "At reference loadable volume", "t per tank", "TEPSA 40,000 t (58,651 m³ × 682 kg/m³)"], ["capex.exponent", "Scale exponent"], ["capex.locationFactor", "Location factor", "× reference"],
+    ["capex.marineEurM", "Jetty / marine", "€M"], ["capex.otherEurM", "Dredging, pipeline, other", "€M"], ["capex.accuracyPct", "Estimate accuracy", "± %"],
+    ["register.vopakSg.marineUsdM", "Vopak SG: jetty / marine", "US$M", "of the implied total"], ["register.vopakSg.otherUsdM", "Vopak SG: export piping, other", "US$M", "of the implied total"],
+    ["register.vopakSg.accuracyPct", "Vopak SG: estimate accuracy", "± %"]]],
   ["Financial assumptions", [["fin.hurdlePct", "Operator return", "% nominal, post-tax"], ["fin.cpiPct", "CPI indexation", "%/yr"], ["fin.taxPct", "Corporate tax", "%"], ["fin.depYears", "Tax depreciation", "yrs, SL"],
     ["fin.opexPct", "Fixed OPEX", "% CAPEX/yr"], ["fin.termYears", "Contract term", "yrs"], ["fin.residualPct", "Residual value", "% CAPEX"], ["fin.buildYears", "Build period", "yrs"], ["fin.spendProfile", "Spend profile", "% per build year"]]],
 ];
@@ -2371,10 +2516,10 @@ async function exportExcel(full) {
     R("Design loadable volume", sz.net, "t", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankT)} t · ${sz.rule.name.toLowerCase()} · basis for CAPEX`, "key");
     R("Inner diameter × shell height", sz.D, "m", `× ${fmt(sz.H, 1)} m shell · outer Ø ${fmt(sz.OD, 1)} m`, "key", XF.d1);
     R("Plot required, incl. jetty", sz.plot.ha, "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres · linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t`, "key", XF.d2);
-    R("Total CAPEX, before financing", cx.total, "€M", `range €${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %)`, "key");
-    R("Break-even storage tariff", cx.be.eurT, "€/t", `range €${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t · ${fmt(f.h * 100, 1)} % return, ${f.term}-yr term`, "key", XF.d1);
-    R("All-in tariff incl. utilities", cx.allIn, "€/t", `+ €${fmt(u, 2)}/t utility fee`, "key", XF.d1);
-    R("Landed logistics cost", cur.total, "€/t", `storage + utilities + freight, ${shipName(sz.shipKey)}`, "key", XF.d1);
+    R("Total CAPEX, before financing", cx.total, CCY.m, `range ${CCY.sym}${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %) · ${cx.sg ? "Vopak Singapore database" : "TEPSA database"} · ${CCY.code}`, "key");
+    R("Break-even storage tariff", cx.be.eurT, CCY.t, `range ${CCY.sym}${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t · ${fmt(f.h * 100, 1)} % return, ${f.term}-yr term`, "key", XF.d1);
+    R("All-in tariff incl. utilities", cx.allIn, CCY.t, `+ ${CCY.sym}${fmt(u, 2)}/t utility fee`, "key", XF.d1);
+    R("Landed logistics cost", cur.total, CCY.t, `storage + utilities + freight, ${shipName(sz.shipKey)}`, "key", XF.d1);
 
     S.section("Storage");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
@@ -2420,22 +2565,22 @@ async function exportExcel(full) {
 
     S.section("Economics");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    R("Storage CAPEX", cx.storage, "€M", `${sz.N} × ${fmt(sz.perTankT)} t loadable on the reference curve`, null, XF.d1);
-    R("Jetty / marine", cx.marine, "€M", "", null, XF.d1);
-    R("Dredging, pipeline, other", cx.other, "€M", "", null, XF.d1);
-    R("Total CAPEX, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} %`, "key", XF.d1);
-    R("CAPEX at start of operations", cx.be.capexCod, "€M", `incl. financing over ${f.profile.length} build yrs`, null, XF.d1);
-    R("Break-even storage tariff", cx.be.eurT, "€/t", `year 1, CPI-indexed after`, "key", XF.d1);
-    R("Utility fee", u, "€/t", "pass-through + admin mark-up", null, XF.d2);
-    R("All-in tariff", cx.allIn, "€/t", "", "key", XF.d1);
-    R("Year-1 revenue", cx.be.revEurM, "€M/yr", "", null, XF.d1);
+    R("Storage CAPEX", cx.storage, CCY.m, `${sz.N} × ${fmt(sz.perTankT)} t loadable on the reference curve`, null, XF.d1);
+    R("Jetty / marine", cx.marine, CCY.m, "", null, XF.d1);
+    R(cx.sg ? "Export piping, other" : "Dredging, pipeline, other", cx.other, CCY.m, "", null, XF.d1);
+    R("Total CAPEX, before financing", cx.total, CCY.m, `±${fmt(cx.acc * 100)} %`, "key", XF.d1);
+    R("CAPEX at start of operations", cx.be.capexCod, CCY.m, `incl. financing over ${f.profile.length} build yrs`, null, XF.d1);
+    R("Break-even storage tariff", cx.be.eurT, CCY.t, `year 1, CPI-indexed after`, "key", XF.d1);
+    R("Utility fee", u, CCY.t, "pass-through + admin mark-up", null, XF.d2);
+    R("All-in tariff", cx.allIn, CCY.t, "", "key", XF.d1);
+    R("Year-1 revenue", cx.be.revEurM, CCY.m + "/yr", "", null, XF.d1);
 
     S.section("Optimum ship class", "lowest storage + utilities + freight");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
     S.row(["Best ship class", shipName(best.k), "", `${fmt(best.sz.parcel)} t parcel${best.k === sz.shipKey ? " · same as selected" : ` · selected: ${shipName(sz.shipKey)}`}`], { kind: "key" });
     R("Optimum tank, net", best.sz.net, "t", `Ø${fmt(best.sz.D, 1)} × ${fmt(best.sz.H, 1)} m · ${best.sz.N} tank(s)`);
     R("Plot required", best.sz.plot.ha, "ha", `${fmt(best.sz.plot.sqft)} sq ft · ${fmt(best.sz.plot.acre, 2)} acres`, null, XF.d2);
-    R("Landed logistics cost", best.total, "€/t", `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`, "key", XF.d1);
+    R("Landed logistics cost", best.total, CCY.t, `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`, "key", XF.d1);
 
     const counts = checks.reduce((a, c) => { const l = stLabel(c.st); a[l] = (a[l] || 0) + 1; return a; }, {});
     S.section("PGS 12 check", Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(" · "));
@@ -2471,11 +2616,11 @@ async function exportExcel(full) {
     d.forEach((p) => S.row([p.t, p.sz.netReq, p.sz.req.gross, p.sz.gross, p.sz.net, p.sz.D, p.sz.stockDays], { kind: bold(p), fmt: [XF.int, XF.int, XF.int, XF.int, XF.int, XF.d1, XF.d1] }));
     S.section("CAPEX & break-even tariff vs throughput");
     const cap = (t) => { S.ws.addRow([t]).getCell(1).font = xfont({ size: 10, bold: true, color: XC.text2 }); };
-    cap("Total CAPEX, €M before financing");
+    cap(`Total CAPEX, ${CCY.m} before financing`);
     await img(sensSvg(d, ser.capex, Object.assign({ w: 820, h: 280, label: "Total CAPEX versus throughput" }, SENS_FMT.capex), SENS_PRINT), 820, 280);
-    cap("Break-even storage tariff, €/t");
+    cap(`Break-even storage tariff, ${CCY.t}`);
     await img(sensSvg(d, ser.tariff, Object.assign({ w: 820, h: 280, label: "Break-even storage tariff versus throughput" }, SENS_FMT.tariff), SENS_PRINT), 820, 280);
-    S.header(["Throughput, ktpa", "Loadable volume, t", "Storage CAPEX, €M", "Total CAPEX, €M", "Range low, €M", "Range high, €M", "Break-even tariff, €/t"]);
+    S.header(["Throughput, ktpa", "Loadable volume, t", `Storage CAPEX, ${CCY.m}`, `Total CAPEX, ${CCY.m}`, `Range low, ${CCY.m}`, `Range high, ${CCY.m}`, `Break-even tariff, ${CCY.t}`]);
     d.forEach((p) => S.row([p.t, p.sz.net, p.cx.storage, p.cx.total, p.cx.low, p.cx.high, p.cx.be.eurT], { kind: bold(p), fmt: [XF.int, XF.int, XF.d1, XF.d1, XF.int, XF.int, XF.d2] }));
     S.ws.addRow([]);
     S.note("Each row re-runs the full sizing (required net → required gross → rounded storage size → loadable volume) and the CAPEX and tariff model at that throughput, with every other input as in this workbook. The current case is highlighted.");
@@ -2608,21 +2753,23 @@ async function exportExcel(full) {
       S.title("CAPEX & break-even tariff", subtitle);
       const R = (label, v, unit, note, kind, fm) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fm || XF.d1] });
       const c = P.capex;
-      S.section("CAPEX", "€M, before financing");
+      S.section("CAPEX", `${CCY.m}, before financing · ${cx.sg ? "Vopak Singapore database (fee back-calculated)" : "TEPSA database"} · ${CCY.code}`);
       S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
-      R(`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, cx.storage, "€M", `€${fmt(num(c.refStorageEurM))}M × (${fmt(sz.perTankT)} ÷ ${fmt(num(c.refNetT))})^${num(c.exponent)} × ${num(c.locationFactor)}`);
-      R("Jetty / marine", cx.marine, "€M", `€${fmt(num(c.marineEurM))}M + ${shipName(sz.shipKey)} adder`);
-      R("Dredging, pipeline, other", cx.other, "€M");
-      R("Total, before financing", cx.total, "€M", `±${fmt(cx.acc * 100)} % → €${fmt(cx.low)}–${fmt(cx.high)}M`, "key");
-      R("Financing during construction", cx.be.capexCod - cx.total, "€M", `${fmt(f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`);
-      R("CAPEX at start of operations", cx.be.capexCod, "€M", "", "total");
+      R(`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, cx.storage, CCY.m, cx.sg
+        ? `${CCY.sym}${fmt(cx.refStorage, 1)}M (from the S$${fmt(num(P.register.vopakSg.feeSgdPerT), 2)}/MT fee${CCY.code === "USD" ? "" : `; US$${fmt(cx.ref.storage, 1)}M`}) × (${fmt(sz.perTankT)} ÷ ${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`
+        : `${CCY.sym}${fmt(cx.refStorage, 1)}M (TEPSA €${fmt(num(c.refStorageEurM))}M) × (${fmt(sz.perTankT)} ÷ ${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`);
+      R("Jetty / marine", cx.marine, CCY.m, `${CCY.sym}${fmt(cx.marineFixed)}M + ${shipName(sz.shipKey)} adder`);
+      R(cx.sg ? "Export piping, other" : "Dredging, pipeline, other", cx.other, CCY.m);
+      R("Total, before financing", cx.total, CCY.m, `±${fmt(cx.acc * 100)} % → ${CCY.sym}${fmt(cx.low)}–${fmt(cx.high)}M`, "key");
+      R("Financing during construction", cx.be.capexCod - cx.total, CCY.m, `${fmt(f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`);
+      R("CAPEX at start of operations", cx.be.capexCod, CCY.m, "", "total");
       S.section("Tariff build-up", `${fmt(f.h * 100, 1)} % return · ${f.term} yr`);
-      S.header(["Component", "€M / yr", "€/t", "Note"], [0, 3]);
+      S.header(["Component", `${CCY.m} / yr`, CCY.t, "Note"], [0, 3]);
       const opex1 = f.opex * cx.be.capexCod;
       const T2 = (l, a, b2, kind, note) => S.row([l, a, b2, note || ""], { kind, fmt: [null, XF.d1, XF.d1] });
       T2("Fixed OPEX (year 1)", opex1, opex1 * 1000 / q);
       T2("Capital recovery, return & tax", cx.be.revEurM - opex1, (cx.be.revEurM - opex1) * 1000 / q);
-      T2("Break-even storage tariff", cx.be.revEurM, cx.be.eurT, "key", `range €${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`);
+      T2("Break-even storage tariff", cx.be.revEurM, cx.be.eurT, "key", `range ${CCY.sym}${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`);
       T2("Utility fee (pass-through)", u * q / 1000, u);
       T2("All-in", cx.be.revEurM + u * q / 1000, cx.allIn, "key");
       S.section("Financial assumptions");
@@ -2631,20 +2778,14 @@ async function exportExcel(full) {
         .forEach(([l, v, fm]) => R(l, v, "", "", null, fm));
       R("Tax depreciation", f.dep, "yrs", "straight line", null, XF.int);
       R("Contract term", f.term, "yrs", "", null, XF.int);
-      S.section("Market check at this throughput", "registered offers, 40 kt tank, interpolated on fixed revenue");
-      S.header(["Source", "Storage €/t", "All-in €/t", "Implied CAPEX before financing, €M"], [0]);
-      const vl = vopakAt("t40", q, "low"), vm = vopakAt("t40", q, "mid"), vh = vopakAt("t40", q, "high"), tp = tepsaAt(q);
-      const M = (l, eurT, cap, kind) => S.row([l, eurT, eurT + u, cap], { kind, fmt: [null, XF.d1, XF.d1, XF.int] });
-      M("This design (break-even)", cx.be.eurT, cx.total, "key");
-      M("TEPSA indicative fee", tp.eurT, impliedCapex(tp.eurT, q).overnight);
-      M("Vopak — low", vl.eurT, impliedCapex(vl.eurT, q).overnight);
-      M("Vopak — mid", vm.eurT, impliedCapex(vm.eurT, q).overnight);
-      M("Vopak — high", vh.eurT, impliedCapex(vh.eurT, q).overnight);
+      S.section("Market check at this throughput", `registered offers, 40 kt tank, interpolated on fixed revenue · ${CCY.code}`);
+      S.header(["Source", `Storage ${CCY.t}`, `All-in ${CCY.t}`, `Implied CAPEX before financing, ${CCY.m}`], [0]);
+      marketRows(q, cx).forEach((r, i) => S.row([r.label, r.fee, r.fee + u, r.capex], { kind: i === 0 ? "key" : null, fmt: [null, XF.d1, XF.d1, XF.int] }));
     }
 
     // ── SHIP OPTIONS ──────────────────────────────────────────
     {
-      const cols = ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Plot acres", "Plot sq ft", "Inner Ø m", "Ships / yr", "Jetty occ.", "Round trip d", "Vessels", "CAPEX €M", "Storage €/t", "Utilities €/t", "Freight €/t", "Total €/t"];
+      const cols = ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Plot acres", "Plot sq ft", "Inner Ø m", "Ships / yr", "Jetty occ.", "Round trip d", "Vessels", `CAPEX ${CCY.m}`, `Storage ${CCY.t}`, `Utilities ${CCY.t}`, `Freight ${CCY.t}`, `Total ${CCY.t}`];
       const S = xSheet(wb, "Ship Options", [26, 10, 11, 9, 10, 12, 10, 10, 10, 11, 9, 10, 11, 11, 11, 11]);
       S.title("Optimum size by ship class", subtitle);
       S.section("Cost per tonne by ship class", `freight: ${P.voyage.freightMethod === "manual" ? "manual €/t" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share (COA / spot)"} · ${fmt(num(P.voyage.roundTripDays), 1)} d round trip`);
@@ -2665,6 +2806,21 @@ async function exportExcel(full) {
       const Rg = P.register, v = Rg.vopak, t = Rg.tepsa, ti = Rg.titan;
       const S = xSheet(wb, "Register", [30, 14, 12, 13, 13, 15, 18, 18], { tab: XC.text3 });
       S.title("Economics register", "Derived values use the current financial assumptions. All figures indicative and non-binding.");
+      {
+        const g = Rg.vopakSg, ref = sgRef(), uUsd = u * Math.max(0.01, num(P.voyage.fxUsdPerEur, 1.1)), acc = num(g.accuracyPct) / 100;
+        S.section("Vopak Singapore — new tank, indicative fee (USD)", `${g.status} · ${num(g.termYears)}-yr, CPI`);
+        S.note(g.scope);
+        S.header(["Item", "Value", "Unit", "", "", "", "", ""], [0, 2]);
+        [["Indicative fee", num(g.feeSgdPerT), "S$ per MT", XF.d2], ["Exchange rate", num(g.fxUsdPerSgd), "US$ per S$", "0.0000"], ["Fee in USD", ref.feeUsdT, "US$ per MT", XF.d2],
+          ["Tank capacity", num(g.tankM3), "m³", XF.int], ["Loadable ÷ nominal", num(g.netToNominalPct) / 100, "", XF.pct], ["Reference loadable volume", ref.netT, "t", XF.int],
+          ["Terminal throughput", num(g.terminalKtpa), "ktpa", XF.int], ["Gentari throughput", num(g.gentariKtpa), "ktpa", XF.int], ["Contracted period", num(g.termYears), "years", XF.int],
+          ["Parcel size", num(g.parcelKt), "kt per vessel", XF.int], ["Estimate accuracy", acc, "±", XF.pct0],
+          ["Implied CAPEX incl. financing", ref.ic.cod, "US$M", XF.d1], ["Implied CAPEX before financing", ref.total, "US$M", XF.d1],
+          ["Range low (before financing)", ref.total * (1 - acc), "US$M", XF.d1], ["Range high (before financing)", ref.total * (1 + acc), "US$M", XF.d1],
+          ["Year-1 revenue at the terminal throughput", ref.ic.revEurM, "US$M/yr", XF.d2], ["Utility fee (model power price, converted)", uUsd, "US$ per t", XF.d2]]
+          .forEach(([l, val, un, fm]) => S.row([l, val, un], { fmt: [null, fm] }));
+        S.note(`The quote gives a fee, not a CAPEX: the CAPEX is back-calculated from the fee with the Financial assumptions (${fmt(f.h * 100, 1)} % return, ${f.term}-yr term, ${fmt(f.cpi * 100, 1)} % CPI, ${fmt(f.opex * 100, 1)} % fixed OPEX).`);
+      }
       S.section("Vopak — non-binding tariff indication", `${v.status} · ${num(v.termYears)}-yr, CPI`);
       S.note(v.scope);
       S.header(["Case", "Throughput ktpa", "Level", "Tariff €/t", "All-in €/t", "Revenue €M/yr", "CAPEX incl. fin. €M", "CAPEX before fin. €M"], [0, 2]);
