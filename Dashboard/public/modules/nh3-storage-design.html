@@ -1836,12 +1836,6 @@ function drawSection(sz) {
   });
 }
 
-// Low / mid / high strip for the Total CAPEX card: mid is the point estimate, low and high apply
-// the estimate accuracy (Estimate accuracy, ± %).
-function capexRange(cx) {
-  const cell = (label, v, cls) => `<div class="${cls || ""}"><div class="rl">${label}</div><div class="rv">${CCY.sym}${fmt(v)}M</div></div>`;
-  return `<div class="rng" role="group" aria-label="Total CAPEX range">${cell("Low", cx.low)}${cell("Mid", cx.total, "mid")}${cell("High", cx.high)}</div>`;
-}
 function renderCapex(sz, cx) {
   const q = sz.thrT / 1000, $c = CCY.sym;
   $("capexHeroSub").textContent = `${fmt(sz.net)} t loadable volume · ${fmt(sz.gross)} t storage size (gross) · ${fmt(q)} ktpa · ${shipName(sz.shipKey)} · ${cx.sg ? "Vopak Singapore database" : "TEPSA database"} · ${CCY.code}`;
@@ -1854,7 +1848,7 @@ function renderCapex(sz, cx) {
   $("capexTblSub").textContent = `${CCY.m}, before financing`;
   $("optCostSub").textContent = `${CCY.t}, year-1`;
   $("capexKpis").innerHTML =
-    kpi("Total CAPEX", $c + fmt(cx.total), "M", `estimate accuracy ±${fmt(cx.acc * 100)} %` + capexRange(cx), true) +
+    kpi("Total CAPEX", $c + fmt(cx.total), "M", `point estimate · accuracy ±${fmt(cx.acc * 100)} %`, true) +
     kpi("Incl. financing", $c + fmt(cx.be.capexCod), "M", `× ${fmt(cx.idc, 3)} over ${cx.f.profile.length} build yrs`) +
     kpi("Break-even storage tariff", $c + fmt(cx.be.eurT, 1), "/t", `range ${$c}${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`) +
     kpi("All-in incl. utilities", $c + fmt(cx.allIn, 1), "/t", `+ ${$c}${fmt(cx.util, 2)}/t utility fee`) +
