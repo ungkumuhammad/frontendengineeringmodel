@@ -236,3 +236,31 @@ months) are flagged. Pressures: NH₃ at 2 barg, −33 °C; feed pump ≈ 44 bar
 
 **OSBL equipment** tab adds a Terminal & Storage B.L. table (NH₃ jetty, NH₃ storage, storage flare, H₂ storage,
 H₂ compression above 20 barg, plus buildings & labs to confirm).
+
+## Linde fixed-cost reference and implied CAPEX (added 2026-10-15)
+
+Fifth tolling reference: Linde's indicative **fixed cost** per kg H₂ (figures passed on by Gentari): **€0.50/kg at 170 ktpa and
+above**, **€0.70–0.90/kg at 80–100 ktpa**. Treated exactly like the Air Liquide yearly fee: the charge covers capital recovery,
+fixed O&M and the operator's return, with NH₃, energy and utilities passed through. Same Implied CAPEX panel and same
+defaults (9 % real pre-tax, 20 yr, CRF 10.955 %, fixed O&M 3 %, operating licence €8.50/t H₂, FX 1.1448):
+
+CAPEX = (tariff × H₂ − licence × H₂) ÷ (CRF + fixed O&M %)
+
+| H₂ capacity | Tariff (EUR/kg) | Yearly fee (MM EUR) | Implied CAPEX low / mid / high (MM EUR) | Mid, EUR per t/yr |
+|---|---|---|---|---|
+| 80 ktpa | 0.70 / 0.80 / 0.90 | 56 / 64 / 72 | 396 / 454 / 511 | 5,672 |
+| 100 ktpa | 0.70 / 0.80 / 0.90 | 70 / 80 / 90 | 496 / 567 / 639 | 5,672 |
+| 170 ktpa and above | 0.50 | 85 | 599 | 3,522 |
+
+Mid-case CAPEX scales as ktpa^0.37 between 80 and 170 ktpa (Air Liquide 0.40, KBR total 0.44). At 80 ktpa Air Liquide implies
+€520M, just above Linde's high case (511).
+
+Interpretation choices (editable inputs are the finance ones; the tariff shape is fixed in code):
+
+- The 0.70–0.90 range is read as uncertainty at a given capacity in 80–100 ktpa, not as a slope. Reading 0.90 at 80 and 0.70
+  at 100 would make the yearly fee fall as capacity rises (72 → 70 MM EUR), which is not physical.
+- 100 → 170 ktpa is interpolated linearly in tariff (not quoted). Below 80 ktpa the tariff is held at the 80–100 value, which is
+  optimistic; flagged as extrapolated.
+- NH₃:H₂ ratio 6–7 t/t borrowed from the Vopak Energy Park Antwerp LoI (Linde cracker); Linde gave none.
+- Scope, term, indexation and what the fixed cost includes (buildings, jetty, storage, licence) are not stated. Confirm with Linde
+  whether the licence fee and any OSBL/terminal scope sit inside the €/kg.
