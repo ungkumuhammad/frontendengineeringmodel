@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8"><title>IT Migration Brief</title>
+<style>
+:root{--p:#60269E;--c:#00C8E8;--fg:#0F1729;--mu:#65758B;--bd:#E1E7EF;--bg:#F8FAFC;--ac:#F1EAF6;--ad:#441D62;--ok:#21C45D;--wn:#F59F0A}
+*{box-sizing:border-box;margin:0}
+body{width:1600px;font-family:Inter,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--fg);padding-bottom:48px}
+header{background:var(--p);color:#fff;padding:56px 72px;display:flex;align-items:center;gap:36px;border-bottom:8px solid var(--c)}
+header img{width:110px;height:110px}
+header h1{font-size:54px;letter-spacing:-.5px}
+header p{font-size:24px;opacity:.88;margin-top:10px}
+main{padding:44px 72px 0;display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:18px;padding:32px 36px}
+.card.wide{grid-column:1/3}
+.num{display:inline-flex;width:40px;height:40px;border-radius:50%;background:var(--p);color:#fff;font-weight:700;font-size:20px;align-items:center;justify-content:center;margin-right:14px}
+h2{font-size:27px;color:var(--p);margin-bottom:16px;display:flex;align-items:center}
+ul{list-style:none;padding:0}
+li{font-size:20px;line-height:1.45;padding:6px 0 6px 26px;position:relative}
+li:before{content:"";position:absolute;left:0;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c)}
+b{color:var(--ad)}
+.stack{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tag{background:var(--ac);color:var(--ad);font-weight:600;font-size:18px;padding:6px 16px;border-radius:99px}
+table{width:100%;border-collapse:collapse;font-size:19px}
+th{background:var(--ac);color:var(--ad);text-align:left;padding:12px 16px}
+td{padding:12px 16px;border-top:1px solid var(--bd);vertical-align:top;line-height:1.4}
+td:first-child{font-weight:600;width:34%}
+.ask li:before{background:var(--p)}
+.note{margin:28px 72px 0;font-size:17px;color:var(--mu)}
+</style></head><body>
+<header><img src="../Dashboard/public/branding/gentari-icon.png" alt="">
+<div><h1>Engineering Dashboard — Migration to Gentari</h1>
+<p>Briefing for IT: what it is, how it is built, run and secured, and what we need from you</p></div></header>
+<main>
+<section class="card"><h2><span class="num">1</span>What it is</h2>
+<div class="stack"><span class="tag">Next.js 14</span><span class="tag">React 18</span><span class="tag">TypeScript</span><span class="tag">Tailwind</span><span class="tag">Node 22</span><span class="tag">Supabase (Postgres + Auth)</span></div>
+<ul><li>Internal engineering web app: <b>6 calculators</b> (gas LCOE, multigas converter, H₂ blend, pipeline sizing, NH₃ cracker, NH₃ storage)</li>
+<li>Login, roles (admin / user), user management, login and activity audit</li>
+<li>No custom API server; calculators run <b>in the browser</b> — engineering inputs are never sent to a server</li></ul></section>
+
+<section class="card"><h2><span class="num">2</span>Data &amp; access control</h2>
+<ul><li>3 tables only: <b>profiles, login_logs, activity_logs</b></li>
+<li>Holds user email, name, role, IP, user agent, login times — <b>no engineering or commercial data</b></li>
+<li>Server-side guards on every page; <b>row-level security</b> on all tables</li>
+<li>No public sign-up — admins create accounts; every login and admin action is audited</li></ul></section>
+
+<section class="card"><h2><span class="num">3</span>How we develop</h2>
+<ul><li>Source in Git; database schema in versioned SQL migrations</li>
+<li>Local setup: <b>npm install → copy .env.example → npm run dev</b></li>
+<li>Checks today: <b>lint</b> and <b>typecheck</b></li>
+<li>Proposed flow: feature branch → pull request → review → merge to main → auto-deploy, with separate dev / staging / prod</li></ul></section>
+
+<section class="card"><h2><span class="num">4</span>How we maintain</h2>
+<ul><li>Small footprint: <b>5 runtime dependencies</b></li>
+<li>Proposed: Dependabot / Renovate + <b>npm audit</b> in CI</li>
+<li>New calculator = one entry in the module registry (low effort)</li>
+<li>Named primary owner + backup, and a short runbook</li></ul></section>
+
+<section class="card wide"><h2><span class="num">5</span>Security</h2>
+<ul style="columns:2;column-gap:48px"><li>Secrets only in environment variables, never in Git; service-role key is server-only</li>
+<li>Passwords and sessions handled by Supabase Auth — no custom crypto</li>
+<li>RLS enabled; privileged DB functions hardened (migration 0003)</li>
+<li><b>Proposed:</b> SSO via Gentari identity provider + MFA</li>
+<li><b>Proposed:</b> security headers / CSP, rate limiting, dependency scanning</li>
+<li><b>Proposed:</b> security review by IT before go-live</li></ul></section>
+
+<section class="card wide"><h2><span class="num">6</span>Known gaps — and the fix (we raise these first)</h2>
+<table><tr><th>Gap</th><th>Fix</th></tr>
+<tr><td>No Dockerfile / CI pipeline</td><td>Add standalone build + Dockerfile; CI running lint, typecheck, build</td></tr>
+<tr><td>No automated tests</td><td>Add tests for auth and admin actions first, then calculators</td></tr>
+<tr><td>Next.js 14.2 is behind current</td><td>Upgrade plan + vulnerability scan before go-live</td></tr>
+<tr><td>No security headers, CSP or rate limiting</td><td>Configure in app and/or at the reverse proxy</td></tr>
+<tr><td>Calculators load Google Fonts from the internet</td><td>Self-host fonts for the internal network</td></tr>
+<tr><td>Vercel / personal identifiers in repo and docs</td><td>Clean before importing into Gentari Git</td></tr></table></section>
+
+<section class="card wide"><h2><span class="num">7</span>What we need from IT</h2>
+<ul class="ask" style="columns:2;column-gap:48px"><li><b>Hosting:</b> container platform or Gentari standard</li>
+<li><b>Database decision:</b> Gentari-owned Supabase tenant, or Postgres + auth replacement (largest decision)</li>
+<li><b>Identity:</b> SSO / MFA integration</li>
+<li><b>Network:</b> domain, TLS certificate, reverse proxy / WAF</li>
+<li><b>Platform:</b> secrets store, logging, backup and retention policy</li>
+<li><b>Delivery:</b> Git repository and CI/CD pipeline; security review slot</li></ul></section>
+</main>
+<p class="note">Source: repository review of Dashboard/ (Next.js app, Supabase migrations 0001–0003). Items marked “Proposed” are not yet in place.</p>
+</body></html>
