@@ -68,6 +68,7 @@ td:first-child{font-weight:600;width:34%}
 <tr><td>Next.js 14.2 is behind current</td><td>Upgrade plan + vulnerability scan before go-live</td></tr>
 <tr><td>No security headers, CSP or rate limiting</td><td>Configure in app and/or at the reverse proxy</td></tr>
 <tr><td>Calculators load Google Fonts from the internet</td><td>Self-host fonts for the internal network</td></tr>
+<tr><td>Calculator HTML files are served as public static files (login gate is on the page, not the file)</td><td>Serve modules through an authenticated route or the reverse proxy</td></tr>
 <tr><td>Vercel / personal identifiers in repo and docs</td><td>Clean before importing into Gentari Git</td></tr></table></section>
 
 <section class="card wide"><h2><span class="num">7</span>What we need from IT</h2>

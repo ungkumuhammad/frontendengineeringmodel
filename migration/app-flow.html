@@ -1,0 +1,51 @@
+<!doctype html><html><head><meta charset="utf-8"><title>App Flow</title>
+<style>
+:root{--p:#60269E;--c:#00C8E8;--fg:#0F1729;--mu:#65758B;--bd:#E1E7EF;--bg:#F8FAFC;--ac:#F1EAF6;--ad:#441D62}
+*{box-sizing:border-box;margin:0}
+body{width:1600px;font-family:Inter,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--fg);padding-bottom:48px}
+header{background:var(--p);color:#fff;padding:44px 72px;display:flex;align-items:center;gap:32px;border-bottom:8px solid var(--c)}
+header img{width:90px}header h1{font-size:46px}header p{font-size:22px;opacity:.88;margin-top:8px}
+.lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:40px 72px 0;border:1px solid var(--bd);border-radius:18px;overflow:hidden;background:#fff}
+.lane{padding:20px 22px 28px}.lane+.lane{border-left:1px solid var(--bd)}
+.lane h3{font-size:22px;color:var(--p);text-align:center;margin-bottom:4px}
+.lane small{display:block;text-align:center;color:var(--mu);font-size:15px;margin-bottom:18px}
+.lane:nth-child(2){background:#FBF9FD}
+.box{border:2px solid var(--p);border-radius:12px;padding:12px 14px;font-size:17px;line-height:1.35;background:#fff;text-align:center}
+.box b{color:var(--ad)}
+.box.c{border-color:var(--c)}.box.d{background:var(--ac)}
+.ar{text-align:center;color:var(--p);font-size:26px;line-height:26px;height:28px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sec{margin:34px 72px 0;display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:18px;padding:26px 32px}
+.card h2{font-size:24px;color:var(--p);margin-bottom:10px}
+li{list-style:none;font-size:19px;line-height:1.45;padding:5px 0 5px 24px;position:relative}
+li:before{content:"";position:absolute;left:0;top:15px;width:9px;height:9px;border-radius:50%;background:var(--c)}
+b{color:var(--ad)}
+</style></head><body>
+<header><img src="../Dashboard/public/branding/gentari-icon.png" alt=""><div><h1>Application Flow</h1><p>Who talks to what: browser, Next.js server, Supabase</p></div></header>
+<div class="lanes">
+<div class="lane"><h3>Browser (user)</h3><small>React UI + calculators</small>
+<div class="box"><b>Open app</b> (/)</div><div class="ar">↓</div>
+<div class="box">Sign in form<br>(<b>/login</b>)</div><div class="ar">↓</div>
+<div class="box d">Redirected by role</div><div class="ar">↓</div>
+<div class="pair"><div class="box"><b>User</b><br>/dashboard<br>/modules<br>/settings</div><div class="box"><b>Admin</b><br>/admin<br>/admin/users<br>/admin/logins<br>/admin/audit</div></div><div class="ar">↓</div>
+<div class="box c">Calculator opens in a <b>sandboxed iframe</b>; maths and <b>Excel export run in the browser</b></div></div>
+
+<div class="lane"><h3>Next.js server (Node 22)</h3><small>Server components + server actions</small>
+<div class="box"><b>Root route</b> checks session →<br>no session: /login</div><div class="ar">↓</div>
+<div class="box"><b>Login action</b><br>validates input, calls Auth, checks profile <i>disabled</i> flag</div><div class="ar">↓</div>
+<div class="box"><b>Route guards</b><br>requireUser() / requireAdmin() on every page layout</div><div class="ar">↓</div>
+<div class="box"><b>Admin actions</b><br>create, edit, reset password, disable, delete user<br>(service-role key, server-only)</div><div class="ar">↓</div>
+<div class="box c"><b>Audit service</b><br>writes login and activity records</div></div>
+
+<div class="lane"><h3>Supabase</h3><small>Managed Postgres + Auth</small>
+<div class="box"><b>Auth</b><br>passwords, sessions, tokens</div><div class="ar">↕</div>
+<div class="box"><b>profiles</b><br>role, name, disabled<br>RLS: self or admin</div><div class="ar">↕</div>
+<div class="box"><b>login_logs</b><br>IP, user agent, login/logout time<br>RLS: admin read only</div><div class="ar">↕</div>
+<div class="box"><b>activity_logs</b><br>action, target, metadata<br>RLS: admin read only</div><div class="ar">&nbsp;</div>
+<div class="box c">No engineering data stored</div></div>
+</div>
+<div class="sec">
+<div class="card"><h2>Login path</h2><ul><li>Form → login action → Supabase Auth → profile check</li><li>Disabled account: signed out immediately</li><li>Success: login_logs + activity_logs row, then redirect by role</li></ul></div>
+<div class="card"><h2>Every page request</h2><ul><li>Layout calls requireUser() or requireAdmin()</li><li>Not signed in → /login; wrong role → /unauthorized</li><li>If Supabase is unreachable, user is treated as signed out</li></ul></div>
+</div></body></html>
