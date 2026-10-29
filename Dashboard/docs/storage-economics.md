@@ -210,20 +210,31 @@ cross-check, not a quoted number.
 
 ## Excel export
 
-**⬇ Excel** offers *Results only* (Results + Sensitivity) or *Full workbook* (every sheet below). It writes a styled workbook with ExcelJS (cdnjs), in the module's colours (purple
-`#7030A0` headings, blue `#0070C0` key values, status colours from the PGS 12 checks), Arial
-throughout, gridlines off, frozen table headers and landscape/portrait print setup.
+**⬇ Excel** offers *Results only* or *Full workbook*. It writes a styled workbook with ExcelJS (cdnjs), in the module's colours (purple
+`#7030A0` headings, blue `#0070C0` key values), Arial throughout, gridlines off, frozen table headers and landscape/portrait print setup.
 
-| Sheet | Content |
-|---|---|
-| Results | Results only: headline (net capacity, tank size, plot, CAPEX, tariffs, landed cost) highlighted, then storage, levels, plot, shipping, economics, optimum ship class, PGS 12 check sorted worst-first, and the model's flags |
-| Sensitivity | Storage size, required gross and loadable volume, total CAPEX and break-even tariff at the current throughput ± 5 × 100 ktpa, as charts (images) with the data tables. Written in both export options |
-| Inputs | Every input grouped by section, with units and placeholder notes; ship classes |
-| Sizing | Capacity build-up, tank dimensions vs TEPSA, plot area, operations, voyage and freight |
-| PGS 12 Levels | Level schedule per tank and the full PGS 12 check with coloured status |
-| CAPEX & Tariff | CAPEX, tariff build-up, financial assumptions, market check |
-| Ship Options | All ship classes; lowest-cost row in green |
-| Register | Vopak, TEPSA, Titan benchmark, open questions, decision log |
+The workbook is a **live model**, not a dump of values. Every calculated figure is an Excel formula that traces back to the **Inputs** sheet,
+so changing an input in Excel recalculates everything (the file asks Excel to recalculate on open).
+
+- **Blue cells (Inputs sheet)** are the numbers to change. Text choices (rule, level basis, database, currency, ship class, ...) have drop-downs.
+- **Yellow cells** are formulas: they change when an input changes. Keep this convention for any new Excel output.
+- Sizing, voyage, CAPEX and tariff maths are replicated in formulas (verified against the module for all ship classes, both cost databases, both
+  currencies, lumped and PGS 12 level bases, auto and chartered fleet, rounding up/down, dedicated and manual freight).
+
+| Sheet | Content | Live? |
+|---|---|---|
+| Results | Headline, storage, levels, shipping, economics, optimum ship class | formulas |
+| Sensitivity | Storage size, CAPEX and break-even tariff at the base throughput ± 5 steps (step is an input). No charts: images cannot follow formulas | formulas |
+| Inputs | Every input, ship-class table, build-year spend weights, selected ship class | inputs |
+| Sizing | One column per ship class, the selected class and each sensitivity point: capacity build-up, levels, tank, plot, voyage, freight, CAPEX, tariff | formulas |
+| Finance | Finance engine (return, CPI, tax, depreciation, term), cash-flow schedule (up to 60 yrs), currency, utility fee, Vopak SG back-calculation | formulas |
+| PGS 12 Levels *(full)* | Level schedule per tank | formulas |
+| CAPEX & Tariff *(full)* | CAPEX, tariff build-up, financial assumptions | formulas |
+| Ship Options *(full)* | All ship classes, lowest valid landed cost flagged | formulas |
+| PGS 12 Check *(full)* | Pass/fail checks | values at export, does not recalculate |
+| Register *(full)* | Vopak, TEPSA, Titan, open questions, decision log | values at export |
+
+Limits: the financing build period takes up to 6 build years; the market-check table is not in the workbook.
 
 ## Reusing for a new project
 

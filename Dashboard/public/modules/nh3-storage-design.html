@@ -277,8 +277,8 @@
     <div class="xl-wrap">
       <button class="icon-btn primary" id="btnExcel" aria-haspopup="menu" aria-expanded="false" aria-controls="xlMenu">⬇ Excel ▾</button>
       <div class="xl-menu hidden" id="xlMenu" role="menu">
-        <button role="menuitem" data-xl="results">Results only<span>Results + Sensitivity: headline figures, storage, levels, shipping, economics, PGS 12 check, flags, throughput charts</span></button>
-        <button role="menuitem" data-xl="full">Full workbook<span>Results, Sensitivity + Inputs, Sizing, PGS 12 Levels, CAPEX &amp; Tariff, Ship Options, Register</span></button>
+        <button role="menuitem" data-xl="results">Results only<span>Live formulas: Results, Sensitivity, Inputs, Sizing model, Finance. Change a blue input and the yellow cells recalculate</span></button>
+        <button role="menuitem" data-xl="full">Full workbook<span>Everything above + PGS 12 Levels, CAPEX &amp; Tariff, Ship Options (formulas), PGS 12 Check and Register (values at export)</span></button>
       </div>
     </div>
     <button class="icon-btn" id="btnReset" title="Restore all defaults">Reset</button>
@@ -2410,13 +2410,15 @@ function xSheet(wb, name, widths, o = {}) {
       const r = ws.addRow(vals);
       const kind = o.kind;
       for (let c = 1; c <= n; c++) {
-        const cell = r.getCell(c), v = cell.value, isNum = typeof v === "number";
-        if (isNum && !Number.isFinite(v)) cell.value = null;
+        // A formula cell is numeric unless it was written with FT(); formula cells are filled yellow (XY).
+        const cell = r.getCell(c), v0 = vals[c - 1], fo = isFormula(v0), v = fo ? "" : cell.value, isNum = typeof v === "number" || (fo && !FTXT.has(v0));
+        if (typeof v === "number" && !Number.isFinite(v)) cell.value = null;
         const f = Array.isArray(o.fmt) ? o.fmt[c - 1] : null;
         if (isNum && f) cell.numFmt = f;
         cell.font = xfont({ size: 10, color: c === 1 ? XC.text2 : XC.text });
         cell.border = { bottom: xline(XC.border) };
         cell.alignment = { vertical: "middle", wrapText: typeof v === "string", horizontal: isNum ? "right" : "left", indent: c === 1 ? 1 : 0 };
+        const keepFill = () => { if (fo) cell.fill = xfill(XY); };
         if (kind === "key") {
           cell.fill = xfill(XC.keyBg);
           cell.font = c === 1 ? xfont({ size: 10.5, bold: true, color: XC.text }) : isNum ? xfont({ size: 12, bold: true, color: XC.brand2 })
@@ -2432,6 +2434,7 @@ function xSheet(wb, name, widths, o = {}) {
         } else if (kind === "sub" && c === 1) {
           cell.font = xfont({ size: 9.5, color: XC.text3 }); cell.alignment = { ...cell.alignment, indent: 3 };
         }
+        keepFill();
       }
       if (o.status) for (const [ci, sk] of Object.entries(o.status)) {
         const pair = XC.st[sk]; if (!pair) continue;
@@ -2512,320 +2515,553 @@ $("xlMenu").addEventListener("click", (e) => {
 document.addEventListener("click", (e) => { if (!e.target.closest(".xl-wrap")) closeXlMenu(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("xlMenu").classList.contains("hidden")) { closeXlMenu(); $("btnExcel").focus(); } });
 
-async function exportExcel(full) {
-  if (typeof ExcelJS === "undefined") { alert("Excel library failed to load (check network access to cdnjs.cloudflare.com)."); return; }
-  const sz = size(), cx = capexFor(sz), vy = voyage(sz), q = sz.thrT / 1000, f = cx.f, u = cx.util, L = sz.L;
-  const wb = new ExcelJS.Workbook();
-  wb.creator = "NH3 Storage Design module"; wb.created = new Date();
-  const today = new Date().toISOString().slice(0, 10);
-  const subtitle = `${P.project.name} · ${P.project.location} · exported ${today} · receiving (import) terminal, sized from downstream demand · indicative, non-binding`;
-  const od = optimumData();
-  const valid = od.filter((d) => Number.isFinite(d.total) && d.sz.intervalD * 24 >= d.sz.callH && d.sz.D <= num(P.geometry.maxDiameterM) && d.sz.grossMdllT <= PGS12.bandHiT);
-  const best = (valid.length ? valid : od).reduce((a, b) => (b.total < a.total ? b : a));
-  const cur = od.find((d) => d.k === sz.shipKey);
-  const checks = pgsChecks(sz);
-  const stLabel = (k) => (ST[k] || ST.info)[1];
+// ── Live workbook ────────────────────────────────────────────
+// Every calculated figure is an Excel formula tied to the Inputs sheet, so changing an input recalculates the
+// workbook. Blue cells on Inputs are the numbers to change; calculated cells are filled yellow (XY).
+// Formulas are written with tokens and resolved once every row exists:
+//   [p:path] input cell · [g:name] Finance global · [s:field] ship-table row · [m:key] / [m:key:COL] Sizing cell (selected case / column)
+//   [mr:key] Sizing C:F range · {key} same column of Sizing · {key:COL} fixed column of Sizing
+const XY = "FFFF99";
+const FTXT = new WeakSet();
+const F = (s) => ({ formula: s });
+const FT = (s) => { const o = { formula: s }; FTXT.add(o); return o; };
+const isFormula = (v) => v && typeof v === "object" && typeof v.formula === "string";
+const colLetter = (n) => { let s = ""; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+const LIST = {
+  "demand.rateBasis": ["average", "operating"], "voyage.fleetMode": ["auto", "chartered"], "voyage.freightMethod": ["voyage", "manual"],
+  "voyage.charterBasis": ["share", "dedicated"], "buffer.rule": ["tepsa", "additive", "max"], "buffer.ullage": ["include", "exclude"],
+  "buffer.roundDir": ["up", "down"], "geometry.levelBasis": ["pgs12", "lumped"], "capex.db": ["tepsa", "vopaksg"], "capex.currency": ["eur", "usd"],
+  "shipClass": SHIP_KEYS,
+};
+const SHIP_FIELDS = [["label", "Name", null], ["m3", "Capacity", "m³"], ["fillPct", "Fill", "%"], ["tcUsdDay", "Charter hire", "USD/d"], ["seaFuelTpd", "Sea fuel", "t/d"],
+  ["portFuelTpd", "Port fuel", "t/d"], ["portCostUsdK", "Port & canal costs", "USD k / call"], ["freightEurT", "Manual freight", "€/t"], ["marineAdderEurM", "Marine adder", "€M"]];
+
+function buildLiveSheets(wb, subtitle, full) {
+  const REF = {}, Gx = {}, SHIPR = {}, rowOf = {};
+  const sheets = {};
+  const order = ["Results", "Sensitivity", "Inputs", "Sizing", "Finance"];
+  if (full) order.push("PGS 12 Levels", "CAPEX & Tariff", "Ship Options", "PGS 12 Check", "Register");
+  const COLS = [];
+  ["C", "D", "E", "F"].forEach((L, i) => COLS.push({ L, ship: i + 1, head: () => FT(`INDEX([s:label],${i + 1})`) }));
+  COLS.push({ L: "G", sel: true, head: () => "Selected" });
+  for (let i = -SENS_N; i <= SENS_N; i++) COLS.push({ L: colLetter(8 + i + SENS_N), i, head: () => FT(`TEXT([p:demand.throughputKtpa]+(${i})*[g:sensStep],"#,##0")&" ktpa"`) });
+  const widths = {
+    Results: [40, 18, 12, 62], Sensitivity: [18, 16, 16, 16, 16, 16, 16], Inputs: [40, 16, 16, 16, 16, 34],
+    Sizing: [46, 9, ...COLS.map(() => 13)], Finance: [40, 16, 12, 16, 16, 16],
+    "PGS 12 Levels": [40, 11, 12, 12, 78, 22], "CAPEX & Tariff": [40, 16, 12, 60], "Ship Options": [26, 10, 11, 9, 10, 12, 10, 10, 10, 11, 9, 10, 11, 11, 11, 11],
+    "PGS 12 Check": [40, 11, 78, 40], Register: [30, 14, 12, 13, 13, 15, 18, 18],
+  };
+  const opts = { Results: { portrait: true }, Sensitivity: { tab: XC.brand2 }, Inputs: { portrait: true, tab: XC.brand2 }, Sizing: {}, Finance: { tab: XC.text3 },
+    "CAPEX & Tariff": { portrait: true }, Register: { tab: XC.text3 } };
+  order.forEach((n) => { sheets[n] = xSheet(wb, n, widths[n], opts[n] || {}); });
+
+  const styleInput = (cell, isNum) => {
+    cell.font = xfont({ size: 10, bold: true, color: "0000FF" });
+    cell.fill = xfill(XC.white);
+    cell.border = { top: xline(XC.brand2), bottom: xline(XC.brand2), left: xline(XC.brand2), right: xline(XC.brand2) };
+    cell.alignment = { vertical: "middle", horizontal: isNum ? "right" : "left" };
+  };
+
+  // ── INPUTS ─────────────────────────────────────────────────
+  {
+    const S = sheets.Inputs;
+    S.title("Inputs", `${subtitle}. Change the blue cells; every yellow cell in the workbook recalculates from them.`);
+    const lg = S.row(["Legend", "Input", "", "Change these"], { span: [4, 6] }); styleInput(lg.getCell(2), false);
+    const lg2 = S.row(["", "Calculated", "", "Yellow: formula, changes when an input changes"], { span: [4, 6] }); lg2.getCell(2).fill = xfill(XY); lg2.getCell(2).font = xfont({ size: 10, bold: true });
+    const put = (path, label, unit, note) => {
+      const v = getPath(P, path), isNum = typeof v === "number";
+      const r = S.row([label, isNum ? v : String(v ?? ""), unit || "", note || ""], { span: [4, 6], fmt: [null, isNum && !Number.isInteger(v) ? "#,##0.###" : XF.int] });
+      styleInput(r.getCell(2), isNum);
+      if (LIST[path]) r.getCell(2).dataValidation = { type: "list", allowBlank: false, formulae: [`"${LIST[path].join(",")}"`] };
+      REF[path] = `Inputs!$B$${r.number}`;
+    };
+    const SKIP = new Set(["fin.buildYears", "fin.spendProfile"]);
+    const LISTNOTE = { "demand.rateBasis": "average | operating", "voyage.fleetMode": "auto | chartered", "voyage.freightMethod": "voyage | manual", "voyage.charterBasis": "share | dedicated",
+      "buffer.rule": "tepsa | additive | max", "buffer.ullage": "include | exclude", "buffer.roundDir": "up | down", "geometry.levelBasis": "pgs12 | lumped", "capex.db": "tepsa | vopaksg", "capex.currency": "eur | usd" };
+    const groups = INPUT_GROUPS.map(([g, items]) => [g, items.filter(([p]) => !SKIP.has(p))]);
+    groups.push(["Vopak Singapore quote", [["register.vopakSg.feeSgdPerT", "Indicative fee", "S$ per MT"], ["register.vopakSg.fxUsdPerSgd", "Exchange rate", "US$ per S$", "placeholder"],
+      ["register.vopakSg.terminalKtpa", "Terminal throughput", "ktpa", "the fee is back-calculated to CAPEX at this throughput"], ["register.vopakSg.tankM3", "Tank capacity", "m³"],
+      ["register.vopakSg.netToNominalPct", "Loadable ÷ quoted capacity", "%"]]]);
+    for (const [grp, items] of groups) {
+      S.section(grp);
+      S.header(["Parameter", "Value", "Unit", "Note"], [0, 2, 3]);
+      for (const [path, label, unit, note] of items) put(path, label, unit, [LISTNOTE[path], note].filter(Boolean).join(" · "));
+    }
+    S.section("Financing build period", "spend weight per build year; blank or 0 = not used");
+    S.header(["Build year", "Spend weight", "", "Note"], [0, 2, 3]);
+    const prof = String(P.fin.spendProfile).split(/[\/,;\s]+/).map(Number).filter((x) => x > 0), yrs = Math.max(0, Math.round(num(P.fin.buildYears)));
+    const wts = prof.length === yrs && yrs > 0 ? prof : Array(yrs).fill(1);
+    let w1 = 0, w2 = 0;
+    for (let i = 0; i < 6; i++) {
+      const r = S.row([`Year ${i + 1}`, wts[i] || 0, "", i === 0 ? "weights are normalised; years with a positive weight make up the build period" : ""], { span: [4, 6], fmt: [null, "#,##0.###"] });
+      styleInput(r.getCell(2), true);
+      if (i === 0) w1 = r.number; w2 = r.number;
+    }
+    Gx.wRange = `Inputs!$B$${w1}:$B$${w2}`;
+    S.section("Selected ship class & sensitivity");
+    S.header(["Parameter", "Value", "Unit", "Note"], [0, 2, 3]);
+    put("shipClass", "Selected ship class", "", "MGC | LGC | VLAC | CUSTOM — the case shown on Results");
+    {
+      const r = S.row(["Sensitivity step", SENS_STEP, "ktpa", "throughput steps of the Sensitivity sheet, ±5 steps around the base"], { span: [4, 6], fmt: [null, XF.int] });
+      styleInput(r.getCell(2), true); REF["sens.step"] = `Inputs!$B$${r.number}`; Gx.sensStep = REF["sens.step"];
+    }
+    S.section("Ship classes", "one column per class");
+    S.header(["Parameter", ...SHIP_KEYS.map((k) => (k === "CUSTOM" ? "Custom" : k)), "Unit"], [0, 5]);
+    for (const [fld, label, unit] of SHIP_FIELDS) {
+      const r = S.row([label, ...SHIP_KEYS.map((k) => P.ships[k][fld] ?? ""), unit || ""], { fmt: [null, "#,##0.###", "#,##0.###", "#,##0.###", "#,##0.###"] });
+      for (let c = 2; c <= 5; c++) styleInput(r.getCell(c), fld !== "label");
+      SHIPR[fld] = `Inputs!$B$${r.number}:$E$${r.number}`;
+    }
+  }
+
+  // ── FINANCE ────────────────────────────────────────────────
+  {
+    const S = sheets.Finance;
+    S.title("Finance engine & shared factors", `${subtitle}. Same maths as the module: NPV is linear in CAPEX and revenue, so break-even revenue = CAPEX at start of operations × factor.`);
+    const fr = (name, label, unit, f, fm, note) => {
+      const r = S.row([label, F(f), unit || "", note || ""], { fmt: [null, fm || XF.d3] });
+      Gx[name] = `Finance!$B$${r.number}`;
+    };
+    const frT = (name, label, f, note) => {
+      const r = S.row([label, FT(f), "", note || ""]); Gx[name] = `Finance!$B$${r.number}`;
+    };
+    S.section("Financial parameters"); S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
+    fr("h", "Operator return", "", "[p:fin.hurdlePct]/100", XF.pct);
+    fr("cpi", "CPI indexation", "", "[p:fin.cpiPct]/100", XF.pct);
+    fr("tax", "Corporate tax", "", "[p:fin.taxPct]/100", XF.pct);
+    fr("dep", "Tax depreciation", "yrs", "MAX(1,[p:fin.depYears])", XF.d1);
+    fr("opex", "Fixed OPEX, % of CAPEX", "", "[p:fin.opexPct]/100", XF.pct);
+    fr("T", "Contract term", "yrs", "MAX(1,ROUND([p:fin.termYears],0))", XF.int, "schedule below covers up to 60 years");
+    fr("resid", "Residual value", "", "[p:fin.residualPct]/100", XF.pct);
+    fr("nb", "Build years", "yrs", 'COUNTIF([g:wRange],">0")', XF.int);
+    fr("idc", "Financing factor during construction", "×", "IF([g:nb]=0,1,SUMPRODUCT([g:wRange]*(1+[g:h])^([g:nb]-(ROW([g:wRange])-MIN(ROW([g:wRange])))-0.5))/SUM([g:wRange]))", "0.0000", "spend at mid-year, compounded to start of operations");
+    S.section("Tariff factors", "from the cash-flow schedule below");
+    S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
+    fr("A", "PV of indexed after-tax revenue per €1 year-1", "×", "0", "0.0000");
+    fr("Dd", "PV of depreciation tax shield per €1 CAPEX", "×", "0", "0.0000");
+    fr("Tm", "PV of residual value, after tax, per €1 CAPEX", "×", "([g:resid]*(1-[g:tax])+[g:tax]*MAX(1-MIN([g:T],[g:dep])/[g:dep],0))/(1+[g:h])^[g:T]", "0.0000");
+    fr("K", "Net cost per €1 CAPEX", "×", "1+[g:opex]*[g:A]-[g:Dd]-[g:Tm]", "0.0000");
+    fr("BEf", "Break-even year-1 revenue per €1 overnight CAPEX", "×", "[g:idc]*[g:K]/[g:A]", "0.0000", "revenue = CAPEX before financing × this factor");
+    S.section("Currency, utilities & cost database"); S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
+    fr("fxv", "FX, USD per EUR", "", "MAX(0.01,[p:voyage.fxUsdPerEur])", XF.d2);
+    fr("ccyK", "Display units per EUR", "", 'IF([p:capex.currency]="usd",[g:fxv],1)', XF.d2);
+    frT("ccyM", "Money unit", 'IF([p:capex.currency]="usd","US$M","€M")');
+    frT("ccyT", "Tariff unit", 'IF([p:capex.currency]="usd","US$/t","€/t")');
+    fr("sg", "Vopak Singapore database selected (1 = yes)", "", 'IF([p:capex.db]="vopaksg",1,0)', XF.int);
+    fr("LF", "Location factor", "×", "[p:capex.locationFactor]", XF.d2);
+    fr("utilEur", "Utility fee", "€/t", "[p:utilities.powerKWhPerT]*[p:utilities.powerPriceEurMWh]/1000*(1+[p:utilities.markupPct]/100)", XF.d2);
+    fr("util", "Utility fee, display currency", "/t", "[g:utilEur]*[g:ccyK]", XF.d2);
+    fr("sgFeeUsd", "Vopak SG fee", "US$/t", "[p:register.vopakSg.feeSgdPerT]*[p:register.vopakSg.fxUsdPerSgd]", XF.d2);
+    fr("sgOvern", "Vopak SG tank CAPEX funded by the fee", "US$M", "[g:sgFeeUsd]*MAX(1,[p:register.vopakSg.terminalKtpa])/1000/[g:BEf]", XF.d1, "back-calculated with the same finance engine");
+    fr("sgNetT", "Vopak SG reference loadable volume", "t", "[p:register.vopakSg.tankM3]*[p:register.vopakSg.netToNominalPct]/100*[p:product.density]/1000", XF.int);
+    fr("refStorage", "Reference storage CAPEX", "", 'IF([g:sg]=1,[g:sgOvern]/[g:fxv]*[g:ccyK],[p:capex.refStorageEurM]*[g:ccyK])', XF.d1);
+    fr("refT", "At loadable volume per tank", "t", "MAX(1,IF([g:sg]=1,[g:sgNetT],[p:capex.refNetT]))", XF.int);
+    fr("marineFixed", "Jetty / marine, fixed", "", "IF([g:sg]=1,[p:register.vopakSg.marineUsdM]/[g:fxv]*[g:ccyK],[p:capex.marineEurM]*[g:ccyK])", XF.d1);
+    fr("otherFixed", "Dredging, pipeline, other", "", "IF([g:sg]=1,[p:register.vopakSg.otherUsdM]/[g:fxv]*[g:ccyK],[p:capex.otherEurM]*[g:ccyK])", XF.d1);
+    fr("acc", "Estimate accuracy", "±", "IF([g:sg]=1,[p:register.vopakSg.accuracyPct],[p:capex.accuracyPct])/100", XF.pct0);
+    fr("selIdx", "Selected ship class index", "", 'MATCH([p:shipClass],{"MGC","LGC","VLAC","CUSTOM"},0)', XF.int);
+    fr("bestIdx", "Lowest-cost valid ship class index", "", "MATCH(MIN([mr:cand]),[mr:cand],0)", XF.int);
+    S.section("Cash-flow schedule", "per year of the contract term");
+    S.header(["Year", "Discount factor", "", "Index", "PV revenue weight", "PV depreciation shield"], [0]);
+    // columns: A year · B (1+h)^t · C CPI index · D 1 if within term · E PV revenue weight · F PV depreciation shield
+    let s1 = 0, s2 = 0;
+    for (let t = 1; t <= 60; t++) {
+      const r = S.ws.addRow([t]);
+      const n = r.number;
+      r.getCell(2).value = F(`(1+[g:h])^A${n}`);
+      r.getCell(3).value = F(`(1+[g:cpi])^(A${n}-1)`);
+      r.getCell(4).value = F(`IF(A${n}<=[g:T],1,0)`);
+      r.getCell(5).value = F(`D${n}*C${n}*(1-[g:tax])/B${n}`);
+      r.getCell(6).value = F(`IF(AND(D${n}=1,A${n}<=[g:dep]),[g:tax]/[g:dep]/B${n},0)`);
+      for (let c = 1; c <= 6; c++) {
+        const cell = r.getCell(c);
+        cell.font = xfont({ size: 9.5 }); cell.border = { bottom: xline(XC.border) };
+        if (c >= 2) { cell.fill = xfill(XY); cell.numFmt = "0.0000"; }
+      }
+      r.height = 14;
+      if (t === 1) s1 = n; s2 = n;
+    }
+    for (const nm of ["A", "Dd"]) {
+      const c = nm === "A" ? "E" : "F", r = +Gx[nm].split("$")[2];
+      sheets.Finance.ws.getCell(`B${r}`).value = F(`SUM(${c}${s1}:${c}${s2})`);
+    }
+  }
+
+  // ── SIZING (all ship classes, the selected case and the sensitivity points) ──
+  {
+    const S = sheets.Sizing;
+    S.title("Sizing, voyage & CAPEX model", `${subtitle}. One column per ship class, the selected class, and the throughput sensitivity points; all formulas.`);
+    S.header(["Item", "Unit", ...COLS.map((c) => c.head())], [0, 1]);
+    const hdr = S.headerRow;
+    const dens = "[p:product.density]";
+    // [key, label, unit, formula | null (per-column), format]; "#" rows are section headings
+    const D = [
+      ["#", "Case"],
+      ["shipIdx", "Ship class index", "", null, XF.int],
+      ["name", "Ship class", "", "INDEX([s:label],{shipIdx})", null],
+      ["thrKt", "Throughput", "ktpa", null, XF.int],
+      ["#", "Demand & parcel"],
+      ["dens", "Liquid density", "kg/m³", dens, XF.d1],
+      ["thrT", "Throughput", "t/yr", "{thrKt}*1000", XF.int],
+      ["qAvg", "Send-out, calendar average", "t/d", "{thrT}/365", XF.int],
+      ["qOp", "Send-out, operating days", "t/d", "{thrT}/MAX(1,[p:demand.operatingDays])", XF.int],
+      ["q", "Daily send-out used for buffers", "t/d", 'IF([p:demand.rateBasis]="operating",{qOp},{qAvg})', XF.int],
+      ["m3", "Ship capacity", "m³", "INDEX([s:m3],{shipIdx})", XF.int],
+      ["fill", "Ship fill", "%", "INDEX([s:fillPct],{shipIdx})", XF.d1],
+      ["parcelFull", "Full parcel", "t", "{m3}*{fill}/100*{dens}/1000", XF.int],
+      ["callHRt", "Berth time of a full cargo", "h", "{parcelFull}/MAX(1,[p:jetty.unloadRateTph])+[p:jetty.berthHours]", XF.d1],
+      ["rtD", "Round trip per vessel", "d", "MAX(1,[p:voyage.roundTripDays])", XF.d1],
+      ["dischD", "Days in port at each end (fuel split)", "d", "MIN({callHRt}/24,{rtD}/2)", XF.d2],
+      ["seaDays", "Days at sea (fuel split)", "d", "MAX(0,{rtD}-2*{dischD})", XF.d1],
+      ["cargoesPV", "Cargoes per vessel per year", "", "MAX(1,365-[p:voyage.offHireDays])/{rtD}", XF.d1],
+      ["isChart", "Chartered-fleet mode applies (1 = yes)", "", 'IF(AND([p:voyage.fleetMode]="chartered",{shipIdx}=[g:selIdx]),1,0)', XF.int],
+      ["fleetCh", "Ships chartered", "", "IF({isChart}=1,MAX(1,ROUND([p:voyage.chartered],0)),0)", XF.int],
+      ["callsYr", "Ship calls per year", "", "IF({isChart}=1,{fleetCh}*{cargoesPV},{thrT}/{parcelFull})", XF.d1],
+      ["supplyT", "Supply delivered", "t/yr", "IF({isChart}=1,{callsYr}*{parcelFull},{thrT})", XF.int],
+      ["parcel", "Ship parcel", "t", "IF({isChart}=1,MIN({parcelFull},{qAvg}*365/{callsYr}),{parcelFull})", XF.int],
+      ["#", "Buffer"],
+      ["bNo", "No send-out", "d", "MAX(0,[p:buffer.noSendoutDays])", XF.d1],
+      ["bEarly", "Ship early", "d", "MAX(0,[p:buffer.earlyDays])", XF.d1],
+      ["bLate", "Ship late", "d", "MAX(0,[p:buffer.lateDays])", XF.d1],
+      ["bPort", "Port / weather closure", "d", "MAX(0,[p:buffer.portClosureDays])", XF.d1],
+      ["bStrat", "Strategic reserve", "d", "MAX(0,[p:buffer.strategicDays])", XF.d1],
+      ["ruleDays", "Buffer from the rule", "d", 'IF([p:buffer.rule]="additive",{bNo}+{bEarly}+{bLate}+{bPort}+{bStrat},IF([p:buffer.rule]="max",MAX({bNo},{bEarly},{bLate}+{bPort})+{bStrat},{bNo}+MAX({bEarly},{bLate}+{bPort})+{bStrat}))', XF.d1],
+      ["safetyDays", "Safety stock", "d", "MIN({bLate}+{bPort}+{bStrat},{ruleDays})", XF.d1],
+      ["ullRuleDays", "Ullage reserve", "d", "{ruleDays}-{safetyDays}", XF.d1],
+      ["bufferDays", "Buffer counted", "d", 'IF([p:buffer.ullage]="exclude",{safetyDays},{ruleDays})', XF.d1],
+      ["bufferT", "Buffer counted", "t", "{bufferDays}*{q}", XF.int],
+      ["netReq", "Required net capacity", "t", "{parcel}+{bufferT}", XF.int],
+      ["#", "Tank geometry & levels"],
+      ["N", "Number of tanks", "", "MAX(1,ROUND([p:geometry.tanks],0))", XF.int],
+      ["H", "Inner shell height", "m", "[p:geometry.innerHeightM]", XF.d2],
+      ["lumped", "Lumped level basis (1 = yes)", "", 'IF([p:geometry.levelBasis]="lumped",1,0)', XF.int],
+      ["qIn", "Inflow while unloading", "m³/h", `[p:jetty.unloadRateTph]*1000/{dens}`, XF.int],
+      ["qOut", "Send-out from the tank", "m³/h", "{q}/24*1000/{dens}", XF.int],
+      ["fb", "Freeboard", "m", "MAX(0,[p:levels.freeboardM])", XF.d2],
+      ["ex", "Extra freeboard", "m", "MAX(0,[p:levels.extraFreeboardM])", XF.d2],
+      ["lallI", "Pump low-low trip (heel)", "m", "MAX(0,[p:levels.lallM])", XF.d2],
+      ["tTrip", "Overfill trip → valve shut", "h", "MAX(0,[p:levels.tripMin])/60", XF.d3],
+      ["tAl", "High alarm → action", "h", "MAX(0,[p:levels.alarmMin])/60", XF.d3],
+      ["tLow", "Low alarm → action", "h", "MAX(0,[p:levels.lowAlarmMin])/60", XF.d3],
+      ["heel", "Bottom heel (lumped)", "m", "[p:geometry.heelM]", XF.d2],
+      ["topM", "Top margin (lumped)", "m", "[p:geometry.topMarginM]", XF.d2],
+      ["mdll", "Max design liquid level", "m", `IF({lumped}=1,{H}-${PGS12.freeboardMinM},{H}-{fb}-{ex})`, XF.d2],
+      ["netM3Req", "Required net volume per tank", "m³", "{netReq}/{N}*1000/{dens}", XF.int],
+      ["areaReq", "Cross-section for the required net", "m²", "IF({lumped}=1,IF({H}-{heel}-{topM}>0,{netM3Req}/({H}-{heel}-{topM}),NA()),IF({H}-{fb}-{ex}-{lallI}>0,({netM3Req}+{qIn}*({tTrip}+{tAl})+{qOut}*{tLow})/({H}-{fb}-{ex}-{lallI}),NA()))", XF.d1],
+      ["lahReq", "Max working level, required tank", "m", "IF({lumped}=1,{H}-{topM},{mdll}-{qIn}*({tTrip}+{tAl})/{areaReq})", XF.d2],
+      ["lalReq", "Min working level, required tank", "m", "IF({lumped}=1,{heel},{lallI}+{qOut}*{tLow}/{areaReq})", XF.d2],
+      ["grossReq", "Required gross tank size", "t", "{areaReq}*{H}*{dens}/1000*{N}", XF.int],
+      ["reqTopT", "→ top margin", "t", "{areaReq}*({mdll}-{lahReq})*{dens}/1000*{N}", XF.int],
+      ["reqBotT", "→ bottom (heel)", "t", "{areaReq}*{lalReq}*{dens}/1000*{N}", XF.int],
+      ["reqFbT", "→ freeboard", "t", "{areaReq}*({H}-{mdll})*{dens}/1000*{N}", XF.int],
+      ["step", "Rounding step", "t", "MAX(0,[p:buffer.roundStepT])", XF.int],
+      ["grossLo", "Rounded down", "t", "IF({step}>0,INT({grossReq}/{step}+0.000000001)*{step},{grossReq})", XF.int],
+      ["grossHi", "Rounded up", "t", "IF({step}>0,-INT(-({grossReq}/{step}-0.000000001))*{step},{grossReq})", XF.int],
+      ["down", "Rounded down (1 = yes)", "", 'IF(AND([p:buffer.roundDir]="down",{grossLo}>0),1,0)', XF.int],
+      ["gross", "Design gross tank size", "t", "IF({down}=1,{grossLo},{grossHi})", XF.int],
+      ["area", "Tank cross-section", "m²", "{gross}/{N}*1000/({dens}*{H})", XF.d1],
+      ["lahh", "Overfill trip (LAHH)", "m", 'IF({lumped}=1,"",{mdll}-{qIn}*{tTrip}/{area})', XF.d2],
+      ["lah", "Max working level (high alarm)", "m", "IF({lumped}=1,{H}-{topM},{mdll}-{qIn}*({tTrip}+{tAl})/{area})", XF.d2],
+      ["lal", "Min working level (low alarm)", "m", "IF({lumped}=1,{heel},{lallI}+{qOut}*{tLow}/{area})", XF.d2],
+      ["lallE", "Pump low-low trip", "m", "IF({lumped}=1,{heel},{lallI})", XF.d2],
+      ["perTankT", "Loadable volume per tank", "t", "MAX(0,{area}*({lah}-{lal})*{dens}/1000)", XF.int],
+      ["net", "Design loadable volume", "t", "{perTankT}*{N}", XF.int],
+      ["perTankNetM3", "Loadable volume per tank", "m³", "{perTankT}*1000/{dens}", XF.int],
+      ["workH", "Working range", "m", "{lah}-{lal}", XF.d2],
+      ["D", "Inner diameter", "m", "SQRT(4*{area}/PI())", XF.d1],
+      ["OD", "Outer diameter", "m", "{D}+2*[p:geometry.annularGapM]", XF.d1],
+      ["nominalM3", "Nominal volume per tank", "m³", "{area}*{H}", XF.int],
+      ["netToNominal", "Loadable ÷ nominal", "", "{perTankNetM3}/{nominalM3}", XF.pct],
+      ["heelT", "Below min working level", "t", "{area}*{lal}*{dens}/1000", XF.int],
+      ["grossMdllT", "Stored at max design level", "t", "{area}*{mdll}*{dens}/1000", XF.int],
+      ["lallT", "Below pump trip", "t", "{area}*{lallE}*{dens}/1000", XF.int],
+      ["riseMh", "Level rise while unloading", "m/h", "{qIn}/{area}", XF.d2],
+      ["footHa", "Tank footprint incl. clearance", "ha", "PI()/4*({OD}+2*[p:geometry.clearanceM])^2*{N}/10000", XF.d2],
+      ["#", "Shipping, jetty & plot"],
+      ["unloadH", "Pumping time per call", "h", "{parcel}/MAX(1,[p:jetty.unloadRateTph])", XF.d1],
+      ["callH", "Berth time per call", "h", "{unloadH}+[p:jetty.berthHours]", XF.d1],
+      ["shipsYr", "Ships per year", "", "{callsYr}", XF.d1],
+      ["shipsMonth", "Ships per month", "", "{shipsYr}/12", XF.d2],
+      ["intervalD", "Arrival interval", "d", "365/{callsYr}", XF.d1],
+      ["jettyOcc", "Jetty occupancy", "", "{shipsYr}*{callH}/8760", XF.pct],
+      ["stockDays", "Stock cover (operating-day send-out)", "d", "{net}/{qOp}", XF.d1],
+      ["stockDaysAvg", "Stock cover (calendar average)", "d", "{net}/{qAvg}", XF.d1],
+      ["turns", "Turns per year", "", "{thrT}/{net}", XF.d1],
+      ["bogTpd", "Boil-off at full tank", "t/d", "{net}*[p:utilities.bogPctPerDay]/100", XF.d1],
+      ["safetyT", "Safety stock", "t", "{safetyDays}*{q}", XF.int],
+      ["ullageT", "Ullage in the design", "t", "MAX(0,{net}-{parcel}-{safetyT})", XF.int],
+      ["plotHa", "Plot required, incl. jetty", "ha", "[p:site.refPlotHa]*{net}/MAX(1,[p:site.refTankT])", XF.d2],
+      ["plotAcre", "Plot required", "acres", "{plotHa}*10000/4046.8564224", XF.d2],
+      ["plotSqft", "Plot required", "sq ft", "{plotHa}*10000/(0.3048*0.3048)", XF.int],
+      ["#", "Fleet & freight"],
+      ["fleetExact", "Vessels needed, exact", "", "{thrT}/{parcelFull}/{cargoesPV}", XF.d2],
+      ["fleet", "Vessels", "", "IF({isChart}=1,{fleetCh},MAX(1,-INT(-({fleetExact}-0.000000001))))", XF.int],
+      ["fleetUse", "Fleet utilisation", "", "{fleetExact}/{fleet}", XF.pct0],
+      ["hireUsd", "Hire per voyage", "USD", "INDEX([s:tcUsdDay],{shipIdx})*{rtD}", XF.int],
+      ["fuelUsd", "Fuel per voyage", "USD", "({seaDays}*INDEX([s:seaFuelTpd],{shipIdx})+2*{dischD}*INDEX([s:portFuelTpd],{shipIdx}))*[p:voyage.bunkerUsdT]", XF.int],
+      ["portUsd", "Port & canal costs per voyage", "USD", "INDEX([s:portCostUsdK],{shipIdx})*1000", XF.int],
+      ["voyUsd", "Voyage cost", "USD", "{hireUsd}+{fuelUsd}+{portUsd}", XF.int],
+      ["shareEurT", "Freight, voyage share", "€/t", "{voyUsd}/{parcel}/[g:fxv]", XF.d1],
+      ["delivT", "Delivered per year", "t", "MIN({thrT},{supplyT})", XF.int],
+      ["dedUsdYr", "Dedicated fleet cost", "USD/yr", "{fleet}*INDEX([s:tcUsdDay],{shipIdx})*365+({fuelUsd}+{portUsd})*{shipsYr}", XF.int],
+      ["dedEurT", "Freight, dedicated fleet", "€/t", "{dedUsdYr}/{delivT}/[g:fxv]", XF.d1],
+      ["freight", "Freight used", "€/t", 'IF([p:voyage.freightMethod]="manual",INDEX([s:freightEurT],{shipIdx}),IF([p:voyage.charterBasis]="dedicated",{dedEurT},{shareEurT}))', XF.d1],
+      ["#", "CAPEX & tariff (display currency)"],
+      ["storage", "Storage CAPEX", "M", "{N}*[g:refStorage]*({perTankT}/[g:refT])^[p:capex.exponent]*[g:LF]", XF.d1],
+      ["marine", "Jetty / marine", "M", "([g:marineFixed]+INDEX([s:marineAdderEurM],{shipIdx})*[g:ccyK])*[g:LF]", XF.d1],
+      ["other", "Dredging, pipeline, other", "M", "[g:otherFixed]*[g:LF]", XF.d1],
+      ["total", "Total CAPEX, before financing", "M", "{storage}+{marine}+{other}", XF.d1],
+      ["low", "Range low", "M", "{total}*(1-[g:acc])", XF.d1],
+      ["high", "Range high", "M", "{total}*(1+[g:acc])", XF.d1],
+      ["capexCod", "CAPEX at start of operations", "M", "{total}*[g:idc]", XF.d1],
+      ["beRev", "Year-1 revenue (break-even)", "M/yr", "{total}*[g:BEf]", XF.d1],
+      ["beTariff", "Break-even storage tariff", "/t", "{beRev}*1000/{thrKt}", XF.d1],
+      ["beLow", "Tariff, range low", "/t", "{beTariff}*(1-[g:acc])", XF.d1],
+      ["beHigh", "Tariff, range high", "/t", "{beTariff}*(1+[g:acc])", XF.d1],
+      ["util", "Utility fee", "/t", "[g:util]", XF.d2],
+      ["allIn", "All-in tariff", "/t", "{beTariff}+{util}", XF.d1],
+      ["freightD", "Freight, display currency", "/t", "{freight}*[g:ccyK]", XF.d1],
+      ["landed", "Landed logistics cost", "/t", "{beTariff}+{util}+{freightD}", XF.d1],
+      ["valid", "Valid option (1 = yes)", "", `IF(AND(ISNUMBER({landed}),{intervalD}*24>={callH},{D}<=[p:geometry.maxDiameterM],{grossMdllT}<=${PGS12.bandHiT}),1,0)`, XF.int],
+      ["cand", "Cost used to pick the lowest", "/t", "IF(SUM({valid:C}:{valid:F})>0,IF({valid}=1,{landed},1E+99),{landed})", XF.d1],
+    ];
+    const thrBase = "[p:demand.throughputKtpa]";
+    for (const d of D) {
+      if (d[0] === "#") { S.section(d[1]); continue; }
+      const [key, label, unit, f, fm] = d;
+      const unitCell = unit === "/t" ? FT("[g:ccyT]") : unit === "M" ? FT("[g:ccyM]") : unit === "M/yr" ? FT('[g:ccyM]&"/yr"') : unit;
+      const vals = [label, unitCell];
+      for (const c of COLS) {
+        if (key === "shipIdx") vals.push(c.ship ? c.ship : F("[g:selIdx]"));
+        else if (key === "thrKt") vals.push(F(c.i === undefined ? thrBase : `${thrBase}+(${c.i})*[g:sensStep]`));
+        else vals.push(key === "name" ? FT(f) : F(f));
+      }
+      const r = S.ws.addRow(vals);
+      rowOf[key] = r.number;
+      r.height = 16;
+      for (let c = 1; c <= vals.length; c++) {
+        const cell = r.getCell(c), v = vals[c - 1];
+        cell.border = { bottom: xline(XC.border) };
+        cell.font = xfont({ size: 10, color: c === 1 ? XC.text2 : XC.text });
+        if (c <= 2) { cell.alignment = { vertical: "middle", indent: c === 1 ? 1 : 0, horizontal: "left" }; continue; }
+        cell.alignment = { vertical: "middle", horizontal: key === "name" ? "center" : "right" };
+        if (isFormula(v)) cell.fill = xfill(XY);
+        if (fm) cell.numFmt = fm;
+        if (key === "net" || key === "gross" || key === "total" || key === "beTariff" || key === "landed") cell.font = xfont({ size: 10, bold: true, color: XC.brand2 });
+      }
+    }
+    S.ws.views = [{ state: "frozen", xSplit: 2, ySplit: hdr, showGridLines: false }];
+    S.ws.addRow([]);
+    S.note("Columns C–F size each ship class at the project throughput; column G is the selected class (the case on Results); columns H onward re-run the selected class at the base throughput ± the sensitivity step. Chartered-fleet mode applies to the selected class only. Money rows are in the display currency chosen on Inputs.");
+  }
+
+  const M = (k) => `[m:${k}]`;
+  const unitM = () => FT("[g:ccyM]"), unitT = () => FT("[g:ccyT]");
+  const money = (k, fm) => ({ k, fm });
 
   // ── RESULTS ────────────────────────────────────────────────
   {
-    const S = xSheet(wb, "Results", [40, 18, 12, 62], { portrait: true });
-    S.title("NH₃ Storage Design — Results", subtitle);
-    const R = (label, v, unit, note, kind, fmt) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fmt || XF.int] });
+    const S = sheets.Results;
+    S.title("NH₃ Storage Design — Results", `${subtitle}. All figures are formulas linked to the Inputs sheet (yellow = recalculates).`);
+    const R = (label, f, unit, note, kind, fm) => S.row([label, F(f), unit ?? "", note ? (note.startsWith("=") ? FT(note.slice(1)) : note) : ""], { kind, fmt: [null, fm || XF.int] });
+    const t0 = (k) => `TEXT(${M(k)},"#,##0")`, t1 = (k) => `TEXT(${M(k)},"#,##0.0")`, t2 = (k) => `TEXT(${M(k)},"#,##0.00")`;
     S.section("Headline");
     S.header(["Result", "Value", "Unit", "Basis"], [0, 2, 3]);
-    R("Storage size (gross, to shell top)", sz.gross, "t", `${sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t from ${fmt(sz.req.gross)} t required` : "no rounding"}`, "key");
-    R("Design loadable volume", sz.net, "t", `${sz.N} tank${sz.N > 1 ? "s" : ""} × ${fmt(sz.perTankT)} t · ${sz.rule.name.toLowerCase()} · basis for CAPEX`, "key");
-    R("Inner diameter × shell height", sz.D, "m", `× ${fmt(sz.H, 1)} m shell · outer Ø ${fmt(sz.OD, 1)} m`, "key", XF.d1);
-    R("Plot required, incl. jetty", sz.plot.ha, "ha", `${fmt(sz.plot.sqft)} sq ft · ${fmt(sz.plot.acre, 2)} acres · linear from ${fmt(num(P.site.refPlotHa), 1)} ha at ${fmt(num(P.site.refTankT))} t`, "key", XF.d2);
-    R("Total CAPEX, before financing", cx.total, CCY.m, `range ${CCY.sym}${fmt(cx.low)}–${fmt(cx.high)}M (±${fmt(cx.acc * 100)} %) · ${cx.sg ? "Vopak Singapore database" : "TEPSA database"} · ${CCY.code}`, "key");
-    R("Break-even storage tariff", cx.be.eurT, CCY.t, `range ${CCY.sym}${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t · ${fmt(f.h * 100, 1)} % return, ${f.term}-yr term`, "key", XF.d1);
-    R("All-in tariff incl. utilities", cx.allIn, CCY.t, `+ ${CCY.sym}${fmt(u, 2)}/t utility fee`, "key", XF.d1);
-    R("Landed logistics cost", cur.total, CCY.t, `storage + utilities + freight, ${shipName(sz.shipKey)}`, "key", XF.d1);
+    R("Storage size (gross, to shell top)", M("gross"), "t", `=IF(${M("step")}>0,"rounded "&IF(${M("down")}=1,"down","up")&" to "&${t0("step")}&" t from "&${t0("grossReq")}&" t required","no rounding")`, "key");
+    R("Design loadable volume", M("net"), "t", `=${M("N")}&" tank(s) × "&${t0("perTankT")}&" t loadable · basis for CAPEX"`, "key");
+    R("Inner diameter", M("D"), "m", `="× "&${t1("H")}&" m shell · outer Ø "&${t1("OD")}&" m"`, "key", XF.d1);
+    R("Plot required, incl. jetty", M("plotHa"), "ha", `=${t0("plotSqft")}&" sq ft · "&${t2("plotAcre")}&" acres"`, "key", XF.d2);
+    S.row(["Total CAPEX, before financing", F(M("total")), unitM(), FT(`"range "&${t0("low")}&" – "&${t0("high")}&" · ±"&TEXT([g:acc],"0%")`)], { kind: "key", fmt: [null, XF.int] });
+    S.row(["Break-even storage tariff", F(M("beTariff")), unitT(), FT(`"range "&${t1("beLow")}&" – "&${t1("beHigh")}&" · "&TEXT([g:h],"0.0%")&" return, "&[g:T]&"-yr term"`)], { kind: "key", fmt: [null, XF.d1] });
+    S.row(["All-in tariff incl. utilities", F(M("allIn")), unitT(), FT(`"+ "&TEXT(${M("util")},"0.00")&" utility fee"`)], { kind: "key", fmt: [null, XF.d1] });
+    S.row(["Landed logistics cost", F(M("landed")), unitT(), "storage + utilities + freight, selected ship class"], { kind: "key", fmt: [null, XF.d1] });
 
     S.section("Storage");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    R("Throughput", q, "ktpa", `${fmt(sz.q)} t/d send-out used for buffers`);
-    R("Ship parcel", sz.parcel, "t", `${shipName(sz.shipKey)} · ${fmt(sz.parcelM3)} m³`);
-    R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t · ullage reserve ${sz.withUllage ? `included (${fmt(sz.ullageRuleDays, 1)} d)` : "excluded"}`, null, XF.d1);
-    R("Ullage in the design", sz.ullageT, "t", `free space above the post-discharge peak · ${fmt(sz.ullageT / sz.q, 1)} d at ${fmt(sz.q)} t/d`);
-    R("Required net capacity", sz.netReq, "t", "parcel + buffer");
-    R("Required gross tank size", sz.req.gross, "t", "net + top margin + bottom heel + freeboard, to shell top");
-    R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
-    R("Loadable volume per tank", sz.perTankT, "t", `${fmt(sz.perTankNetM3)} m³`);
-    R("Nominal volume per tank", sz.nominalM3, "m³", `loadable = ${pct(sz.netToNominal)} of nominal`);
-    R("Stock cover", sz.stockDays, "d", `at ${fmt(sz.qOp)} t/d operating-day send-out · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`, null, XF.d1);
-    R("Boil-off at full tank", sz.bogTpd, "t/d", `${fmt(num(P.utilities.bogPctPerDay), 3)} %/d`, null, XF.d1);
+    R("Throughput", M("thrKt"), "ktpa", `=${t0("q")}&" t/d send-out used for buffers"`);
+    R("Ship parcel", M("parcel"), "t", `=[m:name]&" · "&${t0("parcelFull")}&" t full cargo"`);
+    R("Buffer counted", M("bufferDays"), "d", `=${t0("bufferT")}&" t"`, null, XF.d1);
+    R("Ullage in the design", M("ullageT"), "t", `="free space above the post-discharge peak · "&${t1("ullageT")}&" t"`);
+    R("Required net capacity", M("netReq"), "t", "parcel + buffer");
+    R("Required gross tank size", M("grossReq"), "t", "net + top margin + bottom heel + freeboard, to shell top");
+    R("Design gross tank size", M("gross"), "t", `=IF(${M("step")}>0,"rounded to "&${t0("step")}&" t","no rounding")`);
+    R("Loadable volume per tank", M("perTankT"), "t", `=${t0("perTankNetM3")}&" m³"`);
+    R("Nominal volume per tank", M("nominalM3"), "m³", `="loadable = "&TEXT(${M("netToNominal")},"0.0%")&" of nominal"`);
+    R("Stock cover", M("stockDays"), "d", `=${t1("stockDaysAvg")}&" d at ÷365 average · "&${t1("turns")}&" turns / yr"`, null, XF.d1);
+    R("Boil-off at full tank", M("bogTpd"), "t/d", "", null, XF.d1);
 
-    S.section("Liquid levels per tank", sz.lumped ? "lumped margins (TEPSA calibration)" : "PGS 12 level stack");
+    S.section("Liquid levels per tank");
     S.header(["Level", "Height", "Unit", "Basis"], [0, 2, 3]);
-    R("Top of inner shell", sz.H, "m", "input", null, XF.d2);
-    R("Max design liquid level", L.mdll, "m", `${fmt(sz.H - L.mdll, 2)} m freeboard below shell top — PGS 12 (1999) §6.4.1.4 / §6.4.1.6`, "total", XF.d2);
-    if (!sz.lumped) R("Overfill trip (LAHH)", L.lahh, "m", `${fmt(L.tTrip * 60)} min at ${fmt(sz.riseMh, 2)} m/h — M18 · time is a placeholder`, null, XF.d2);
-    R("Max working level (high alarm)", L.lah, "m", sz.lumped ? "shell top − top margin" : `${fmt(L.tAl * 60)} min below the trip — M17 · time is a placeholder`, null, XF.d2);
-    R("Min working level (low alarm)", L.lal, "m", sz.lumped ? "lumped heel" : `pump trip ${fmt(L.lall, 2)} m + ${fmt(L.tLow * 60)} min draw-down`, null, XF.d2);
-    R("Working range", sz.workH, "m", `${pct(sz.workH / sz.H)} of shell height`, "key", XF.d2);
-    R("Stored at max design level", sz.grossMdllT, "t", `per tank · PGS 12 practical ceiling ≈${fmt(PGS12.bandLoT / 1000)}–${fmt(PGS12.bandHiT / 1000)} kt`,
-      null, XF.int);
-
-    S.section("Plot area");
-    S.header(["Area", "ha", "acres", "m² · sq ft"], [0, 3]);
-    const pr = (lbl, a, kind) => S.row([lbl, a.ha, a.acre, `${fmt(a.m2)} m² · ${fmt(a.sqft)} sq ft`], { kind, fmt: [null, XF.d2, XF.d2] });
-    pr(`Plot required — ${fmt(sz.net)} t net, incl. jetty`, sz.plot, "key");
-    pr(`Reference — ${fmt(num(P.site.refTankT))} t incl. jetty (jetty ${fmt(num(P.site.jettyToTankM))} m from tank)`, areaUnits(num(P.site.refPlotHa)));
-    pr("Available plot", areaUnits(num(P.geometry.plotHa)));
-    pr(`Tank footprint incl. ${fmt(num(P.geometry.clearanceM))} m clearance (tanks only)`, areaUnits(sz.footHa));
+    R("Top of inner shell", M("H"), "m", "input", null, XF.d2);
+    R("Max design liquid level", M("mdll"), "m", "shell top − freeboard — PGS 12 (1999) §6.4.1.4 / §6.4.1.6", "total", XF.d2);
+    R("Overfill trip (LAHH)", M("lahh"), "m", "blank when the lumped level basis is used", null, XF.d2);
+    R("Max working level (high alarm)", M("lah"), "m", "", null, XF.d2);
+    R("Min working level (low alarm)", M("lal"), "m", "", null, XF.d2);
+    R("Working range", M("workH"), "m", `=TEXT(${M("workH")}/${M("H")},"0.0%")&" of shell height"`, "key", XF.d2);
+    R("Stored at max design level", M("grossMdllT"), "t", `="per tank · PGS 12 practical ceiling ≈${PGS12.bandLoT / 1000}–${PGS12.bandHiT / 1000} kt"`);
 
     S.section("Shipping & fleet");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    R("Ships per year", sz.shipsYr, "", `${fmt(sz.shipsMonth, 2)} per month`, null, XF.d1);
-    R("Arrival interval", sz.intervalD, "d", "parcel ÷ average send-out", null, XF.d1);
-    R("Round trip per vessel", vy.rt, "d", "input, all-in", null, XF.d1);
-    R("Vessels needed", vy.fleet, "", `${fmt(vy.fleetExact, 2)} exact · ${pct(vy.fleetUse, 0)} utilised`, "total");
-    R("Jetty occupancy", sz.jettyOcc, "", `${fmt(sz.callH, 1)} h per call`, null, XF.pct);
-    R("Freight", vy.freight, "€/t", vy.manual ? "manual input" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share (COA / spot)", null, XF.d1);
+    R("Ships per year", M("shipsYr"), "", `=${t2("shipsMonth")}&" per month"`, null, XF.d1);
+    R("Arrival interval", M("intervalD"), "d", "parcel ÷ average send-out", null, XF.d1);
+    R("Round trip per vessel", M("rtD"), "d", "input, all-in", null, XF.d1);
+    R("Vessels", M("fleet"), "", `=${t2("fleetExact")}&" exact · "&TEXT(${M("fleetUse")},"0%")&" utilised"`, "total");
+    R("Jetty occupancy", M("jettyOcc"), "", `=${t1("callH")}&" h per call"`, null, XF.pct);
+    S.row(["Freight", F(M("freight")), "€/t", FT('IF([p:voyage.freightMethod]="manual","manual input",IF([p:voyage.charterBasis]="dedicated","dedicated fleet","voyage share (COA / spot)"))')], { fmt: [null, XF.d1] });
 
     S.section("Economics");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    R("Storage CAPEX", cx.storage, CCY.m, `${sz.N} × ${fmt(sz.perTankT)} t loadable on the reference curve`, null, XF.d1);
-    R("Jetty / marine", cx.marine, CCY.m, "", null, XF.d1);
-    R("Dredging, pipeline, other", cx.other, CCY.m, "", null, XF.d1);
-    R("Total CAPEX, before financing", cx.total, CCY.m, `±${fmt(cx.acc * 100)} %`, "key", XF.d1);
-    R("CAPEX at start of operations", cx.be.capexCod, CCY.m, `incl. financing over ${f.profile.length} build yrs`, null, XF.d1);
-    R("Break-even storage tariff", cx.be.eurT, CCY.t, `year 1, CPI-indexed after`, "key", XF.d1);
-    R("Utility fee", u, CCY.t, "pass-through + admin mark-up", null, XF.d2);
-    R("All-in tariff", cx.allIn, CCY.t, "", "key", XF.d1);
-    R("Year-1 revenue", cx.be.revEurM, CCY.m + "/yr", "", null, XF.d1);
+    const E = (label, k, note, kind, fm, tariff) => S.row([label, F(M(k)), tariff ? unitT() : unitM(), note || ""], { kind, fmt: [null, fm || XF.d1] });
+    E("Storage CAPEX", "storage", "loadable volume per tank on the reference curve");
+    E("Jetty / marine", "marine");
+    E("Dredging, pipeline, other", "other");
+    E("Total CAPEX, before financing", "total", "", "key");
+    E("CAPEX at start of operations", "capexCod", "incl. financing over the build period");
+    E("Break-even storage tariff", "beTariff", "year 1, CPI-indexed after", "key", XF.d1, true);
+    E("Utility fee", "util", "pass-through + admin mark-up", null, XF.d2, true);
+    E("All-in tariff", "allIn", "", "key", XF.d1, true);
+    S.row(["Year-1 revenue", F(M("beRev")), FT('[g:ccyM]&"/yr"'), ""], { fmt: [null, XF.d1] });
 
     S.section("Optimum ship class", "lowest storage + utilities + freight");
     S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-    S.row(["Best ship class", shipName(best.k), "", `${fmt(best.sz.parcel)} t parcel${best.k === sz.shipKey ? " · same as selected" : ` · selected: ${shipName(sz.shipKey)}`}`], { kind: "key" });
-    R("Optimum tank, net", best.sz.net, "t", `Ø${fmt(best.sz.D, 1)} × ${fmt(best.sz.H, 1)} m · ${best.sz.N} tank(s)`);
-    R("Plot required", best.sz.plot.ha, "ha", `${fmt(best.sz.plot.sqft)} sq ft · ${fmt(best.sz.plot.acre, 2)} acres`, null, XF.d2);
-    R("Landed logistics cost", best.total, CCY.t, `${best.vy.fleet} vessel(s), ${fmt(best.vy.rt, 1)}-day round trip`, "key", XF.d1);
-
-    const counts = checks.reduce((a, c) => { const l = stLabel(c.st); a[l] = (a[l] || 0) + 1; return a; }, {});
-    S.section("PGS 12 check", Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(" · "));
-    S.header(["Item", "Status", "", "This design"], [0, 3]);
-    const order = { bad: 0, risk: 0, warn: 1, gap: 2, req: 3, info: 4, ok: 5 };
-    [...checks].sort((a, b) => order[a.st] - order[b.st]).forEach((c) =>
-      S.row([c.item, stLabel(c.st), "", xstrip(c.val)], { status: { 1: XST[c.st] }, span: [2, 3] }));
-
-    const msgs = msgRows();
-    if (msgs.length) {
-      S.section("Flags from the model");
-      S.header(["Type", "Message", "", ""], [0, 1]);
-      msgs.forEach(([k, t]) => S.row([{ bad: "Error", warn: "Warning", ok: "Check passed", info: "Info" }[k], t, "", ""], { status: { 0: k }, span: [2, 4] }));
-    }
+    const bi = (k) => `INDEX([mr:${k}],[g:bestIdx])`;
+    S.row(["Best ship class", FT(bi("name")), "", FT(`IF([g:bestIdx]=[g:selIdx],"same as selected","selected: "&[m:name])`)], { kind: "key" });
+    S.row(["Optimum tank, net", F(bi("net")), "t", FT(`"Ø"&TEXT(${bi("D")},"0.0")&" × "&TEXT(${bi("H")},"0.0")&" m · "&${bi("N")}&" tank(s)"`)], { fmt: [null, XF.int] });
+    S.row(["Plot required", F(bi("plotHa")), "ha", FT(`TEXT(${bi("plotSqft")},"#,##0")&" sq ft · "&TEXT(${bi("plotAcre")},"0.00")&" acres"`)], { fmt: [null, XF.d2] });
+    S.row(["Landed logistics cost", F(bi("landed")), unitT(), FT(`${bi("fleet")}&" vessel(s), "&TEXT(${bi("rtD")},"0.0")&"-day round trip"`)], { kind: "key", fmt: [null, XF.d1] });
     S.ws.addRow([]);
-    S.note("Placeholders: voyage distance, charter hire, fuel and port costs; level response times (overfill trip, alarms) and the pump heel — PGS 12 requires the functions but sets no values. The plot area scales linearly from the reference, which also scales the fixed jetty and jetty-to-tank corridor. Tabel 9's 80 vol% fill limit is not applied (pressurized storage, M109); the refrigerated-tank freeboard rule is used instead.");
+    S.note("The PGS 12 check and the Register hold values as at export (Full workbook); they do not recalculate. Placeholders: voyage distance, charter hire, fuel and port costs; level response times (overfill trip, alarms) and the pump heel — PGS 12 requires the functions but sets no values. The plot area scales linearly from the reference.");
   }
 
   // ── SENSITIVITY ────────────────────────────────────────────
   {
-    const d = sensitivityData(), ser = sensSeries(d), sz0 = (d.find((p) => p.base) || d[0]).sz;
-    const S = xSheet(wb, "Sensitivity", [18, 16, 16, 16, 16, 16, 16], { tab: XC.brand2 });
-    S.title("Throughput sensitivity", `${subtitle} · ±${SENS_N} × ${SENS_STEP} ktpa around ${fmt(q)} ktpa · ${sz0.step > 0 ? `storage size rounded ${sz0.roundDir} to ${fmt(sz0.step)} t` : "no rounding"} · other inputs unchanged`);
-    const img = async (svg, w, h) => {
-      const id = wb.addImage({ base64: await svgToPng(svg, w, h), extension: "png" });
-      S.ws.addImage(id, { tl: { col: 0, row: S.ws.rowCount }, ext: { width: w, height: h } });
-      for (let i = 0; i < Math.ceil(h / 20) + 1; i++) S.ws.addRow([]);
-    };
-    const bold = (p, s) => (p.base ? "total" : s);
+    const S = sheets.Sensitivity;
+    S.title("Throughput sensitivity", `${subtitle}. Each row re-runs the full sizing, CAPEX and tariff chain on the Sizing sheet at the base throughput ± the sensitivity step (Inputs).`);
+    const sc = COLS.filter((c) => c.i !== undefined);
+    const rowOfCol = (c, k) => `Sizing!$${c.L}$${rowOf[k]}`;
+    const line = (c, ks) => [F(rowOfCol(c, "thrKt")), ...ks.map((k) => F(`IF(${rowOfCol(c, "thrKt")}<=0,"",${rowOfCol(c, k)})`))];
     S.section("Storage size vs throughput");
-    await img(sensSvg(d, ser.storage, Object.assign({ w: 820, h: 300, label: "Storage size versus throughput" }, SENS_FMT.storage), SENS_PRINT), 820, 300);
     S.header(["Throughput, ktpa", "Required net, t", "Required gross, t", "Storage size, t", "Loadable volume, t", "Inner Ø, m", "Stock cover, d"]);
-    d.forEach((p) => S.row([p.t, p.sz.netReq, p.sz.req.gross, p.sz.gross, p.sz.net, p.sz.D, p.sz.stockDays], { kind: bold(p), fmt: [XF.int, XF.int, XF.int, XF.int, XF.int, XF.d1, XF.d1] }));
+    sc.forEach((c) => S.row(line(c, ["netReq", "grossReq", "gross", "net", "D", "stockDays"]), { kind: c.i === 0 ? "total" : null, fmt: [XF.int, XF.int, XF.int, XF.int, XF.int, XF.d1, XF.d1] }));
     S.section("CAPEX & break-even tariff vs throughput");
-    const cap = (t) => { S.ws.addRow([t]).getCell(1).font = xfont({ size: 10, bold: true, color: XC.text2 }); };
-    cap(`Total CAPEX, ${CCY.m} before financing`);
-    await img(sensSvg(d, ser.capex, Object.assign({ w: 820, h: 280, label: "Total CAPEX versus throughput" }, SENS_FMT.capex), SENS_PRINT), 820, 280);
-    cap(`Break-even storage tariff, ${CCY.t}`);
-    await img(sensSvg(d, ser.tariff, Object.assign({ w: 820, h: 280, label: "Break-even storage tariff versus throughput" }, SENS_FMT.tariff), SENS_PRINT), 820, 280);
-    S.header(["Throughput, ktpa", "Loadable volume, t", `Storage CAPEX, ${CCY.m}`, `Total CAPEX, ${CCY.m}`, `Range low, ${CCY.m}`, `Range high, ${CCY.m}`, `Break-even tariff, ${CCY.t}`]);
-    d.forEach((p) => S.row([p.t, p.sz.net, p.cx.storage, p.cx.total, p.cx.low, p.cx.high, p.cx.be.eurT], { kind: bold(p), fmt: [XF.int, XF.int, XF.d1, XF.d1, XF.int, XF.int, XF.d2] }));
+    S.header(["Throughput, ktpa", "Loadable volume, t", FT('"Storage CAPEX, "&[g:ccyM]'), FT('"Total CAPEX, "&[g:ccyM]'), FT('"Range low, "&[g:ccyM]'), FT('"Range high, "&[g:ccyM]'), FT('"Break-even tariff, "&[g:ccyT]')]);
+    sc.forEach((c) => S.row(line(c, ["net", "storage", "total", "low", "high", "beTariff"]), { kind: c.i === 0 ? "total" : null, fmt: [XF.int, XF.int, XF.d1, XF.d1, XF.int, XF.int, XF.d2] }));
     S.ws.addRow([]);
-    S.note("Each row re-runs the full sizing (required net → required gross → rounded storage size → loadable volume) and the CAPEX and tariff model at that throughput, with every other input as in this workbook. The current case is highlighted.");
+    S.note("The base case is highlighted. Charts are not exported: they cannot follow the formulas. Insert a chart on these tables in Excel if needed.");
   }
 
   if (full) {
-    // ── INPUTS ────────────────────────────────────────────────
+    // ── PGS 12 LEVELS ──────────────────────────────────────
     {
-      const S = xSheet(wb, "Inputs", [40, 30, 16, 48], { portrait: true, tab: XC.brand2 });
-      S.title("Inputs", subtitle);
-      for (const [grp, items] of INPUT_GROUPS) {
-        S.section(grp);
-        S.header(["Parameter", "Value", "Unit", "Note"], [0, 2, 3]);
-        for (const [path, label, unit, note] of items) {
-          const v = getPath(P, path);
-          const isNum = typeof v === "number";
-          S.row([label, isNum ? v : inputText(path, v), unit || "", note || ""], { fmt: [null, isNum && !Number.isInteger(v) ? "#,##0.###" : XF.int] });
-        }
-      }
-      S.section("Ship classes", `selected: ${shipName(P.shipClass)}`);
-      S.header(["Class", "Capacity m³ · fill %", "Hire USD/d", "Fuel sea/port t/d · port USD k · manual €/t · marine adder €M"], [0, 3]);
-      SHIP_KEYS.forEach((k) => {
-        const s = P.ships[k];
-        S.row([shipName(k), `${fmt(num(s.m3))} · ${fmt(num(s.fillPct), 1)} %`, `${fmt(num(s.tcUsdDay))}`,
-          `${fmt(num(s.seaFuelTpd))} / ${fmt(num(s.portFuelTpd), 1)} · ${fmt(num(s.portCostUsdK))} · €${fmt(num(s.freightEurT), 1)} · €${fmt(num(s.marineAdderEurM))}M`],
-          { kind: k === P.shipClass ? "total" : null });
-      });
+      const S = sheets["PGS 12 Levels"];
+      S.title("PGS 12 tank levels", `${subtitle}. Heights, volumes and masses are formulas on the selected case.`);
+      S.section("Level schedule, per tank", "lumped basis: the overfill trip row is blank");
+      S.header(["Level", "Height m", "Volume m³", "Mass t", "Basis", ""], [0, 4]);
+      const lv = [["Top of inner shell", "H", "Input"], ["Max design liquid level (MDLL)", "mdll", "Shell top − freeboard (lumped basis: shell top − 0.5 m). PGS 12 (1999) §6.4.1.6; NEN-EN 14620 governs."],
+        ["LAHH — independent overfill trip", "lahh", "MDLL − trip time × level rise. PGS 12:2025 M18; the time is a placeholder."], ["LAH — high-level alarm = max working level", "lah", "LAHH − alarm time × level rise (lumped: shell top − top margin). M17."],
+        ["LAL — low-level alarm = min working level", "lal", "LALL + low-alarm time × draw-down (lumped: heel). Operating margin."], ["LALL — pump low-low trip (heel)", "lallE", "M10 / M30: what the submerged pumps need. Placeholder."]];
+      lv.forEach(([n, k, b]) => S.row([n, F(M(k)), F(`IF(ISNUMBER(${M(k)}),${M(k)}*${M("area")},"")`), F(`IF(ISNUMBER(${M(k)}),${M(k)}*${M("area")}*${M("dens")}/1000,"")`), b, ""], { kind: ["mdll", "lah", "lal"].includes(k) ? "key" : null, fmt: [null, XF.d2, XF.int, XF.int] }));
+      S.row(["Tank floor", 0, 0, 0, "", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
+      S.row(["Working range (max − min working level)", F(M("workH")), F(`${M("workH")}*${M("area")}`), F(`${M("workH")}*${M("area")}*${M("dens")}/1000`), "= loadable volume per tank", ""], { kind: "total", fmt: [null, XF.d2, XF.int, XF.int] });
+      S.row(["Unusable above max working level", F(`${M("H")}-${M("lah")}`), F(`(${M("H")}-${M("lah")})*${M("area")}`), F(`(${M("H")}-${M("lah")})*${M("area")}*${M("dens")}/1000`), "shell volume kept empty", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
+      S.row(["Unusable below min working level", F(M("lal")), F(`${M("lal")}*${M("area")}`), F(`${M("lal")}*${M("area")}*${M("dens")}/1000`), "never sent out — keeps the tank cold", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
     }
 
-    // ── SIZING ────────────────────────────────────────────────
+    // ── CAPEX & TARIFF ─────────────────────────────────────
     {
-      const S = xSheet(wb, "Sizing", [44, 16, 10, 58]);
-      S.title("Tank sizing", subtitle);
-      const R = (label, v, unit, note, kind, fmtS) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fmtS || XF.int] });
-      S.section("Loadable volume build-up", `${shipName(sz.shipKey)} · ${sz.rule.name}`);
-      S.header(["Component", "Value", "Unit", "Note"], [0, 2, 3]);
-      const b = P.buffer;
-      R(`Ship parcel (${shipName(sz.shipKey)})`, sz.parcel, "t", `${fmt(sz.parcelM3)} m³ × ${fmt(sz.dens, 1)} kg/m³`);
-      [["No send-out (downstream outage)", b.noSendoutDays], ["Ship early", b.earlyDays], ["Ship late", b.lateDays], ["Port / weather closure", b.portClosureDays], ["Strategic reserve", b.strategicDays]]
-        .forEach(([l, d]) => R(l, num(d), "d", "", "sub", XF.d1));
-      R("→ Safety stock", sz.safetyDays, "d", `${fmt(sz.safetyT)} t · late ship, port closure, strategic`, "sub", XF.d1);
-      R("→ Ullage reserve", sz.withUllage ? sz.ullageRuleDays : 0, "d", sz.withUllage ? `${fmt(sz.ullageRuleDays * sz.q)} t · outage, early ship` : "excluded by user", "sub", XF.d1);
-      R("Buffer counted", sz.bufferDays, "d", `${fmt(sz.bufferT)} t at ${fmt(sz.q)} t/d`, null, XF.d1);
-      R("Required net capacity", sz.netReq, "t", "");
-      R(sz.lumped ? "+ Top margin (lumped)" : "+ Top margin (high alarm, overfill trip)", sz.req.topT, "t", "", "sub");
-      R(sz.lumped ? "+ Bottom heel (lumped)" : "+ Bottom (pump heel, low alarm)", sz.req.botT, "t", "", "sub");
-      R("+ Freeboard", sz.req.fbT, "t", "", "sub");
-      R("Required gross tank size", sz.req.gross, "t", "to shell top");
-      R("Design gross tank size", sz.gross, "t", sz.step > 0 ? `rounded ${sz.roundDir} to ${fmt(sz.step)} t` : "no rounding");
-      R("Design loadable volume", sz.net, "t", sz.netReq - sz.net > 0.5 ? `${fmt(sz.netReq - sz.net)} t below required` : `${fmt(sz.net - sz.netReq)} t above required`, "key");
-
-      S.section("Tank dimensions, per tank", "vs TEPSA Scenario D datasheet");
-      S.header(["Item", "This design", "TEPSA D", "Note"], [0, 3]);
-      const D2 = (l, v, t, fm, kind, note) => S.row([l, v, t, note || ""], { kind, fmt: [null, fm, fm] });
-      D2("Loadable volume, t", sz.perTankT, 40000, XF.int);
-      D2("Loadable volume, m³", sz.perTankNetM3, 58651, XF.int);
-      D2("Nominal volume, m³", sz.nominalM3, 69557, XF.int);
-      D2("Inner diameter, m", sz.D, 55.0, XF.d1, "key");
-      D2("Outer diameter, m", sz.OD, 58.0, XF.d1);
-      D2("Inner shell height, m", sz.H, 29.3, XF.d1);
-      D2("Max design liquid level, m", L.mdll, null, XF.d2);
-      D2("Max working level, m", L.lah, 26.2, XF.d2, null, "TEPSA: 3.1 m top-margin calibration");
-      D2("Min working level, m", L.lal, 1.5, XF.d2, null, "TEPSA: 1.5 m heel calibration");
-      D2("Working level range, m", sz.workH, 24.7, XF.d2);
-      D2("Below min working level, t", sz.heelT, null, XF.int);
-      D2("Stored at max design level, t", sz.grossMdllT, null, XF.int);
-
-      S.section("Plot area");
-      S.header(["Area", "ha", "acres", "m² · sq ft"], [0, 3]);
-      const pr = (lbl, a, kind) => S.row([lbl, a.ha, a.acre, `${fmt(a.m2)} m² · ${fmt(a.sqft)} sq ft`], { kind, fmt: [null, XF.d2, XF.d2] });
-      pr(`Plot required — ${fmt(sz.net)} t net, incl. jetty (linear)`, sz.plot, "key");
-      pr(`Reference — ${fmt(num(P.site.refTankT))} t incl. jetty, jetty ${fmt(num(P.site.jettyToTankM))} m from tank`, areaUnits(num(P.site.refPlotHa)));
-      pr("Available plot", areaUnits(num(P.geometry.plotHa)));
-      pr(`Tank footprint incl. ${fmt(num(P.geometry.clearanceM))} m clearance`, areaUnits(sz.footHa));
-
-      S.section("Shipping & operations");
-      S.header(["Item", "Value", "Unit", "Note"], [0, 2, 3]);
-      R("Ships per year", sz.shipsYr, "", `${fmt(sz.shipsMonth, 2)} per month`, null, XF.d1);
-      R("Nominal ship interval", sz.intervalD, "d", "parcel ÷ average send-out", null, XF.d1);
-      R("Pumping time per call", sz.unloadH, "h", `at ${fmt(num(P.jetty.unloadRateTph))} t/h`, null, XF.d1);
-      R("Berth time per call", sz.callH, "h", `incl. ${fmt(num(P.jetty.berthHours))} h overhead`, null, XF.d1);
-      R("Jetty occupancy", sz.jettyOcc, "", sz.jettyOcc > 0.5 ? "high" : "OK", null, XF.pct);
-      R("Average send-out", sz.qAvg, "t/d", `operating-day ${fmt(sz.qOp)} t/d`);
-      R("Stock cover", sz.stockDays, "d", `at ${fmt(sz.qOp)} t/d operating-day send-out · ${fmt(sz.stockDaysAvg, 1)} d at ÷365 average · ${fmt(sz.turns, 1)} turns / yr`, null, XF.d1);
-      R("Boil-off (full tank)", sz.bogTpd, "t/d", "", null, XF.d1);
-      R("Level rise while unloading", sz.riseMh, "m/h", `${fmt(sz.qInM3h)} m³/h into one tank`, null, XF.d2);
-
-      S.section("Vessel round trip & fleet", `${fmt(vy.rt, 1)} d round trip`);
-      S.header(["Leg", "Days", "", "Basis"], [0, 3]);
-      R("Round trip per vessel", vy.rt, "", `input · ${fmt(vy.cargoesPerVessel, 1)} cargoes / vessel / yr`, "total", XF.d1);
-      R("→ at sea (fuel split)", vy.seaDays, "", "round trip − port days", null, XF.d1);
-      R("→ in port (fuel split)", vy.loadD + vy.dischD, "", `load port + discharge, ${fmt(sz.callHRt, 1)} h berth time each`, null, XF.d1);
-      R(sz.chartered ? "Vessels chartered" : "Vessels needed", vy.fleet, "", sz.chartered ? `need ${fmt(vy.fleetExact, 2)} · delivers ${fmt(sz.supplyT / 1000)} kt/yr vs ${fmt(sz.thrT / 1000)} kt/yr` : `${fmt(vy.fleetExact, 2)} exact · ${pct(vy.fleetUse, 0)} utilised`, "key");
-
-      S.section("Freight per voyage");
-      S.header(["Item", "USD k / voyage", "€/t", "Note"], [0, 3]);
-      const F = (l, usd, eur, kind, note) => S.row([l, usd, eur, note || ""], { kind, fmt: [null, XF.int, XF.d1] });
-      F(`Hire (${fmt(vy.rt, 1)} d × ${fmt(num(P.ships[sz.shipKey].tcUsdDay))} USD/d)`, vy.hireUsd / 1000, vy.hireUsd / sz.parcel / vy.fx);
-      F("Fuel", vy.fuelUsd / 1000, vy.fuelUsd / sz.parcel / vy.fx);
-      F("Port & canal costs", vy.portUsd / 1000, vy.portUsd / sz.parcel / vy.fx);
-      F("Voyage share (COA / spot)", vy.voyUsd / 1000, vy.shareEurT, !vy.manual && P.voyage.charterBasis !== "dedicated" ? "key" : null);
-      F(`Dedicated fleet (${vy.fleet} × 365 d hire)`, null, vy.dedicatedEurT, !vy.manual && P.voyage.charterBasis === "dedicated" ? "key" : null, `${fmt(vy.dedicatedUsdYr / 1e6, 1)} USD M/yr`);
-      F("Manual freight input", null, num(P.ships[sz.shipKey].freightEurT), vy.manual ? "key" : null);
-    }
-
-    // ── PGS 12 LEVELS ─────────────────────────────────────────
-    {
-      const S = xSheet(wb, "PGS 12 Levels", [40, 11, 12, 12, 78, 22]);
-      S.title("PGS 12 tank levels & check", subtitle);
-      S.section("Level schedule, per tank", `${sz.lumped ? "lumped margins" : "PGS 12 level stack"} · Ø${fmt(sz.D, 1)} m · ρ ${fmt(sz.dens, 1)} kg/m³ · 1 m = ${fmt(sz.area * sz.dens / 1000)} t`);
-      S.header(["Level", "Height m", "Volume m³", "Mass t", "Basis", "Status"], [0, 4, 5]);
-      const hdr = S.headerRow;
-      const keyL = new Set(["mdll", "lah", "lal"]);
-      levelRows(sz).forEach((x) => {
-        const sk = tagStatus(x.tag);
-        S.row([x.name, x.h, x.h * sz.area, sz.levelT(x.h), xstrip(x.basis), x.tag], { kind: keyL.has(x.k) ? "key" : null, fmt: [null, XF.d2, XF.int, XF.int], status: sk ? { 5: sk } : null });
-      });
-      S.row(["Working range (max − min working level)", sz.workH, sz.workH * sz.area, sz.levelT(sz.workH), `= loadable volume per tank (${fmt(sz.perTankT)} t)`, ""], { kind: "total", fmt: [null, XF.d2, XF.int, XF.int] });
-      S.row(["Unusable above max working level", sz.H - L.lah, (sz.H - L.lah) * sz.area, sz.levelT(sz.H - L.lah), "shell volume kept empty", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
-      S.row(["Unusable below min working level", L.lal, L.lal * sz.area, sz.levelT(L.lal), "never sent out — keeps the tank cold", ""], { fmt: [null, XF.d2, XF.int, XF.int] });
-      S.freeze(hdr);
-      S.section("PGS 12 check of this design", "re-evaluated from the current inputs");
-      S.header(["Item", "Status", "", "", "PGS 12 requirement and source", "This design"], [0, 4, 5]);
-      checks.forEach((c) => S.row([c.item, stLabel(c.st), "", "", xstrip(c.req), xstrip(c.val)], { status: { 1: XST[c.st] }, span: [2, 4] }));
-    }
-
-    // ── CAPEX & TARIFF ────────────────────────────────────────
-    {
-      const S = xSheet(wb, "CAPEX & Tariff", [40, 16, 12, 60], { portrait: true });
-      S.title("CAPEX & break-even tariff", subtitle);
-      const R = (label, v, unit, note, kind, fm) => S.row([label, v, unit, note || ""], { kind, fmt: [null, fm || XF.d1] });
-      const c = P.capex;
-      S.section("CAPEX", `${CCY.m}, before financing · ${cx.sg ? "Vopak Singapore database (fee back-calculated)" : "TEPSA database"} · ${CCY.code}`);
+      const S = sheets["CAPEX & Tariff"];
+      S.title("CAPEX & break-even tariff", `${subtitle}. Formulas on the selected case; financial assumptions are on Inputs.`);
+      S.section("CAPEX", "before financing, display currency");
       S.header(["Item", "Value", "Unit", "Basis"], [0, 2, 3]);
-      R(`Storage (${sz.N} × ${fmt(sz.perTankT)} t loadable)`, cx.storage, CCY.m, cx.sg
-        ? `${CCY.sym}${fmt(cx.refStorage, 1)}M (from the S$${fmt(num(P.register.vopakSg.feeSgdPerT), 2)}/MT fee${CCY.code === "USD" ? "" : `; US$${fmt(cx.ref.storage, 1)}M`}) × (${fmt(sz.perTankT)} ÷ ${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`
-        : `${CCY.sym}${fmt(cx.refStorage, 1)}M (TEPSA €${fmt(num(c.refStorageEurM))}M) × (${fmt(sz.perTankT)} ÷ ${fmt(cx.refT)})^${num(c.exponent)} × ${num(c.locationFactor)}`);
-      R("Jetty / marine", cx.marine, CCY.m, `${CCY.sym}${fmt(cx.marineFixed)}M + ${shipName(sz.shipKey)} adder`);
-      R("Dredging, pipeline, other", cx.other, CCY.m);
-      R("Total, before financing", cx.total, CCY.m, `±${fmt(cx.acc * 100)} % → ${CCY.sym}${fmt(cx.low)}–${fmt(cx.high)}M`, "key");
-      R("Financing during construction", cx.be.capexCod - cx.total, CCY.m, `${fmt(f.h * 100, 1)} % on ${String(P.fin.spendProfile)} spend`);
-      R("CAPEX at start of operations", cx.be.capexCod, CCY.m, "", "total");
-      S.section("Tariff build-up", `${fmt(f.h * 100, 1)} % return · ${f.term} yr`);
-      S.header(["Component", `${CCY.m} / yr`, CCY.t, "Note"], [0, 3]);
-      const opex1 = f.opex * cx.be.capexCod;
-      const T2 = (l, a, b2, kind, note) => S.row([l, a, b2, note || ""], { kind, fmt: [null, XF.d1, XF.d1] });
-      T2("Fixed OPEX (year 1)", opex1, opex1 * 1000 / q);
-      T2("Capital recovery, return & tax", cx.be.revEurM - opex1, (cx.be.revEurM - opex1) * 1000 / q);
-      T2("Break-even storage tariff", cx.be.revEurM, cx.be.eurT, "key", `range ${CCY.sym}${fmt(cx.beLow, 1)}–${fmt(cx.beHigh, 1)}/t`);
-      T2("Utility fee (pass-through)", u * q / 1000, u);
-      T2("All-in", cx.be.revEurM + u * q / 1000, cx.allIn, "key");
-      S.section("Financial assumptions");
+      const C = (label, f, note, kind, fm) => S.row([label, F(f), unitM(), note || ""], { kind, fmt: [null, fm || XF.d1] });
+      C("Storage", M("storage"), "reference CAPEX × (loadable volume per tank ÷ reference)^exponent × tanks × location factor");
+      C("Jetty / marine", M("marine"), "fixed marine + ship-class adder");
+      C("Dredging, pipeline, other", M("other"));
+      C("Total, before financing", M("total"), FT(`"±"&TEXT([g:acc],"0%")&" → "&TEXT(${M("low")},"#,##0")&" – "&TEXT(${M("high")},"#,##0")`), "key");
+      C("Financing during construction", `${M("capexCod")}-${M("total")}`, "build-period spend compounded at the operator return");
+      C("CAPEX at start of operations", M("capexCod"), "", "total");
+      S.section("Tariff build-up");
+      S.header(["Component", FT('[g:ccyM]&" / yr"'), FT("[g:ccyT]"), "Note"], [0, 3]);
+      const opex1 = `[g:opex]*${M("capexCod")}`;
+      const T2 = (l, a, note, kind) => S.row([l, F(a), F(`(${a})*1000/${M("thrKt")}`), note || ""], { kind, fmt: [null, XF.d1, XF.d1] });
+      T2("Fixed OPEX (year 1)", opex1);
+      T2("Capital recovery, return & tax", `${M("beRev")}-${opex1}`);
+      T2("Break-even storage tariff", M("beRev"), "", "key");
+      T2("Utility fee (pass-through)", `${M("util")}*${M("thrKt")}/1000`);
+      T2("All-in", `${M("beRev")}+${M("util")}*${M("thrKt")}/1000`, "", "key");
+      S.section("Financial assumptions", "linked to Inputs");
       S.header(["Item", "Value", "Unit", ""], [0, 2]);
-      [["Operator return", f.h, XF.pct], ["CPI indexation", f.cpi, XF.pct], ["Corporate tax", f.tax, XF.pct0], ["Fixed OPEX, % of CAPEX", f.opex, XF.pct], ["Residual value", f.resid, XF.pct0]]
-        .forEach(([l, v, fm]) => R(l, v, "", "", null, fm));
-      R("Tax depreciation", f.dep, "yrs", "straight line", null, XF.int);
-      R("Contract term", f.term, "yrs", "", null, XF.int);
-      S.section("Market check at this throughput", `registered offers, 40 kt tank, interpolated on fixed revenue · ${CCY.code}`);
-      S.header(["Source", `Storage ${CCY.t}`, `All-in ${CCY.t}`, `Implied CAPEX before financing, ${CCY.m}`], [0]);
-      marketRows(q, cx).forEach((r, i) => S.row([r.label, r.fee, r.fee + u, r.capex], { kind: i === 0 ? "key" : null, fmt: [null, XF.d1, XF.d1, XF.int] }));
+      [["Operator return", "[g:h]", XF.pct, ""], ["CPI indexation", "[g:cpi]", XF.pct, ""], ["Corporate tax", "[g:tax]", XF.pct0, ""], ["Fixed OPEX, % of CAPEX", "[g:opex]", XF.pct, ""],
+        ["Residual value", "[g:resid]", XF.pct0, ""], ["Tax depreciation", "[g:dep]", XF.int, "yrs"], ["Contract term", "[g:T]", XF.int, "yrs"]]
+        .forEach(([l, f, fm, u]) => S.row([l, F(f), u, ""], { fmt: [null, fm] }));
     }
 
-    // ── SHIP OPTIONS ──────────────────────────────────────────
+    // ── SHIP OPTIONS ───────────────────────────────────────
     {
-      const cols = ["Ship class", "Parcel t", "Net tank t", "Plot ha", "Plot acres", "Plot sq ft", "Inner Ø m", "Ships / yr", "Jetty occ.", "Round trip d", "Vessels", `CAPEX ${CCY.m}`, `Storage ${CCY.t}`, `Utilities ${CCY.t}`, `Freight ${CCY.t}`, `Total ${CCY.t}`];
-      const S = xSheet(wb, "Ship Options", [26, 10, 11, 9, 10, 12, 10, 10, 10, 11, 9, 10, 11, 11, 11, 11]);
-      S.title("Optimum size by ship class", subtitle);
-      S.section("Cost per tonne by ship class", `freight: ${P.voyage.freightMethod === "manual" ? "manual €/t" : P.voyage.charterBasis === "dedicated" ? "dedicated fleet" : "voyage share (COA / spot)"} · ${fmt(num(P.voyage.roundTripDays), 1)} d round trip`);
-      S.header(cols, [0]);
+      const S = sheets["Ship Options"];
+      S.title("Optimum size by ship class", `${subtitle}. One Sizing column per class; the lowest valid landed cost is flagged.`);
+      S.section("Cost per tonne by ship class");
+      S.header(["Ship class", "Parcel t", "Net tank t", "Plot ha", "Plot acres", "Plot sq ft", "Inner Ø m", "Ships / yr", "Jetty occ.", "Round trip d", "Vessels", FT('"CAPEX "&[g:ccyM]'), FT('"Storage "&[g:ccyT]'), FT('"Utilities "&[g:ccyT]'), FT('"Freight "&[g:ccyT]'), FT('"Total "&[g:ccyT]')], [0]);
       const hdr = S.headerRow;
-      od.forEach((d) => {
-        const tags = [d === best ? "lowest" : "", d.k === sz.shipKey ? "selected" : "", d.sz.grossMdllT > PGS12.bandHiT ? "> 70 kt/tank" : ""].filter(Boolean).join(", ");
-        const r = S.row([shipName(d.k) + (tags ? ` (${tags})` : ""), d.sz.parcel, d.sz.net, d.sz.plot.ha, d.sz.plot.acre, d.sz.plot.sqft, d.sz.D, d.sz.shipsYr, d.sz.jettyOcc, d.vy.rt, d.vy.fleet, d.cx.total, d.storage, d.util, d.freight, d.total],
-          { kind: d === best ? "best" : null, fmt: [null, XF.int, XF.int, XF.d2, XF.d2, XF.int, XF.d1, XF.d1, XF.pct0, XF.d1, XF.int, XF.int, XF.d1, XF.d2, XF.d1, XF.d1] });
-        const tc = r.getCell(16); tc.font = xfont({ size: 11, bold: true, color: d === best ? XC.st.ok[1] : XC.brand2 });
+      ["C", "D", "E", "F"].forEach((L, i) => {
+        const x = (k) => `Sizing!$${L}$${rowOf[k]}`;
+        const flag = `IF([g:bestIdx]=${i + 1}," (lowest)","")&IF([g:selIdx]=${i + 1}," (selected)","")&IF(${x("grossMdllT")}>${PGS12.bandHiT}," (> 70 kt/tank)","")`;
+        const r = S.row([FT(`${x("name")}&${flag}`), F(x("parcel")), F(x("net")), F(x("plotHa")), F(x("plotAcre")), F(x("plotSqft")), F(x("D")), F(x("shipsYr")), F(x("jettyOcc")), F(x("rtD")), F(x("fleet")),
+          F(x("total")), F(x("beTariff")), F(x("util")), F(x("freightD")), F(x("landed"))],
+          { fmt: [null, XF.int, XF.int, XF.d2, XF.d2, XF.int, XF.d1, XF.d1, XF.pct0, XF.d1, XF.int, XF.int, XF.d1, XF.d2, XF.d1, XF.d1] });
+        r.getCell(16).font = xfont({ size: 11, bold: true, color: XC.brand2 });
       });
-      S.freeze(hdr);
-      S.note("Green row = lowest landed cost among valid options (jetty keeps up, diameter within limit, ≤ 70 kt per tank). Hire, fuel, speed and distance are placeholders.");
+      S.ws.views = [{ state: "frozen", ySplit: hdr, showGridLines: false }];
+      S.note("Lowest valid landed cost: jetty keeps up, diameter within the limit on Inputs, ≤ 70 kt per tank. Hire, fuel, speed and distance are placeholders.");
+    }
+  }
+  return { sheets, REF, Gx, SHIPR, rowOf };
+}
+
+// Replace tokens in every formula of the workbook once all rows exist.
+function resolveLiveFormulas(wb, ctx) {
+  const { REF, Gx, SHIPR, rowOf } = ctx;
+  const need = (v, what) => { if (v === undefined) throw new Error("Excel export: unresolved reference " + what); return v; };
+  const rep = (tpl, col) => tpl.replace(/\[(p|g|m|mr|s):([^\]]+)\]|\{([A-Za-z0-9_]+)(?::([A-Z]+))?\}/g, (all, t, arg, key, kc) => {
+    if (t === "p") return need(REF[arg], arg);
+    if (t === "g") return need(Gx[arg], arg);
+    if (t === "s") return need(SHIPR[arg], arg);
+    if (t === "m") { const [k, c] = arg.split(":"); return `Sizing!$${c || "G"}$${need(rowOf[k], k)}`; }
+    if (t === "mr") return `Sizing!$C$${need(rowOf[arg], arg)}:$F$${rowOf[arg]}`;
+    return kc ? `$${kc}$${need(rowOf[key], key)}` : `${col}${need(rowOf[key], key)}`;
+  });
+  wb.eachSheet((ws) => ws.eachRow({ includeEmpty: false }, (row) => row.eachCell({ includeEmpty: false }, (cell) => {
+    if (cell.isMerged && cell.master && cell.master.address !== cell.address) return;
+    const v = cell.value;
+    if (!isFormula(v)) return;
+    cell.value = { formula: rep(v.formula, colLetter(cell.col)) };
+  })));
+}
+
+async function exportExcel(full) {
+  if (typeof ExcelJS === "undefined") { alert("Excel library failed to load (check network access to cdnjs.cloudflare.com)."); return; }
+  const sz = size(), cx = capexFor(sz), f = cx.f, u = cx.util;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "NH3 Storage Design module"; wb.created = new Date();
+  wb.calcProperties = { fullCalcOnLoad: true };
+  const today = new Date().toISOString().slice(0, 10);
+  const subtitle = `${P.project.name} · ${P.project.location} · exported ${today} · receiving (import) terminal, sized from downstream demand · indicative, non-binding`;
+  const live = buildLiveSheets(wb, subtitle, full);
+
+  if (full) {
+    // ── PGS 12 CHECK (values as at export) ───────────────────
+    {
+      const checks = pgsChecks(sz), stLabel = (k) => (ST[k] || ST.info)[1];
+      const S = live.sheets["PGS 12 Check"];
+      S.title("PGS 12 check of this design", `${subtitle}. Evaluated at export from the inputs then; this sheet does not recalculate.`);
+      S.header(["Item", "Status", "PGS 12 requirement and source", "This design"], [0, 2, 3]);
+      checks.forEach((c) => S.row([c.item, stLabel(c.st), xstrip(c.req), xstrip(c.val)], { status: { 1: XST[c.st] } }));
     }
 
-    // ── REGISTER ──────────────────────────────────────────────
+    // ── REGISTER (quotes and reference data; derived values as at export) ──
     {
       const Rg = P.register, v = Rg.vopak, t = Rg.tepsa, ti = Rg.titan;
-      const S = xSheet(wb, "Register", [30, 14, 12, 13, 13, 15, 18, 18], { tab: XC.text3 });
+      const S = live.sheets.Register;
       S.title("Economics register", "Derived values use the current financial assumptions. All figures indicative and non-binding.");
       {
         const g = Rg.vopakSg, ref = sgRef(), uUsd = u * Math.max(0.01, num(P.voyage.fxUsdPerEur, 1.1)), acc = num(g.accuracyPct) / 100;
@@ -2875,6 +3111,7 @@ async function exportExcel(full) {
     }
   }
 
+  resolveLiveFormulas(wb, live);
   const buf = await wb.xlsx.writeBuffer();
   download(`${slug()}-storage-${full ? "design" : "results"}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
 }
