@@ -44,6 +44,11 @@ export function buildNav(role: UserRole): NavSection[] {
     },
   ];
 
+  // Hide any section that has no items (e.g. Engineering Design while its modules are hidden).
+  const visible = sections.filter((s) => s.items.length > 0);
+  sections.length = 0;
+  sections.push(...visible);
+
   if (role === "admin") {
     sections.splice(1, 0, {
       title: "Administration",

@@ -53,15 +53,16 @@ export const MODULES: ModuleDefinition[] = [
     htmlPath: "/modules/hydrogen-blend-calculator.html",
     icon: "coin",
   },
-  {
-    slug: "nh3-cracker-design",
-    title: "NH₃ Cracker Design",
-    description:
-      "Ammonia cracker sizing from required H₂ capacity on KBR H2ACT, Duiker AHC or custom fuel pathways (clean fuel, natural gas, maximum NG with double PSA) — NH₃, fuel, power and CO₂, a Total Cost view (KBR ISBL + OSBL curves, full project CAPEX build-up, price-driven OPEX and LCOH), KBR ISBL and OSBL equipment lists, and a block flow diagram.",
-    category: "Engineering Design",
-    htmlPath: "/modules/nh3-cracker-design.html",
-    icon: "flame",
-  },
+  // TEMPORARILY HIDDEN: NH3 Cracker Design (restores the Engineering Design nav section too).
+  // {
+  //   slug: "nh3-cracker-design",
+  //   title: "NH₃ Cracker Design",
+  //   description:
+  //     "Ammonia cracker sizing from required H₂ capacity on KBR H2ACT, Duiker AHC or custom fuel pathways (clean fuel, natural gas, maximum NG with double PSA) — NH₃, fuel, power and CO₂, a Total Cost view (KBR ISBL + OSBL curves, full project CAPEX build-up, price-driven OPEX and LCOH), KBR ISBL and OSBL equipment lists, and a block flow diagram.",
+  //   category: "Engineering Design",
+  //   htmlPath: "/modules/nh3-cracker-design.html",
+  //   icon: "flame",
+  // },
   // TEMPORARILY HIDDEN: NH3 Storage Design. Uncomment to restore it to the sidebar,
   // /modules index and /modules/[slug] route (the HTML file is kept in public/modules).
   // {
