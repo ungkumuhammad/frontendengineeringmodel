@@ -57,20 +57,22 @@ export const MODULES: ModuleDefinition[] = [
     slug: "nh3-cracker-design",
     title: "NH₃ Cracker Design",
     description:
-      "Ammonia cracker sizing from required H₂ capacity on KBR H2ACT, Duiker AHC or custom fuel pathways (clean fuel, natural gas, maximum NG with double PSA) — NH₃, fuel, power and CO₂, a Total Cost view (KBR ISBL + OSBL curves, full project CAPEX build-up, price-driven OPEX and LCOH), KBR ISBL and OSBL equipment lists, and a block flow diagram. Link the NH₃ demand straight into the NH₃ Storage Design module.",
+      "Ammonia cracker sizing from required H₂ capacity on KBR H2ACT, Duiker AHC or custom fuel pathways (clean fuel, natural gas, maximum NG with double PSA) — NH₃, fuel, power and CO₂, a Total Cost view (KBR ISBL + OSBL curves, full project CAPEX build-up, price-driven OPEX and LCOH), KBR ISBL and OSBL equipment lists, and a block flow diagram.",
     category: "Engineering Design",
     htmlPath: "/modules/nh3-cracker-design.html",
     icon: "flame",
   },
-  {
-    slug: "nh3-storage-design",
-    title: "NH₃ Storage Design",
-    description:
-      "Refrigerated ammonia tank sizing from throughput, ship class and buffer rules — PGS 12 liquid levels and compliance check, tank dimensions, CAPEX, break-even storage tariff, optimum ship/tank size, and a register of terminal operator offers. Excel and project-file export.",
-    category: "Engineering Design",
-    htmlPath: "/modules/nh3-storage-design.html",
-    icon: "tank",
-  },
+  // TEMPORARILY HIDDEN: NH3 Storage Design. Uncomment to restore it to the sidebar,
+  // /modules index and /modules/[slug] route (the HTML file is kept in public/modules).
+  // {
+  //   slug: "nh3-storage-design",
+  //   title: "NH₃ Storage Design",
+  //   description:
+  //     "Refrigerated ammonia tank sizing from throughput, ship class and buffer rules — PGS 12 liquid levels and compliance check, tank dimensions, CAPEX, break-even storage tariff, optimum ship/tank size, and a register of terminal operator offers. Excel and project-file export.",
+  //   category: "Engineering Design",
+  //   htmlPath: "/modules/nh3-storage-design.html",
+  //   icon: "tank",
+  // },
 ];
 
 export function getModule(slug: string): ModuleDefinition | undefined {
