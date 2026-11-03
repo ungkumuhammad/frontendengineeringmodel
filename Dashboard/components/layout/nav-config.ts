@@ -21,7 +21,9 @@ const toNavItem = (m: ModuleDefinition): NavItem => ({
   icon: m.icon,
 });
 
-export function buildNav(role: UserRole): NavSection[] {
+export function buildNav(role: UserRole, hiddenModules: string[] = []): NavSection[] {
+  const hidden = new Set(hiddenModules);
+  const modules = MODULES.filter((m) => !hidden.has(m.slug));
   const sections: NavSection[] = [
     {
       title: "Overview",
@@ -32,11 +34,11 @@ export function buildNav(role: UserRole): NavSection[] {
     },
     {
       title: "Engineering Design",
-      items: MODULES.filter((m) => m.category === "Engineering Design").map(toNavItem),
+      items: modules.filter((m) => m.category === "Engineering Design").map(toNavItem),
     },
     {
       title: "Engineering Modules",
-      items: MODULES.filter((m) => m.category !== "Engineering Design").map(toNavItem),
+      items: modules.filter((m) => m.category !== "Engineering Design").map(toNavItem),
     },
     {
       title: "Account",
@@ -44,7 +46,7 @@ export function buildNav(role: UserRole): NavSection[] {
     },
   ];
 
-  // Hide any section that has no items (e.g. Engineering Design while its modules are hidden).
+  // Hide any section left with no items (e.g. every Engineering Design module hidden).
   const visible = sections.filter((s) => s.items.length > 0);
   sections.length = 0;
   sections.push(...visible);
@@ -55,6 +57,7 @@ export function buildNav(role: UserRole): NavSection[] {
       items: [
         { label: "Admin Home", href: "/admin", icon: "shield" },
         { label: "Users", href: "/admin/users", icon: "users" },
+        { label: "Module Visibility", href: "/admin/modules", icon: "eye" },
         { label: "Login Activity", href: "/admin/logins", icon: "activity" },
         { label: "Audit Log", href: "/admin/audit", icon: "list" },
       ],
@@ -73,6 +76,7 @@ export const ICONS: Record<string, string> = {
   users:
     "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   activity: "M22 12h-4l-3 9L9 3l-3 9H2",
+  eye: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
   bolt: "M13 2 3 14h7v8l10-12h-7z",
   swap: "M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4",

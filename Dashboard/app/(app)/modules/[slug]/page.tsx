@@ -1,22 +1,29 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getModule, MODULES } from "@/lib/modules";
+import { getModule } from "@/lib/modules";
+import { getCurrentProfile } from "@/lib/auth";
+import { getHiddenModuleSlugs } from "@/lib/module-visibility";
 import { ModuleFrame } from "@/components/layout/module-frame";
 import { Badge } from "@/components/ui/badge";
 
-// Pre-render a route for each known module slug.
-export function generateStaticParams() {
-  return MODULES.map((m) => ({ slug: m.slug }));
-}
+// Rendered per request: whether a module is hidden (Admin > Module Visibility)
+// can change at any time, so the route cannot be pre-rendered.
+export const dynamic = "force-dynamic";
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const mod = getModule(params.slug);
   return { title: mod ? `${mod.title} · Dashboard` : "Module" };
 }
 
-export default function ModulePage({ params }: { params: { slug: string } }) {
+export default async function ModulePage({ params }: { params: { slug: string } }) {
   const mod = getModule(params.slug);
   if (!mod) notFound();
+
+  // A module hidden in Admin > Module Visibility 404s for users; admins can
+  // still open it by link to check it before showing it again.
+  const [profile, hiddenSlugs] = await Promise.all([getCurrentProfile(), getHiddenModuleSlugs()]);
+  const isHidden = hiddenSlugs.includes(mod.slug);
+  if (isHidden && profile?.role !== "admin") notFound();
 
   return (
     <div className="flex h-full flex-col">
@@ -31,6 +38,11 @@ export default function ModulePage({ params }: { params: { slug: string } }) {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-lg font-semibold">{mod.title}</h1>
           <Badge tone="default">{mod.category}</Badge>
+          {isHidden ? (
+            <Link href="/admin/modules">
+              <Badge tone="warning">Hidden from users</Badge>
+            </Link>
+          ) : null}
         </div>
         <a
           href={mod.htmlPath}

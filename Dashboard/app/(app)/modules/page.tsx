@@ -1,8 +1,9 @@
-import { MODULES } from "@/lib/modules";
+import { getVisibleModules } from "@/lib/module-visibility";
 import { PageHeader } from "@/components/ui/page-header";
 import { ModuleCard } from "@/components/modules/module-card";
 
-export default function ModulesIndexPage() {
+export default async function ModulesIndexPage() {
+  const modules = await getVisibleModules();
   return (
     <>
       <PageHeader
@@ -10,7 +11,7 @@ export default function ModulesIndexPage() {
         description="All available engineering analysis tools."
       />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {MODULES.map((m) => (
+        {modules.map((m) => (
           <ModuleCard key={m.slug} module={m} />
         ))}
       </div>

@@ -76,6 +76,24 @@ export interface Database {
         };
         Relationships: [];
       };
+      module_settings: {
+        Row: {
+          slug: string;
+          hidden: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          slug: string;
+          hidden?: boolean;
+          updated_by?: string | null;
+        };
+        Update: {
+          hidden?: boolean;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

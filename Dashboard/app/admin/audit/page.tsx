@@ -20,6 +20,8 @@ const ACTION_TONE: Record<ActivityAction, "default" | "success" | "warning" | "d
   role_changed: "warning",
   user_disabled: "danger",
   user_enabled: "success",
+  module_hidden: "warning",
+  module_shown: "success",
 };
 
 const ACTION_LABEL: Record<ActivityAction, string> = {
@@ -32,6 +34,8 @@ const ACTION_LABEL: Record<ActivityAction, string> = {
   role_changed: "Role Changed",
   user_disabled: "User Disabled",
   user_enabled: "User Enabled",
+  module_hidden: "Module Hidden",
+  module_shown: "Module Shown",
 };
 
 export default async function AuditLogPage({
