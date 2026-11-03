@@ -8,9 +8,11 @@ import type { Profile } from "@/types";
 /** Responsive shell: sidebar + top nav wrapping the page content. */
 export function AppShell({
   profile,
+  hiddenModules,
   children,
 }: {
   profile: Profile;
+  hiddenModules: string[];
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,6 +22,7 @@ export function AppShell({
     <div className="flex min-h-screen">
       <Sidebar
         role={profile.role}
+        hiddenModules={hiddenModules}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         collapsed={sidebarCollapsed}

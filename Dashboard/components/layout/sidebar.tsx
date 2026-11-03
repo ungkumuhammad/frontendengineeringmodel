@@ -40,19 +40,21 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }) {
 
 export function Sidebar({
   role,
+  hiddenModules,
   open,
   onClose,
   collapsed,
   onToggleCollapse,
 }: {
   role: UserRole;
+  hiddenModules: string[];
   open: boolean;
   onClose: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }) {
   const pathname = usePathname();
-  const sections = buildNav(role);
+  const sections = buildNav(role, hiddenModules);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   const toggleSection = (title: string) =>

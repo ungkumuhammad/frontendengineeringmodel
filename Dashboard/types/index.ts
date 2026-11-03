@@ -32,7 +32,9 @@ export type ActivityAction =
   | "profile_updated"
   | "role_changed"
   | "user_disabled"
-  | "user_enabled";
+  | "user_enabled"
+  | "module_hidden"
+  | "module_shown";
 
 export interface ActivityLog {
   id: string;

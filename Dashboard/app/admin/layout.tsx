@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/auth";
+import { getHiddenModuleSlugs } from "@/lib/module-visibility";
 import { AppShell } from "@/components/layout/app-shell";
 
 // Admin shell. requireAdmin() is a server-side guard in addition to the
@@ -9,5 +10,10 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const profile = await requireAdmin();
-  return <AppShell profile={profile}>{children}</AppShell>;
+  const hiddenModules = await getHiddenModuleSlugs();
+  return (
+    <AppShell profile={profile} hiddenModules={hiddenModules}>
+      {children}
+    </AppShell>
+  );
 }

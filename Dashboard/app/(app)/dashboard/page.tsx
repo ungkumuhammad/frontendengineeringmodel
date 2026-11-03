@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { MODULES } from "@/lib/modules";
+import { getVisibleModules } from "@/lib/module-visibility";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard, Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { ModuleCard } from "@/components/modules/module-card";
 
 export default async function DashboardPage() {
   const profile = await requireUser();
+  const modules = await getVisibleModules();
 
-  const byCategory = MODULES.reduce<Record<string, typeof MODULES>>(
+  const byCategory = modules.reduce<Record<string, typeof modules>>(
     (acc, m) => {
       (acc[m.category] ??= []).push(m);
       return acc;
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
       />
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Available modules" value={MODULES.length} hint="Techno-economics & pipeline sizing" />
+        <StatCard label="Available modules" value={modules.length} hint="Techno-economics & pipeline sizing" />
         {profile.role === "admin" ? (
           <StatCard label="Your role" value={profile.role} hint={profile.email} />
         ) : null}
@@ -43,12 +44,12 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {Object.entries(byCategory).map(([category, modules]) => (
+      {Object.entries(byCategory).map(([category, list]) => (
         <Card key={category} className="mb-6">
-          <CardHeader title={category} description={`${modules.length} tool(s)`} />
+          <CardHeader title={category} description={`${list.length} tool(s)`} />
           <CardBody>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {modules.map((m) => (
+              {list.map((m) => (
                 <ModuleCard key={m.slug} module={m} />
               ))}
             </div>

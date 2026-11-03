@@ -35,7 +35,15 @@ export default async function AdminHome() {
     <>
       <PageHeader
         title="Admin Console"
-        description="Manage users and monitor platform activity."
+        description="Manage users, module visibility and platform activity."
+        action={
+          <Link
+            href="/admin/modules"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium transition-colors hover:bg-accent"
+          >
+            Module visibility
+          </Link>
+        }
       />
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
