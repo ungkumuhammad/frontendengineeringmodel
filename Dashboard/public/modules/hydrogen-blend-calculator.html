@@ -1890,6 +1890,48 @@ function solve2ShadeByPrice(sA, sB, data, t_p) {
            blendedPrice: xA*data[sA].price + xB*data[sB].price };
 }
 
+// The single blend optimiser behind Calculate AND every sensitivity table, so
+// any sensitivity cell/row equals what Calculate gives for those inputs.
+//   mode 'ci'    → hit CI target exactly at minimum blended price
+//   mode 'price' → hit price target exactly at minimum blended CI
+// 2 shades: the split is unique. 3 shades: an optimal blend only ever needs
+// two shades, so try each pair and keep the best.
+// Returns { fracs, blendedCI, blendedPrice } or null if the target is unreachable.
+function optimiseBlend(active, data, mode, target) {
+  if (active.length === 1) {
+    const s = active[0];
+    const fracs = { grey: 0, blue: 0, green: 0 }; fracs[s] = 1;
+    return { fracs, blendedCI: data[s].ci, blendedPrice: data[s].price };
+  }
+  const pairs = [['grey','blue'],['grey','green'],['blue','green']]
+    .filter(([a,b]) => active.includes(a) && active.includes(b));
+  let best = null, bestVal = Infinity;
+  for (const [sA, sB] of pairs) {
+    const sol = mode === 'ci' ? solve2ShadeByCI(sA, sB, data, target)
+                              : solve2ShadeByPrice(sA, sB, data, target);
+    if (!sol) continue;
+    const val = mode === 'ci' ? sol.blendedPrice : sol.blendedCI;
+    if (val < bestVal) { bestVal = val; best = { sA, sB, sol }; }
+  }
+  if (!best) return null;
+  const fracs = { grey: 0, blue: 0, green: 0 };
+  fracs[best.sA] = best.sol.xA; fracs[best.sB] = best.sol.xB;
+  return { fracs, blendedCI: best.sol.blendedCI, blendedPrice: best.sol.blendedPrice };
+}
+
+// Price-sensitivity heat map cell: re-run the optimiser with the row/column
+// shade prices swapped in. Used by the on-screen table and the Excel export.
+function sensitivityCell(sol, rowShade, colShade, rowPrice, colPrice) {
+  const { active, data, t_ci, t_p, referenceMode: mode } = sol;
+  const d = {};
+  active.forEach(s => d[s] = { ...data[s] });
+  d[rowShade].price = rowPrice;
+  d[colShade].price = colPrice;
+  const r = optimiseBlend(active, d, mode, mode === 'ci' ? t_ci : t_p);
+  if (!r) return null;
+  return { value: mode === 'ci' ? r.blendedPrice : r.blendedCI, fracs: r.fracs };
+}
+
 function calculate() {
   if (referenceMode === 'reqprice') { calculateRequiredPrice(); return; }
 
@@ -1942,61 +1984,9 @@ function calculate() {
     return;
   }
 
-  // ── Helper: all ordered pairs among active shades (in canonical order) ──
-  const orderedPairs = [['grey','blue'],['grey','green'],['blue','green']]
-    .filter(([a,b]) => active.includes(a) && active.includes(b));
-
-  // ── 2 shades ──
-  if (active.length === 2) {
-    const [sA, sB] = active;
-    let sol;
-    if (referenceMode === 'ci') {
-      sol = solve2ShadeByCI(sA, sB, data, t_ci);
-      if (!sol) {
-        const ciLo = Math.min(data[sA].ci, data[sB].ci), ciHi = Math.max(data[sA].ci, data[sB].ci);
-        showError(
-          `Target CI (${t_ci}) is outside the achievable range for the selected shades.`,
-          `Achievable CI: [${ciLo.toFixed(2)}, ${ciHi.toFixed(2)}] ${ciLabel}`, ''
-        ); return;
-      }
-      t_p = sol.blendedPrice;
-      document.getElementById('target_price').value = sol.blendedPrice.toFixed(dec);
-    } else {
-      sol = solve2ShadeByPrice(sA, sB, data, t_p);
-      if (!sol) {
-        const pLo = Math.min(data[sA].price, data[sB].price), pHi = Math.max(data[sA].price, data[sB].price);
-        showError(
-          `Target Price (${t_p}) is outside the achievable range for the selected shades.`,
-          `Achievable Price: [${pLo.toFixed(2)}, ${pHi.toFixed(2)}] ${pu}`, ''
-        ); return;
-      }
-      t_ci = sol.blendedCI;
-      document.getElementById('target_ci').value = sol.blendedCI.toFixed(2);
-    }
-    fracs = { grey: 0, blue: 0, green: 0 };
-    fracs[sA] = sol.xA; fracs[sB] = sol.xB;
-    blendedCI = sol.blendedCI; blendedPrice = sol.blendedPrice;
-    hideError();
-    lastSolution = { active, data, fracs, blendedCI, blendedPrice, t_ci, t_p, referenceMode };
-    // Badge: "CI Anchored · Price Computed" or "Price Anchored · CI Computed"
-    showResults(fracs, blendedCI, blendedPrice, active, referenceMode === 'ci' ? 'ci-only' : 'price-only');
-    buildSensitivityTable();
-    document.getElementById('sensSection').style.display = 'block';
-    return;
-  }
-
-  // ── 3 shades — optimise: CI ref → min price; Price ref → min CI ──
-  let best = null, bestVal = Infinity;
-  for (const [sA, sB] of orderedPairs) {
-    let sol;
-    if (referenceMode === 'ci') {
-      sol = solve2ShadeByCI(sA, sB, data, t_ci);
-      if (sol && sol.blendedPrice < bestVal) { bestVal = sol.blendedPrice; best = { sA, sB, sol }; }
-    } else {
-      sol = solve2ShadeByPrice(sA, sB, data, t_p);
-      if (sol && sol.blendedCI < bestVal) { bestVal = sol.blendedCI; best = { sA, sB, sol }; }
-    }
-  }
+  // ── 2 or 3 shades — same optimiser the sensitivity tables use ──
+  const target = referenceMode === 'ci' ? t_ci : t_p;
+  const best = optimiseBlend(active, data, referenceMode, target);
 
   if (!best) {
     if (referenceMode === 'ci') {
@@ -2011,11 +2001,7 @@ function calculate() {
     return;
   }
 
-  const { sA, sB, sol: bs } = best;
-  fracs = { grey: 0, blue: 0, green: 0 };
-  fracs[sA] = bs.xA; fracs[sB] = bs.xB;
-  blendedCI    = bs.blendedCI;
-  blendedPrice = bs.blendedPrice;
+  ({ fracs, blendedCI, blendedPrice } = best);
 
   if (referenceMode === 'ci') {
     t_p = blendedPrice;
@@ -2182,8 +2168,6 @@ function buildSensitivityTable() {
   // ── Axis assignment: Grey = Y (rows), Green = X (columns) ──
   const rowShade   = active.includes('grey')  ? 'grey'  : active[0];
   const colShade   = active.includes('green') ? 'green' : active[active.length - 1];
-  const fixedShade = active.find(s => s !== rowShade && s !== colShade) || null;
-  const fixedFrac  = fixedShade ? fracs[fixedShade] : 0;
 
   const shadeColor = s => s==='green'?'var(--green-hue)':s==='blue'?'var(--blue-hue)':'var(--grey-hue)';
   const rowColor   = shadeColor(rowShade); // grey → grey color
@@ -2205,50 +2189,7 @@ function buildSensitivityTable() {
     + ` &nbsp;·&nbsp; <span style="color:${colColor}">${colShade.toUpperCase()} price</span> → X axis (columns)`
     + ` &nbsp;·&nbsp; <span style="color:${rowColor}">${rowShade.toUpperCase()} price</span> → Y axis (rows)`
     + ` &nbsp;·&nbsp; step = ${step} ${pu}`
-    + (fixedShade ? ` &nbsp;·&nbsp; <span style="color:${shadeColor(fixedShade)}">${fixedShade.toUpperCase()}</span> fixed at ${(fixedFrac*100).toFixed(1)}%` : '');
-
-  // Compute cell value: blended price (CI ref) or blended CI (price ref)
-  function getCellVal(colPrice, rowPrice) {
-    if (active.length >= 3 && fixedShade) {
-      const rem = 1 - fixedFrac;
-      if (isCIRef) {
-        // Anchor CI → solve col+row fracs, return blended price
-        const remCI = t_ci - fixedFrac * data[fixedShade].ci;
-        const dCI   = data[colShade].ci - data[rowShade].ci;
-        if (Math.abs(dCI) < 1e-10) return null;
-        const xC = (remCI - data[rowShade].ci * rem) / dCI;
-        const xR = rem - xC;
-        if (xC < -0.0001 || xR < -0.0001) return null;
-        return xC * colPrice + xR * rowPrice + fixedFrac * data[fixedShade].price;
-      } else {
-        // Anchor Price → solve col+row fracs from price constraint, return blended CI
-        const remP = t_p - fixedFrac * data[fixedShade].price;
-        const dP   = colPrice - rowPrice;
-        if (Math.abs(dP) < 1e-10) return null;
-        const xC = (remP - rem * rowPrice) / dP;
-        const xR = rem - xC;
-        if (xC < -0.0001 || xR < -0.0001) return null;
-        return xC * data[colShade].ci + xR * data[rowShade].ci + fixedFrac * data[fixedShade].ci;
-      }
-    } else {
-      // 2-shade
-      if (isCIRef) {
-        const dCI = data[colShade].ci - data[rowShade].ci;
-        if (Math.abs(dCI) < 1e-10) return null;
-        const xC = (t_ci - data[rowShade].ci) / dCI;
-        const xR = 1 - xC;
-        if (xC < -0.0001 || xR < -0.0001) return null;
-        return xC * colPrice + xR * rowPrice;
-      } else {
-        const dP = colPrice - rowPrice;
-        if (Math.abs(dP) < 1e-10) return null;
-        const xC = (t_p - rowPrice) / dP;
-        const xR = 1 - xC;
-        if (xC < -0.0001 || xR < -0.0001) return null;
-        return xC * data[colShade].ci + xR * data[rowShade].ci;
-      }
-    }
-  }
+    + ` &nbsp;·&nbsp; blend % re-optimised in every cell (same solver as Calculate — hover a cell for its blend)`;
 
   const refVal = isCIRef ? t_p : t_ci; // what to compare cells against for coloring
   const cellDec = isCIRef ? dec : 2;   // CI always 2 decimals
@@ -2300,11 +2241,13 @@ function buildSensitivityTable() {
     deltas.forEach(cd => {
       const colPrice   = baseColP + cd;
       const isBaseCell = rd === 0 && cd === 0;
-      const val        = getCellVal(colPrice, rowPrice);
+      const cell       = sensitivityCell(lastSolution, rowShade, colShade, rowPrice, colPrice);
+      const val        = cell ? cell.value : null;
+      const tip        = cell ? active.map(s => `${s.toUpperCase()} ${(cell.fracs[s]*100).toFixed(1)}%`).join(' · ') : 'Target not reachable';
       const { bg, color } = cellColorStyle(val, refVal);
       const outline    = isBaseCell ? 'outline:2px solid rgba(240,192,64,0.55);outline-offset:-2px;' : '';
       const bg2        = isBaseCell ? 'rgba(240,192,64,0.16)' : bg;
-      html += `<td style="background:${bg2};color:${color};font-weight:500;${outline}" class="${isBaseCell?'base-row':''}">
+      html += `<td title="${tip}" style="background:${bg2};color:${color};font-weight:500;${outline}" class="${isBaseCell?'base-row':''}">
         ${val !== null
           ? `<span style="font-size:12px">${val.toFixed(cellDec)}</span>`
           : `<span class="infeasible">—</span>`}
@@ -2769,73 +2712,26 @@ function toggleCISens() {
 // Price ref mode: vary Price ±(step/4) (3 steps), show fractions + blended CI
 function getCISensRows() {
   if (!lastSolution) return [];
-  const { active, data, fracs, t_ci, t_p } = lastSolution;
+  const { active, data, t_ci, t_p } = lastSolution;
   if (active.length < 2) return [];
 
   const isCIRef  = referenceMode === 'ci';
   const varStep  = isCIRef ? 0.1 : (priceStep() / 4);
   const steps    = [-3,-2,-1,0,1,2,3];
 
-  // Axis: rowShade = grey (Y), colShade = green (X), fixedShade = blue
-  const rowShade   = active.includes('grey')  ? 'grey'  : active[0];
-  const colShade   = active.includes('green') ? 'green' : active[active.length - 1];
-  const fixedShade = active.find(s => s !== rowShade && s !== colShade) || null;
-  const fixedFrac  = fixedShade ? fracs[fixedShade] : 0;
-
   return steps.map(step => {
-    const variedVal = parseFloat((isCIRef ? t_ci : t_p) + step * varStep).toFixed(isCIRef ? 1 : 2);
-    const vv = parseFloat(variedVal);
+    // Exact target (no rounding) so the BASE row is precisely the calculated blend;
+    // the 1e6 rounding only strips floating-point noise from the step additions.
+    const vv = Math.round(((isCIRef ? t_ci : t_p) + step * varStep) * 1e6) / 1e6;
 
-    let xGrey = 0, xBlue = 0, xGreen = 0;
-    let blendedPrice = null, blendedCI = null, feasible = false;
-
-    if (active.length >= 3 && fixedShade) {
-      const rem = 1 - fixedFrac;
-      if (isCIRef) {
-        const remCI = vv - fixedFrac * data[fixedShade].ci;
-        const dCI   = data[colShade].ci - data[rowShade].ci;
-        if (Math.abs(dCI) > 1e-10) {
-          const xC = (remCI - data[rowShade].ci * rem) / dCI;
-          const xR = rem - xC;
-          if (xC >= -0.0001 && xR >= -0.0001 && xC <= 1.0001 && xR <= 1.0001) {
-            const fm = { grey: 0, blue: 0, green: 0 };
-            fm[colShade] = Math.max(0, xC); fm[rowShade] = Math.max(0, xR); fm[fixedShade] = fixedFrac;
-            xGrey = fm.grey; xBlue = fm.blue; xGreen = fm.green;
-            blendedPrice = xGrey*data.grey.price + xBlue*data.blue.price + xGreen*data.green.price;
-            blendedCI    = xGrey*data.grey.ci    + xBlue*data.blue.ci    + xGreen*data.green.ci;
-            feasible = true;
-          }
-        }
-      } else {
-        // Price ref: solve grey+green from price constraint
-        const remP = vv - fixedFrac * data[fixedShade].price;
-        const dP   = data[colShade].price - data[rowShade].price;
-        if (Math.abs(dP) > 1e-10) {
-          const xC = (remP - rem * data[rowShade].price) / dP;
-          const xR = rem - xC;
-          if (xC >= -0.0001 && xR >= -0.0001 && xC <= 1.0001 && xR <= 1.0001) {
-            const fm = { grey: 0, blue: 0, green: 0 };
-            fm[colShade] = Math.max(0, xC); fm[rowShade] = Math.max(0, xR); fm[fixedShade] = fixedFrac;
-            xGrey = fm.grey; xBlue = fm.blue; xGreen = fm.green;
-            blendedPrice = xGrey*data.grey.price + xBlue*data.blue.price + xGreen*data.green.price;
-            blendedCI    = xGrey*data.grey.ci    + xBlue*data.blue.ci    + xGreen*data.green.ci;
-            feasible = true;
-          }
-        }
-      }
-    } else {
-      // 2-shade
-      const [sA, sB] = active;
-      const sol = isCIRef ? solve2ShadeByCI(sA, sB, data, vv) : solve2ShadeByPrice(sA, sB, data, vv);
-      if (sol) {
-        const fm = { grey: 0, blue: 0, green: 0 };
-        fm[sA] = sol.xA; fm[sB] = sol.xB;
-        xGrey = fm.grey; xBlue = fm.blue; xGreen = fm.green;
-        blendedPrice = sol.blendedPrice;
-        blendedCI    = sol.blendedCI;
-        feasible = true;
-      }
-    }
+    // Same optimiser as Calculate — every row equals what Calculate gives for that target.
+    const r = optimiseBlend(active, data, referenceMode, vv);
+    const feasible     = !!r;
+    const xGrey        = r ? r.fracs.grey  : 0;
+    const xBlue        = r ? r.fracs.blue  : 0;
+    const xGreen       = r ? r.fracs.green : 0;
+    const blendedPrice = r ? r.blendedPrice : null;
+    const blendedCI    = r ? r.blendedCI    : null;
 
     return {
       variedVal: vv, step, xGrey, xBlue, xGreen,
@@ -2861,11 +2757,11 @@ function buildCISensitivityTable() {
   if (isCIRef) {
     document.getElementById('ciSensTitle').textContent = `CI SENSITIVITY — ${molSym}`;
     document.getElementById('ciSensSubtitle').textContent =
-      `Blend fractions & blended price as target CI varies ±0.1 ${ciLabel} · 3 steps each direction · prices fixed`;
+      `Blend fractions & blended price as target CI varies ±0.1 ${ciLabel} · 3 steps each direction · prices fixed · blend re-optimised at each step (same solver as Calculate)`;
   } else {
     document.getElementById('ciSensTitle').textContent = `PRICE SENSITIVITY — ${molSym}`;
     document.getElementById('ciSensSubtitle').textContent =
-      `Blend fractions & blended CI as target price varies ±${varStep.toFixed(dec)} ${pu} · 3 steps each direction · prices fixed`;
+      `Blend fractions & blended CI as target price varies ±${varStep.toFixed(molecule === 'H2' ? 2 : 1)} ${pu} · 3 steps each direction · prices fixed · blend re-optimised at each step (same solver as Calculate)`;
   }
 
   const showGrey  = active.includes('grey');
@@ -2898,9 +2794,9 @@ function buildCISensitivityTable() {
     const stepSign  = r.step > 0 ? '+' : '';
     const stepLabel = r.step === 0
       ? `<span class="base-tag">BASE</span>`
-      : `<span style="color:${r.step < 0 ? 'var(--green-hue)' : 'var(--danger)'}">${stepSign}${(r.step * varStep).toFixed(isCIRef ? 1 : dec)}</span>`;
+      : `<span style="color:${r.step < 0 ? 'var(--green-hue)' : 'var(--danger)'}">${stepSign}${(r.step * varStep).toFixed(isCIRef ? 1 : (molecule === 'H2' ? 2 : 1))}</span>`;
 
-    const rowDisplay = r.variedVal.toFixed(isCIRef ? 1 : dec);
+    const rowDisplay = r.variedVal.toFixed(isCIRef ? 2 : (molecule === 'H2' ? 2 : 1));
     const baseRowCls = r.isBase ? 'base-row' : '';
 
     if (!r.feasible) {
@@ -3022,7 +2918,7 @@ function downloadExcel() {
   summaryAoa.push(['CI Target Match',          Math.abs(blendedCI - t_ci) < 0.01 ? 'YES ✓' : 'NO ✗']);
   summaryAoa.push(['Price Target Match',       Math.abs(blendedPrice - t_p) < 0.01 ? 'YES ✓' : 'Computed Result']);
   summaryAoa.push([]);
-  summaryAoa.push(['Note: Sensitivity table anchors on CI target only. Middle-shade fraction fixed at base value for 3-shade mode.']);
+  summaryAoa.push(['Note: Sensitivity tables re-run the same min-cost blend solver as this result at every point, so each row/cell matches a fresh calculation.']);
 
   const ws1 = XLSX.utils.aoa_to_sheet(summaryAoa);
   ws1['!cols'] = [{ wch: 38 }, { wch: 22 }, { wch: 24 }, { wch: 28 }];
@@ -3041,49 +2937,13 @@ function downloadExcel() {
   // Axis: rowShade = grey (Y axis), colShade = green (X axis)
   const rowShade   = active.includes('grey')  ? 'grey'  : active[0];
   const colShade   = active.includes('green') ? 'green' : active[active.length - 1];
-  const fixedShade = active.find(s => s !== rowShade && s !== colShade) || null;
-  const fixedFrac  = fixedShade ? fracs[fixedShade] : 0;
   const baseRowP   = data[rowShade].price;
   const baseColP   = data[colShade].price;
 
+  // Same optimiser as Calculate and the on-screen table
   function getSensVal(colPrice, rowPrice) {
-    // Returns blended price (CI ref) or blended CI (price ref)
-    if (active.length >= 3 && fixedShade) {
-      const rem = 1 - fixedFrac;
-      if (isCIRefExcel) {
-        const remCI = t_ci - fixedFrac * data[fixedShade].ci;
-        const dCI   = data[colShade].ci - data[rowShade].ci;
-        if (Math.abs(dCI) < 1e-10) return null;
-        const xCol = (remCI - data[rowShade].ci * rem) / dCI;
-        const xRow = rem - xCol;
-        if (xCol < -0.0001 || xRow < -0.0001) return null;
-        return xCol * colPrice + xRow * rowPrice + fixedFrac * data[fixedShade].price;
-      } else {
-        const remP = t_p - fixedFrac * data[fixedShade].price;
-        const dP   = colPrice - rowPrice;
-        if (Math.abs(dP) < 1e-10) return null;
-        const xCol = (remP - rem * rowPrice) / dP;
-        const xRow = rem - xCol;
-        if (xCol < -0.0001 || xRow < -0.0001) return null;
-        return xCol * data[colShade].ci + xRow * data[rowShade].ci + fixedFrac * data[fixedShade].ci;
-      }
-    } else {
-      if (isCIRefExcel) {
-        const dCI = data[colShade].ci - data[rowShade].ci;
-        if (Math.abs(dCI) < 1e-10) return null;
-        const xCol = (t_ci - data[rowShade].ci) / dCI;
-        const xRow = 1 - xCol;
-        if (xCol < -0.0001 || xRow < -0.0001) return null;
-        return xCol * colPrice + xRow * rowPrice;
-      } else {
-        const dP = colPrice - rowPrice;
-        if (Math.abs(dP) < 1e-10) return null;
-        const xCol = (t_p - rowPrice) / dP;
-        const xRow = 1 - xCol;
-        if (xCol < -0.0001 || xRow < -0.0001) return null;
-        return xCol * data[colShade].ci + xRow * data[rowShade].ci;
-      }
-    }
+    const cell = sensitivityCell(lastSolution, rowShade, colShade, rowPrice, colPrice);
+    return cell ? cell.value : null;
   }
 
   const molSym = molecule === 'H2' ? 'H₂' : 'NH₃';
@@ -3096,8 +2956,8 @@ function downloadExcel() {
   sensAoa.push([isCIRefExcel ? `Reference Price (computed): ${t_p} ${priceLabel}` : `Reference CI (computed): ${t_ci} ${ciLabel}`]);
   sensAoa.push([`Step size: ±${step} ${priceLabel}  |  5 steps each direction`]);
   sensAoa.push([`Y axis (rows): ${rowShade.toUpperCase()} price  |  X axis (columns): ${colShade.toUpperCase()} price`]);
-  sensAoa.push([fixedShade
-    ? `${fixedShade.charAt(0).toUpperCase()+fixedShade.slice(1)} fraction fixed at ${(fixedFrac*100).toFixed(1)}% (base solution)`
+  sensAoa.push([active.length >= 3
+    ? `Blend % re-optimised in every cell (same solver as Calculate)`
     : `2-shade mode: ${active.map(s=>s.toUpperCase()).join(' + ')} only`]);
   sensAoa.push([`Cell values in: ${isCIRefExcel ? priceLabel : ciLabel}`]);
   sensAoa.push([]);
@@ -3166,7 +3026,7 @@ function downloadExcel() {
     ? `Base CI Target: ${t_ci} ${ciLabel2}  |  Step: ±0.1 ${ciLabel2}`
     : `Base Price Target: ${t_p} ${priceLabel}  |  Step: ±${varStepS3.toFixed(dec)} ${priceLabel}`]);
   ciSensAoa.push([`3 steps each direction`]);
-  ciSensAoa.push([`Source prices held constant at inputs. Middle-shade fraction fixed for 3-shade mode.`]);
+  ciSensAoa.push([`Source prices held constant at inputs. Blend % re-optimised at every step (same solver as Calculate).`]);
   ciSensAoa.push([]);
 
   // Header row
@@ -3183,9 +3043,9 @@ function downloadExcel() {
   ciSensAoa.push(ciHdr);
 
   ciRows.forEach(r => {
-    const stepStr = r.step === 0 ? 'BASE' : (r.step > 0 ? '+' : '') + (r.step * varStepS3).toFixed(isCIRefS3 ? 1 : dec);
+    const stepStr = r.step === 0 ? 'BASE' : (r.step > 0 ? '+' : '') + (r.step * varStepS3).toFixed(isCIRefS3 ? 1 : (molecule === 'H2' ? 2 : 1));
     if (!r.feasible) {
-      const row = [parseFloat(r.variedVal.toFixed(isCIRefS3 ? 1 : dec)), stepStr];
+      const row = [parseFloat(r.variedVal.toFixed(4)), stepStr];
       ciHdr.slice(2).forEach(() => row.push('N/A'));
       ciSensAoa.push(row);
       return;
@@ -3196,7 +3056,7 @@ function downloadExcel() {
     const diff    = outVal - refValS3;
     const diffPct = refValS3 !== 0 ? (diff / Math.abs(refValS3) * 100) : 0;
     const row = [
-      parseFloat(r.variedVal.toFixed(isCIRefS3 ? 1 : dec)),
+      parseFloat(r.variedVal.toFixed(4)),
       stepStr
     ];
     if (active.includes('grey'))  row.push(parseFloat((r.xGrey  * 100).toFixed(2)));
