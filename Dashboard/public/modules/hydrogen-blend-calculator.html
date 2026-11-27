@@ -2773,8 +2773,8 @@ function buildCISensitivityTable() {
                            : `Target Price<br><span style="font-size:9px;color:var(--muted)">${pu}</span>`;
   const outHdr  = isCIRef ? `BLENDED PRICE<br><span style="font-size:9px;color:var(--muted)">${pu}</span>`
                            : `BLENDED CI<br><span style="font-size:9px;color:var(--muted)">${ciLabel}</span>`;
-  const vsHdr   = isCIRef ? `vs TARGET<br><span style="font-size:9px;color:var(--muted)">${t_p} ${pu}</span>`
-                           : `vs REF CI<br><span style="font-size:9px;color:var(--muted)">${t_ci} ${ciLabel}</span>`;
+  const vsHdr   = isCIRef ? `vs TARGET<br><span style="font-size:9px;color:var(--muted)">${t_p.toFixed(dec)} ${pu}</span>`
+                           : `vs REF CI<br><span style="font-size:9px;color:var(--muted)">${t_ci.toFixed(2)} ${ciLabel}</span>`;
   const refVal  = isCIRef ? t_p : t_ci;
 
   let html = `<table class="ci-table"><thead><tr>
@@ -2953,7 +2953,7 @@ function downloadExcel() {
   // Header info
   sensAoa.push([isCIRefExcel ? `Blended Price Sensitivity Table — ${molSym}` : `Blended CI Sensitivity Table — ${molSym}`]);
   sensAoa.push([isCIRefExcel ? `CI Anchor: ${t_ci} ${ciLabel}` : `Price Anchor: ${t_p} ${priceLabel}`]);
-  sensAoa.push([isCIRefExcel ? `Reference Price (computed): ${t_p} ${priceLabel}` : `Reference CI (computed): ${t_ci} ${ciLabel}`]);
+  sensAoa.push([isCIRefExcel ? `Reference Price (computed): ${t_p.toFixed(dec)} ${priceLabel}` : `Reference CI (computed): ${t_ci.toFixed(2)} ${ciLabel}`]);
   sensAoa.push([`Step size: ±${step} ${priceLabel}  |  5 steps each direction`]);
   sensAoa.push([`Y axis (rows): ${rowShade.toUpperCase()} price  |  X axis (columns): ${colShade.toUpperCase()} price`]);
   sensAoa.push([active.length >= 3
